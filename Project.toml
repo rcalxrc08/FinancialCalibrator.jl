@@ -1,0 +1,4 @@
+name = "FinancialCalibrator"
+uuid = "60ce4190-d1b0-11e9-1cf6-9f8fd6ff6838"
+authors = ["Nicola Scaramuzzino <nicola.scaramuzzino@yandex.com>"]
+version = "0.1.0"
