@@ -1,5 +1,5 @@
 module FinancialCalibrator
 
-greet() = print("Hello World!")
+include("Calibrator.jl")
 
 end # module
