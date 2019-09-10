@@ -1,9 +1,7 @@
 using Dierckx, Dates,FFTW,Random,FinancialFFT,FinancialMonteCarlo
 
 include("RetrieverCalibration.jl")
-include("RetrieverCalibrationMDS.jl")
 include("AdapterCalibration.jl")
-include("AdapterCalibrationMDS.jl")
 include("shiftedLognormalMixturePricer.jl")
 
 import FinancialMonteCarlo.pricer
@@ -19,6 +17,12 @@ function pricer(cal::CalibratorBase,S0::Number,StrikeVec::Array{Float64},r::Floa
 end
 
 function pricer(cal::CalibratorCarrMadan,S0::Number,StrikeVec::Array{Float64},r::Float64,T::Float64,Param::Array{Float64},d::Float64=0.0)::Array{Float64}
+	EUData=[EuropeanOption(T,K1) for K1 in StrikeVec];
+	
+	return pricer(cal.Model,equitySpotData(S0,r,d),CarrMadanMethod(400.0,14),EUData);
+end
+
+function pricer(cal::CalibratorCarrMadan,equitySpotData1::equitySpotData,StrikeVec::Array{Float64},r::Float64,T::Float64,Param::Array{Float64},d::Float64=0.0)::Array{Float64}
 	EUData=[EuropeanOption(T,K1) for K1 in StrikeVec];
 	
 	return pricer(cal.Model,equitySpotData(S0,r,d),CarrMadanMethod(400.0,14),EUData);
