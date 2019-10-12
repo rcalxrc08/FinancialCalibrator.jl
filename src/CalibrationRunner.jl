@@ -38,9 +38,9 @@ InitialPointSLNM[1:length(eta0)]=eta0;
 InitialPointSLNM[length(eta0)+1:end-1]=lambda0;
 InitialPointSLNM[end]=alpha0;
 ## Define the Model
-calibratorShiftedLogNormalMixture=CalibratorShiftedLogNormalMixture(LogNormalMixture);
+calibratorShiftedLogNormalMixture=CalibratorShiftedLogNormalMixture(eta0,lambda0,alpha0);
 #Calibration
-ModelVolatilitySLNM=calibrate(calibratorShiftedLogNormalMixture,mktData,InitialPointSLNM)
+ModelVolatilitySLNM=calibrate(calibratorShiftedLogNormalMixture,mktData)
 
 
 
