@@ -11,7 +11,7 @@ function pricer(cal::CalibratorCarrMadan,S0::Number,StrikeVec::Array{Float64},r:
 	prevModel=cal.Model;
 	FinancialMonteCarlo.set_parameters!(prevModel,Param);
 	
-	return pricer(prevModel,equitySpotData(S0,r,d),CarrMadanMethod(400.0,14),EUData);
+	return pricer(prevModel,ZeroRate(r),CarrMadanMethod(400.0,14),EUData);
 end
 
 function pricer(cal::CalibratorShiftedLogNormalMixture,S0::Number,StrikeVec::Array{Float64},r::Float64,T::Float64,Param::Array{Float64},d::Float64=0.0,AddInput::Integer=0)::Array{Float64}
