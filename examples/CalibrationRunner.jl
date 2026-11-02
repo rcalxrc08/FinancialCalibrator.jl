@@ -17,41 +17,28 @@ const mktData=adapter(rawMarketData);
 ######## Carr Madan Calibration
 
 ##Define the Method
-
+dividend_curve=FinancialMonteCarlo.ImpliedCurve(mktData.ImpliedDividend, mktData.TimeToMaturity);
+#for (t,d) in zip(mktData.TimeToMaturity,mktData.ImpliedDividend)
+#	insert!(dividend_curve,t,d)
+#end
+UnderlyingData=FinancialMonteCarlo.Underlying(mktData.S0, dividend_curve);
 ## Initial Parameters
 #Infinite Activity starting Point and Model
 modelNIG=NormalInverseGaussianProcess(0.2, -0.03, 0.16, UnderlyingData)
 methodNIG=CarrMadanMethod(400.0, 14)
 #Calibration
+
 ModelVolatilityNIG=calibrate(modelNIG, methodNIG, mktData)
 
-################################################
-########Shifted LogNormal Mixture Model
-## Initial Parameters
-Neta=4;
-Random.seed!(0)
-eta0=0.2*ones(Neta);
-lambda0=rand()*ones(Neta-1)/Neta;
-alpha0=-0.22;
-
-InitialPointSLNM=Array{Float64}(undef, length(eta0)+length(lambda0)+1)
-InitialPointSLNM[1:length(eta0)]=eta0;
-InitialPointSLNM[(length(eta0)+1):(end-1)]=lambda0;
-InitialPointSLNM[end]=alpha0;
-## Define the Model
-modelSLNM=ShiftedLogNormalMixture(eta0, lambda0, alpha0, UnderlyingData)
-#Calibration
-ModelVolatilitySLNM=calibrate(modelSLNM, ClosedFormMethod(), mktData)
-
-####Plotting
-
 using PyPlot;
-surf(mktData.TimeToMaturity, mktData.Strikes, ModelVolatilityNIG.ModelVolatility')
-surf(mktData.TimeToMaturity, mktData.Strikes, mktData.Volatility')
+surf_=surf(mktData.TimeToMaturity, mktData.Strikes, ModelVolatilityNIG.ModelVolatility')
+surf_=surf(mktData.TimeToMaturity, mktData.Strikes, mktData.Volatility')
+
+surf_._facecolors2d=surf_._facecolors3d
+surf_._edgecolors2d=surf_._edgecolors3d
 
 xlabel("TimeToMaturity")
 ylabel("Strike")
 zlabel("Volatility")
 title("Model Calibration "*underlying*" "*refDate)
 legend(["Model", "Market"])
-legend(("Model", "Market"))

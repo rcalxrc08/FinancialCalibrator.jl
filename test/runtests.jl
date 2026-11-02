@@ -107,3 +107,5 @@ const FC = FinancialCalibrator
         @test_throws ErrorException FC.smile_prices(model, ClosedFormMethod(), [0.2, -0.03, 0.16], 100.0, [100.0], 0.01, 1.0, 0.0)
     end
 end
+
+include("models_methods.jl")
