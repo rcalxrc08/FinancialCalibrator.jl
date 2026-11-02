@@ -9,7 +9,7 @@ function retriever(calId::CalibrationID, ioInput::IOFileInputStrategy)::RawMarke
     RfRelPath=joinpath(path, "Rf"*currency*refDate*".json")
     ImplDivRelPath=joinpath(path, "ImplDiv"*underlying*refDate*".json")
     VolaRelPath = joinpath(path, "Volatility"*underlying*refDate*".json")
-    TupleString=IORetriever(SpotRelPath, RfRelPath, ImplDivRelPath, VolaRelPath)
+    TupleString=io_retriever(SpotRelPath, RfRelPath, ImplDivRelPath, VolaRelPath)
 
     adjRefDate=refDate[1:2]*"-"*refDate[3:5]*"-"*refDate[6:end]
 

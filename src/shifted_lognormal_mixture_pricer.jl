@@ -1,7 +1,7 @@
 """
 Pricing European Options with Shifted Lognormal Mixture Model
 
-		Price=shiftedLognormalMixture(S0::Number,K::Number,r::Real,T::Real,eta1::AbstractVector{<:Real},lambda1::AbstractVector{<:Real},alpha1::Real,d::Real=0.0,flag::Bool=true)
+		Price=shifted_lognormal_mixture(S0::Number,K::Number,r::Real,T::Real,eta1::AbstractVector{<:Real},lambda1::AbstractVector{<:Real},alpha1::Real,d::Real=0.0,flag::Bool=true)
 
 Where:\n
 		S0 = Spot Price.
@@ -16,7 +16,7 @@ Where:\n
 
 		Price= Price of the European Option with Strike equals to K, tenor T.
 """
-function shiftedLognormalMixture(S0::Number, K::Number, r::Real, T::Real, eta1::Union{AbstractVector{<:Real}, Tuple}, lambda1::Union{AbstractVector{<:Real}, Tuple}, alpha1::Real, d::Real = 0.0, flag::Bool = true)
+function shifted_lognormal_mixture(S0::Number, K::Number, r::Real, T::Real, eta1::Union{AbstractVector{<:Real}, Tuple}, lambda1::Union{AbstractVector{<:Real}, Tuple}, alpha1::Real, d::Real = 0.0, flag::Bool = true)
 
     ########################################
     Kappa = K - S0*alpha1*exp((r - d)*T)
@@ -56,5 +56,5 @@ function pricer(model::ShiftedLogNormalMixture, zero_rate::FinancialMonteCarlo.A
     # tuples can be captured by a GPU broadcast
     eta = Tuple(model.η)
     lambda = Tuple(model.λ)
-    return shiftedLognormalMixture.(S0, opt.K, r, T, Ref(eta), Ref(lambda), model.α, d, opt.isCall)
+    return shifted_lognormal_mixture.(S0, opt.K, r, T, Ref(eta), Ref(lambda), model.α, d, opt.isCall)
 end

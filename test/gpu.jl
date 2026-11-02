@@ -10,7 +10,7 @@ const FC = FinancialCalibrator
 
 @testset "GPU" begin
     CUDA.allowscalar(false)
-    mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
+    dax_und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
     gmkt = adapt(CuArray, mkt)
     @testset "MarketData on the device" begin
         @test gmkt.Strikes isa CuVector{Float64}
@@ -20,28 +20,28 @@ const FC = FinancialCalibrator
         @test Array(gmkt.Volatility) == mkt.Volatility
     end
 
-    und = FinancialMonteCarlo.Underlying(mkt.S0, 0.01)
+    und = FinancialMonteCarlo.Underlying(dax_und.S0, 0.01)
     idx = 3
     args(m) = (m.Strikes, mkt.ZeroRates[idx], mkt.TimeToMaturity[idx])
 
     nig = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
     p0 = FinancialMonteCarlo.get_parameters(nig)
     @testset "smile_prices / $name" for (name, method) in ("CarrMadanLewis" => CarrMadanLewisMethod(400.0, 14), "Lewis" => LewisMethod(100.0, 4001), "Cos" => CosMethod(1024))
-        cpu = FC.smile_prices(nig, method, p0, args(mkt)...)
-        gpu = FC.smile_prices(nig, method, p0, args(gmkt)...)
+        cpu = smile_prices(nig, method, p0, args(mkt)...)
+        gpu = smile_prices(nig, method, p0, args(gmkt)...)
         @test gpu isa CuVector
         @test isapprox(Array(gpu), cpu; rtol = 1e-8)
-        @test FC.Loss(p0, nig, method, gmkt) ≈ FC.Loss(p0, nig, method, mkt) rtol = 1e-6
+        @test FC.loss(p0, nig, method, gmkt) ≈ FC.loss(p0, nig, method, mkt) rtol = 1e-6
     end
 
     @testset "smile_prices / closed form" begin
         slnm = ShiftedLogNormalMixture([0.2, 0.25, 0.3], [0.2, 0.3], -0.1, und)
         ps = FinancialMonteCarlo.get_parameters(slnm)
-        cpu = FC.smile_prices(slnm, AnalyticMethod(), ps, args(mkt)...)
-        gpu = FC.smile_prices(slnm, AnalyticMethod(), ps, args(gmkt)...)
+        cpu = smile_prices(slnm, AnalyticMethod(), ps, args(mkt)...)
+        gpu = smile_prices(slnm, AnalyticMethod(), ps, args(gmkt)...)
         @test gpu isa CuVector
         @test isapprox(Array(gpu), cpu; rtol = 1e-8)
-        @test FC.Loss(ps, slnm, AnalyticMethod(), gmkt) ≈ FC.Loss(ps, slnm, AnalyticMethod(), mkt) rtol = 1e-6
+        @test FC.loss(ps, slnm, AnalyticMethod(), gmkt) ≈ FC.loss(ps, slnm, AnalyticMethod(), mkt) rtol = 1e-6
     end
 
     @testset "calibrate on the GPU" begin

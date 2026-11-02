@@ -8,20 +8,14 @@ refDate="22Aug2016"
 
 cal=CalibrationID(underlying, refDate, currency);
 
-#const rawMarketData=retriever(cal,IOFileInputMDS());
 const rawMarketData=retriever(cal, IOFileInputStrategy());
 
-const mktData=adapter(rawMarketData);
+const UnderlyingData, mktData = adapter(rawMarketData);
 
 ################################################
 ######## Carr Madan Calibration
 
 ##Define the Method
-dividend_curve=FinancialMonteCarlo.ImpliedCurve(mktData.ImpliedDividend, mktData.TimeToMaturity);
-#for (t,d) in zip(mktData.TimeToMaturity,mktData.ImpliedDividend)
-#	insert!(dividend_curve,t,d)
-#end
-UnderlyingData=FinancialMonteCarlo.Underlying(mktData.S0, dividend_curve);
 ## Initial Parameters
 #Infinite Activity starting Point and Model
 modelNIG=NormalInverseGaussianProcess(0.2, -0.03, 0.16, UnderlyingData)

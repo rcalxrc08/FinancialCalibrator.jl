@@ -1,4 +1,4 @@
-function GeneralAdapterStrategy(SpotString::String, RfString::String, IdString::String, VolaString::String, YfrTreshold::Tuple{Real, Real} = (0.1, 5.0), MoneynessTreshold::Tuple{Real, Real} = (0.7, 2.0), BasisConvention::Integer = 1)
+function general_adapter_strategy(SpotString::String, RfString::String, IdString::String, VolaString::String, YfrTreshold::Tuple{Real, Real} = (0.1, 5.0), MoneynessTreshold::Tuple{Real, Real} = (0.7, 2.0), BasisConvention::Integer = 1)
     ####Input Parser and Adapter
 
     # JSON.parse - string or stream to Julia data structures
@@ -79,9 +79,19 @@ function GeneralAdapterStrategy(SpotString::String, RfString::String, IdString::
     return (S0, TimeToMaturity, maturityDates, ZeroRates, ImpliedDividend, Strikes, Volatility)
 end
 
-function adapter(jsonMktDataIN::RawMarketData, ::Type{T} = Float64)::MarketData{T} where {T <: AbstractFloat}
-    ####Input Adapter
-    adaptedData=GeneralAdapterStrategy(jsonMktDataIN.SpotString, jsonMktDataIN.RfString, jsonMktDataIN.ImplDivString, jsonMktDataIN.VolatString)
+"""
+    adapter(raw::RawMarketData, T = Float64) -> (underlying, mkt)
 
-    return MarketData(T(adaptedData[1]), Vector{T}(adaptedData[2]), Vector{Date}(adaptedData[3]), Vector{T}(adaptedData[4]), Vector{T}(adaptedData[5]), Vector{T}(adaptedData[6]), Matrix{T}(adaptedData[7]))
+Parse the raw market data. Returns the `Underlying` (spot and implied dividend curve over the maturities) and the
+`MarketData` (rates, strikes and volatilities), both with floating point type `T`.
+"""
+function adapter(jsonMktDataIN::RawMarketData, ::Type{T} = Float64) where {T <: AbstractFloat}
+    ####Input Adapter
+    adaptedData=general_adapter_strategy(jsonMktDataIN.SpotString, jsonMktDataIN.RfString, jsonMktDataIN.ImplDivString, jsonMktDataIN.VolatString)
+    S0, TimeToMaturity, maturityDates, ZeroRates, ImpliedDividend, Strikes, Volatility = adaptedData
+
+    dividend_curve = FinancialMonteCarlo.ImpliedCurve(Vector{T}(ImpliedDividend), Vector{T}(TimeToMaturity))
+    underlying = FinancialMonteCarlo.Underlying(T(S0), dividend_curve)
+    mkt = MarketData(Vector{T}(TimeToMaturity), Vector{Date}(maturityDates), Vector{T}(ZeroRates), Vector{T}(Strikes), Matrix{T}(Volatility))
+    return underlying, mkt
 end

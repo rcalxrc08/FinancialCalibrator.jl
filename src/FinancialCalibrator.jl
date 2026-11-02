@@ -8,10 +8,10 @@ import FinancialMonteCarlo: pricer
 const DATA_DIR = normpath(joinpath(@__DIR__, "..", "data", "json"))
 
 include("structs.jl")
-include("RetrieverCalibration.jl")
-include("AdapterCalibration.jl")
+include("retriever_calibration.jl")
+include("adapter_calibration.jl")
 include("calibrated_data.jl")
-include("shiftedLognormalMixturePricer.jl")
+include("shifted_lognormal_mixture_pricer.jl")
 include("pricer.jl")
 include("loss.jl")
 include("calibrate.jl")

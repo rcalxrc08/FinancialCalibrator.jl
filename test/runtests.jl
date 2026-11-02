@@ -7,6 +7,12 @@ using Random
 
 const FC = FinancialCalibrator
 
+# Prices of the call smile of `model` re-parametrized with `p`, through the `pricer` interface.
+function smile_prices(model, method, p, K, r, T)
+    smile = FinancialMonteCarlo.EuropeanOptionSmile(T, K, fill!(similar(K, Bool), true))
+    return vec(pricer(FinancialMonteCarlo.set_parameters!(model, p), ZeroRate(r), method, smile, FC.pricing_mode(K)))
+end
+
 @testset "FinancialCalibrator" begin
     @testset "Data retrieval and adaptation" begin
         id = CalibrationID("Dax", "22Aug2016", "EUR")
@@ -14,14 +20,15 @@ const FC = FinancialCalibrator
         @test raw isa RawMarketData
         @test raw.refDate == Date(2016, 8, 22)
 
-        mkt = adapter(raw)
+        und, mkt = adapter(raw)
+        @test und isa FinancialMonteCarlo.AbstractUnderlying
         @test mkt isa MarketData
-        @test mkt.S0 > 0
+        @test und.S0 > 0
         nT, nK = size(mkt.Volatility)
         @test length(mkt.TimeToMaturity) == nT
         @test length(mkt.Strikes) == nK
         @test length(mkt.ZeroRates) == nT
-        @test length(mkt.ImpliedDividend) == nT
+        @test all(isfinite(FC.implied_dividend(und, t)) for t in mkt.TimeToMaturity)
         @test issorted(mkt.TimeToMaturity)
         @test all(0.1 .< mkt.TimeToMaturity .< 5.0)
         @test all(mkt.Volatility .> 0)
@@ -45,24 +52,22 @@ const FC = FinancialCalibrator
         # a single option agrees with the smile
         @test pricer(model, zr, AnalyticMethod(), FinancialMonteCarlo.EuropeanOption(T, 100.0)) ≈ pc[2]
         # and with the scalar formula
-        @test pc ≈ FC.shiftedLognormalMixture.(S0, strikes, r, T, Ref([0.2, 0.25]), Ref([0.5]), -0.1, 0.03)
+        @test pc ≈ FC.shifted_lognormal_mixture.(S0, strikes, r, T, Ref([0.2, 0.25]), Ref([0.5]), -0.1, 0.03)
         # invalid parameters are flagged with a negative price
-        @test FC.shiftedLognormalMixture(S0, 100.0, r, T, [-0.2, 0.25], [0.5], -0.1, 0.0) < 0
+        @test FC.shifted_lognormal_mixture(S0, 100.0, r, T, [-0.2, 0.25], [0.5], -0.1, 0.0) < 0
     end
 
     @testset "Calibration" begin
-        mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
-        curve = FinancialMonteCarlo.ImpliedCurve(mkt.ImpliedDividend, mkt.TimeToMaturity)
-        und = FinancialMonteCarlo.Underlying(mkt.S0, curve)
+        und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
 
         @testset "Carr-Madan / NIG" begin
             model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
             method = CarrMadanMethod(400.0, 14)
             p0 = FinancialMonteCarlo.get_parameters(model)
-            prices = FC.smile_prices(model, method, p0, mkt.Strikes, mkt.ZeroRates[1], mkt.TimeToMaturity[1])
+            prices = smile_prices(model, method, p0, mkt.Strikes, mkt.ZeroRates[1], mkt.TimeToMaturity[1])
             @test length(prices) == length(mkt.Strikes)
             @test all(prices .> 0)
-            loss0 = FC.Loss(p0, model, method, mkt)
+            loss0 = FC.loss(p0, model, method, mkt)
             @test loss0 < 1e4
             res = calibrate(model, method, mkt)
             @test res isa CalibratedData
@@ -74,9 +79,9 @@ const FC = FinancialCalibrator
             p0 = [0.2, -0.03, 0.16]
             model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
             args = (mkt.Strikes, mkt.ZeroRates[1], mkt.TimeToMaturity[1])
-            ref = FC.smile_prices(model, CarrMadanMethod(400.0, 14), p0, args...)
+            ref = smile_prices(model, CarrMadanMethod(400.0, 14), p0, args...)
             for m in (CarrMadanLewisMethod(400.0, 14), CosMethod(256))
-                @test isapprox(FC.smile_prices(model, m, p0, args...), ref; rtol = 1e-3)
+                @test isapprox(smile_prices(model, m, p0, args...), ref; rtol = 1e-3)
             end
         end
 
@@ -86,34 +91,33 @@ const FC = FinancialCalibrator
             method = AnalyticMethod()
             p0 = FinancialMonteCarlo.get_parameters(model)
             @test length(p0) == 8
-            @test FC.Loss(p0, model, method, mkt) < 1e4
+            @test FC.loss(p0, model, method, mkt) < 1e4
         end
     end
 
     @testset "Float32" begin
         raw = retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy())
-        mkt = adapter(raw, Float32)
+        und, mkt = adapter(raw, Float32)
+        @test und.S0 isa Float32
         @test mkt isa MarketData{Float32}
         @test eltype(mkt.Volatility) == Float32
-        curve = FinancialMonteCarlo.ImpliedCurve(mkt.ImpliedDividend, mkt.TimeToMaturity)
-        und = FinancialMonteCarlo.Underlying(mkt.S0, curve)
 
         model = ShiftedLogNormalMixture(0.2f0 * ones(Float32, 4), fill(0.1f0, 3), -0.22f0, und)
         p0 = FinancialMonteCarlo.get_parameters(model)
         @test eltype(p0) == Float32
-        prices = FC.smile_prices(model, AnalyticMethod(), p0, mkt.Strikes, mkt.ZeroRates[1], mkt.TimeToMaturity[1])
+        prices = smile_prices(model, AnalyticMethod(), p0, mkt.Strikes, mkt.ZeroRates[1], mkt.TimeToMaturity[1])
         @test eltype(prices) == Float32
-        @test FC.Loss(p0, model, AnalyticMethod(), mkt) isa Float32
+        @test FC.loss(p0, model, AnalyticMethod(), mkt) isa Float32
 
         nig = NormalInverseGaussianProcess(0.2f0, -0.03f0, 0.16f0, und)
         method = CarrMadanMethod(400.0f0, 14, 0.75f0)
-        @test FC.Loss(FinancialMonteCarlo.get_parameters(nig), nig, method, mkt) isa Float32
+        @test FC.loss(FinancialMonteCarlo.get_parameters(nig), nig, method, mkt) isa Float32
     end
 
     @testset "AnalyticMethod on a model without closed form" begin
         und = FinancialMonteCarlo.Underlying(100.0)
         model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
-        @test_throws ErrorException FC.smile_prices(model, AnalyticMethod(), [0.2, -0.03, 0.16], [100.0], 0.01, 1.0)
+        @test_throws MethodError smile_prices(model, AnalyticMethod(), [0.2, -0.03, 0.16], [100.0], 0.01, 1.0)
     end
 end
 
