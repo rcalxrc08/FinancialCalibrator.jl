@@ -16,7 +16,7 @@ Where:\n
 
 		Price= Price of the European Option with Strike equals to K, tenor T.
 """
-function shiftedLognormalMixture(S0::Number, K::Number, r::Real, T::Real, eta1::AbstractVector{<:Real}, lambda1::AbstractVector{<:Real}, alpha1::Real, d::Real = 0.0, flag::Bool = true)
+function shiftedLognormalMixture(S0::Number, K::Number, r::Real, T::Real, eta1::Union{AbstractVector{<:Real}, Tuple}, lambda1::Union{AbstractVector{<:Real}, Tuple}, alpha1::Real, d::Real = 0.0, flag::Bool = true)
 
     ########################################
     Kappa = K - S0*alpha1*exp((r - d)*T)
@@ -38,14 +38,23 @@ function shiftedLognormalMixture(S0::Number, K::Number, r::Real, T::Real, eta1::
     return price
 end
 
-function shiftedLognormalMixturePricer(S0::Number, StrikeVec::AbstractVector{<:Real}, r::Real, T::Real, Param::AbstractVector{<:Real}, d::Real = 0.0, AdditionalInput = 0)
-    Neta=div(length(Param), 2)
-    Nlam=Neta-1
-    eta1=Param[1:Neta]
-    lambda1=Param[(Neta+1):(end-1)]
-    alpha1=Param[end]
+"""
+    pricer(model::ShiftedLogNormalMixture, zero_rate, ::AnalyticMethod, opt, mode = SerialMode())
 
-    PriceVec=[shiftedLognormalMixture(S0, strike, r, T, eta1, lambda1, alpha1, d) for strike in StrikeVec]
-
-    return PriceVec
+Closed-form price of a `EuropeanOption` or of a `EuropeanOptionSmile` under the shifted lognormal mixture. The spot,
+the dividend curve and the rate curve are those of the `model` and of `zero_rate`, as for the numerical methods;
+the rate and dividend are flat-equivalent over the maturity of `opt`. The strikes of a smile can live on the GPU
+(`CuArray`), in which case the prices are computed there in a single broadcast.
+"""
+function pricer(model::ShiftedLogNormalMixture, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, ::AnalyticMethod, opt::Union{FinancialMonteCarlo.EuropeanOption, FinancialMonteCarlo.EuropeanOptionSmile}, ::FinancialMonteCarlo.BaseMode = FinancialMonteCarlo.SerialMode())
+    T = opt.T
+    S0 = model.underlying.S0
+    # the curves may integrate in a wider type than the model (e.g. Float64 for a Float32 model)
+    FT = float(promote_type(typeof(S0), typeof(T)))
+    r = FT(FinancialMonteCarlo.integral(zero_rate.r, T) / T)
+    d = FT(FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(model), T) / T)
+    # tuples can be captured by a GPU broadcast
+    eta = Tuple(model.η)
+    lambda = Tuple(model.λ)
+    return shiftedLognormalMixture.(S0, opt.K, r, T, Ref(eta), Ref(lambda), model.α, d, opt.isCall)
 end

@@ -1,5 +1,5 @@
 using FinancialCalibrator, FinancialMonteCarlo, FinancialFFT
-import FinancialCalibrator: CalibrationID, IOFileInputStrategy, retriever, adapter, calibrate, ClosedFormMethod
+import FinancialCalibrator: CalibrationID, IOFileInputStrategy, retriever, adapter, calibrate, AnalyticMethod
 
 ####Input Retriever
 currency="EUR"

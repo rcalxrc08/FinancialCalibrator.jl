@@ -83,5 +83,5 @@ function adapter(jsonMktDataIN::RawMarketData, ::Type{T} = Float64)::MarketData{
     ####Input Adapter
     adaptedData=GeneralAdapterStrategy(jsonMktDataIN.SpotString, jsonMktDataIN.RfString, jsonMktDataIN.ImplDivString, jsonMktDataIN.VolatString)
 
-    return MarketData{T}(T(adaptedData[1]), Vector{T}(adaptedData[2]), Vector{Date}(adaptedData[3]), Vector{T}(adaptedData[4]), Vector{T}(adaptedData[5]), Vector{T}(adaptedData[6]), Matrix{T}(adaptedData[7]))
+    return MarketData(T(adaptedData[1]), Vector{T}(adaptedData[2]), Vector{Date}(adaptedData[3]), Vector{T}(adaptedData[4]), Vector{T}(adaptedData[5]), Vector{T}(adaptedData[6]), Matrix{T}(adaptedData[7]))
 end

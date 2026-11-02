@@ -3,7 +3,7 @@ function Loss(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BasePro
     loss = zero(T)
     try
         @simd for i = 1:length(mktData.TimeToMaturity)
-            OutputPriceVec = smile_prices(model, method, params, mktData.S0, mktData.Strikes, mktData.ZeroRates[i], mktData.TimeToMaturity[i], mktData.ImpliedDividend[i])
+            OutputPriceVec = smile_prices(model, method, params, mktData.Strikes, mktData.ZeroRates[i], mktData.TimeToMaturity[i])
             if (minimum(OutputPriceVec) <= 0.0)
                 @show "negative price"
                 return T(1000000)
