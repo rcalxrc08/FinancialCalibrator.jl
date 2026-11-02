@@ -1,7 +1,7 @@
 """
 Pricing European Options with Shifted Lognormal Mixture Model
 
-		Price=shiftedLognormalMixture(S0::Number,K::Number,r::Real,T::Real,eta1::Array{Float64},lambda1::Array{Float64},alpha1::Real,d::Real=0.0,flag::Bool=true)::Float64
+		Price=shiftedLognormalMixture(S0::Number,K::Number,r::Real,T::Real,eta1::AbstractVector{<:Real},lambda1::AbstractVector{<:Real},alpha1::Real,d::Real=0.0,flag::Bool=true)
 
 Where:\n
 		S0 = Spot Price.
@@ -16,20 +16,20 @@ Where:\n
 
 		Price= Price of the European Option with Strike equals to K, tenor T.
 """
-function shiftedLognormalMixture(S0::Number, K::Number, r::Real, T::Real, eta1::Array{Float64}, lambda1::Array{Float64}, alpha1::Real, d::Real = 0.0, flag::Bool = true)::Float64
+function shiftedLognormalMixture(S0::Number, K::Number, r::Real, T::Real, eta1::AbstractVector{<:Real}, lambda1::AbstractVector{<:Real}, alpha1::Real, d::Real = 0.0, flag::Bool = true)
 
     ########################################
     Kappa = K - S0*alpha1*exp((r - d)*T)
-    A0 = S0*(1.0 - alpha1)
+    A0 = S0*(1 - alpha1)
 
-    if (Kappa <= 0.0||A0<=0.0||minimum(lambda1)<=0.0||sum(lambda1)>1.0||minimum(eta1)<=0.0)
-        price = -100000
+    if (Kappa <= 0||A0 <= 0||minimum(lambda1) <= 0||sum(lambda1) > 1||minimum(eta1) <= 0)
+        price = oftype(float(S0), -100000)
     else
-        price=0.0
+        price=zero(float(S0))
         for j = 1:length(lambda1)
             price+=lambda1[j] * blsprice(A0, Kappa, r, T, eta1[j], d)
         end
-        price+=(1.0-sum(lambda1))*blsprice(A0, Kappa, r, T, eta1[end], d)
+        price+=(1-sum(lambda1))*blsprice(A0, Kappa, r, T, eta1[end], d)
         if !flag
             price -= S0*exp(-d*T) - K*exp(-r*T)
         end
@@ -38,7 +38,7 @@ function shiftedLognormalMixture(S0::Number, K::Number, r::Real, T::Real, eta1::
     return price
 end
 
-function shiftedLognormalMixturePricer(S0::Number, StrikeVec::Array{Float64}, r::Real, T::Real, Param::Array{Float64}, d::Real = 0.0, AdditionalInput = 0)::Array{Float64}
+function shiftedLognormalMixturePricer(S0::Number, StrikeVec::AbstractVector{<:Real}, r::Real, T::Real, Param::AbstractVector{<:Real}, d::Real = 0.0, AdditionalInput = 0)
     Neta=div(length(Param), 2)
     Nlam=Neta-1
     eta1=Param[1:Neta]

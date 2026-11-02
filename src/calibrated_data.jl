@@ -7,9 +7,9 @@ from FinancialFFT, so the kind of calibration is entirely determined by the pric
 """
 struct ClosedFormMethod <: FinancialMonteCarlo.AbstractMethod end
 
-struct CalibratedData
-    OptimalParam::Array{Float64}
-    OptimalValue::Float64
-    ModelVolatility::Matrix{Float64}
-    CalibratedData(OptimalParameters, minima, ModelVolatility) = new(OptimalParameters, minima, ModelVolatility)
+struct CalibratedData{T <: AbstractFloat}
+    OptimalParam::Vector{T}
+    OptimalValue::T
+    ModelVolatility::Matrix{T}
 end
+CalibratedData(OptimalParameters::AbstractVector{T}, minima::Real, ModelVolatility::AbstractMatrix) where {T <: AbstractFloat} = CalibratedData{T}(OptimalParameters, T(minima), ModelVolatility)

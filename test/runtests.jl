@@ -81,6 +81,26 @@ const FC = FinancialCalibrator
         end
     end
 
+    @testset "Float32" begin
+        raw = retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy())
+        mkt = adapter(raw, Float32)
+        @test mkt isa MarketData{Float32}
+        @test eltype(mkt.Volatility) == Float32
+        curve = FinancialMonteCarlo.ImpliedCurve(mkt.ImpliedDividend, mkt.TimeToMaturity)
+        und = FinancialMonteCarlo.Underlying(mkt.S0, curve)
+
+        model = ShiftedLogNormalMixture(0.2f0 * ones(Float32, 4), fill(0.1f0, 3), -0.22f0, und)
+        p0 = FinancialMonteCarlo.get_parameters(model)
+        @test eltype(p0) == Float32
+        prices = FC.smile_prices(model, ClosedFormMethod(), p0, mkt.S0, mkt.Strikes, mkt.ZeroRates[1], mkt.TimeToMaturity[1], mkt.ImpliedDividend[1])
+        @test eltype(prices) == Float32
+        @test FC.Loss(p0, model, ClosedFormMethod(), mkt) isa Float32
+
+        nig = NormalInverseGaussianProcess(0.2f0, -0.03f0, 0.16f0, und)
+        method = CarrMadanMethod(400.0f0, 14, 0.75f0)
+        @test FC.Loss(FinancialMonteCarlo.get_parameters(nig), nig, method, mkt) isa Float32
+    end
+
     @testset "ClosedFormMethod on a model without closed form" begin
         und = FinancialMonteCarlo.Underlying(100.0)
         model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)

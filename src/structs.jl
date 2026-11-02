@@ -55,13 +55,21 @@ function WEBRetriever(SpotRelPath::String, RfRelPath::String, IdRelPath::String,
     return (SpotString, RfString, ImplDivString, VolatString)
 end
 
-struct MarketData
-    S0::Float64
-    TimeToMaturity::Array{Float64}
-    MaturityDates::Array{Date}
-    ZeroRates::Array{Float64}
-    ImpliedDividend::Array{Float64}
-    Strikes::Array{Float64}
-    Volatility::Matrix{Float64}
-    MarketData(S0in, TimeToMaturityin, MaturityDatesIn, ZeroRatesin, ImpliedDividendin, Strikesin, Volatilityin) = new(S0in, TimeToMaturityin, MaturityDatesIn, ZeroRatesin, ImpliedDividendin, Strikesin, Volatilityin)
+struct MarketData{T <: AbstractFloat}
+    S0::T
+    TimeToMaturity::Vector{T}
+    MaturityDates::Vector{Date}
+    ZeroRates::Vector{T}
+    ImpliedDividend::Vector{T}
+    Strikes::Vector{T}
+    Volatility::Matrix{T}
 end
+
+# The floating point type is the promotion of the types of all the numeric inputs.
+function MarketData(S0::Real, TimeToMaturity::AbstractVector{<:Real}, MaturityDates::AbstractVector{Date}, ZeroRates::AbstractVector{<:Real}, ImpliedDividend::AbstractVector{<:Real}, Strikes::AbstractVector{<:Real}, Volatility::AbstractMatrix{<:Real})
+    T = float(promote_type(typeof(S0), eltype(TimeToMaturity), eltype(ZeroRates), eltype(ImpliedDividend), eltype(Strikes), eltype(Volatility)))
+    return MarketData{T}(T(S0), Vector{T}(TimeToMaturity), Vector{Date}(MaturityDates), Vector{T}(ZeroRates), Vector{T}(ImpliedDividend), Vector{T}(Strikes), Matrix{T}(Volatility))
+end
+
+Base.eltype(::Type{MarketData{T}}) where {T} = T
+Base.eltype(::MarketData{T}) where {T} = T

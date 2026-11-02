@@ -79,9 +79,9 @@ function GeneralAdapterStrategy(SpotString::String, RfString::String, IdString::
     return (S0, TimeToMaturity, maturityDates, ZeroRates, ImpliedDividend, Strikes, Volatility)
 end
 
-function adapter(jsonMktDataIN::RawMarketData)::MarketData
+function adapter(jsonMktDataIN::RawMarketData, ::Type{T} = Float64)::MarketData{T} where {T <: AbstractFloat}
     ####Input Adapter
     adaptedData=GeneralAdapterStrategy(jsonMktDataIN.SpotString, jsonMktDataIN.RfString, jsonMktDataIN.ImplDivString, jsonMktDataIN.VolatString)
 
-    return MarketData(adaptedData[1], adaptedData[2], adaptedData[3], adaptedData[4], adaptedData[5], adaptedData[6], adaptedData[7])
+    return MarketData{T}(T(adaptedData[1]), Vector{T}(adaptedData[2]), Vector{Date}(adaptedData[3]), Vector{T}(adaptedData[4]), Vector{T}(adaptedData[5]), Vector{T}(adaptedData[6]), Matrix{T}(adaptedData[7]))
 end
