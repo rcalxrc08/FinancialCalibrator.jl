@@ -3,6 +3,7 @@ using FinancialCalibrator
 using FinancialMonteCarlo
 using FinancialFFT
 using FinancialToolbox
+using Optim
 using Dates
 
 const FC = FinancialCalibrator
@@ -68,6 +69,16 @@ end
             loss0 = FC.Loss(FinancialMonteCarlo.get_parameters(start), start, cm, smkt)
             res = calibrate(start, cm, smkt)
             @test res.OptimalValue < loss0 / 10
+        end
+
+        @testset "Optimizer options" begin
+            smkt = synthetic_market(VarianceGammaProcess(0.2, -0.1, 0.2, und0), cm)
+            start = VarianceGammaProcess(0.25, -0.05, 0.3, und0)
+            loss0 = FC.Loss(FinancialMonteCarlo.get_parameters(start), start, cm, smkt)
+            short = calibrate(start, cm, smkt, NelderMead(), Optim.Options(iterations = 2))
+            full = calibrate(start, cm, smkt, NelderMead(), Optim.Options(iterations = 100))
+            @test short.OptimalValue <= loss0
+            @test full.OptimalValue < short.OptimalValue
         end
 
         @testset "ShiftedLogNormalMixture / ClosedForm" begin
