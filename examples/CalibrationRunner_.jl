@@ -1,5 +1,5 @@
-using FinancialCalibrator, FinancialMonteCarlo
-import FinancialCalibrator: CalibrationID, IOFileInputStrategy, retriever, adapter, calibrate, CalibratorCarrMadan, CalibratorShiftedLogNormalMixture
+using FinancialCalibrator, FinancialMonteCarlo, FinancialFFT
+import FinancialCalibrator: CalibrationID, IOFileInputStrategy, retriever, adapter, calibrate, ClosedFormMethod
 
 ####Input Retriever
 currency="EUR"
@@ -24,10 +24,11 @@ dividend_curve=FinancialMonteCarlo.ImpliedCurve(mktData.ImpliedDividend, mktData
 UnderlyingData=FinancialMonteCarlo.Underlying(mktData.S0, dividend_curve);
 ## Initial Parameters
 #Infinite Activity starting Point and Model
-calibratorNIG=CalibratorCarrMadan(NormalInverseGaussianProcess(0.2, -0.03, 0.16, UnderlyingData));
+modelNIG=NormalInverseGaussianProcess(0.2, -0.03, 0.16, UnderlyingData)
+methodNIG=CarrMadanMethod(400.0, 14)
 #Calibration
 
-ModelVolatilityNIG=calibrate(calibratorNIG, mktData)
+ModelVolatilityNIG=calibrate(modelNIG, methodNIG, mktData)
 
 using PyPlot;
 surf_=surf(mktData.TimeToMaturity, mktData.Strikes, ModelVolatilityNIG.ModelVolatility')

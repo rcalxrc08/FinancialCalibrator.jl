@@ -2,6 +2,7 @@ using Test
 using FinancialCalibrator
 using Dates
 using FinancialMonteCarlo
+using FinancialFFT
 using Random
 
 const FC = FinancialCalibrator
@@ -46,30 +47,43 @@ const FC = FinancialCalibrator
         und = FinancialMonteCarlo.Underlying(mkt.S0, curve)
 
         @testset "Carr-Madan / NIG" begin
-            cal = CalibratorCarrMadan(NormalInverseGaussianProcess(0.2, -0.03, 0.16, und))
-            p0 = FinancialMonteCarlo.get_parameters(cal.Model)
-            prices = FC.pricer(cal, mkt.S0, mkt.Strikes, mkt.ZeroRates[1], mkt.TimeToMaturity[1], p0, mkt.ImpliedDividend[1])
+            model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
+            method = CarrMadanMethod(400.0, 14)
+            p0 = FinancialMonteCarlo.get_parameters(model)
+            prices = FC.smile_prices(model, method, p0, mkt.S0, mkt.Strikes, mkt.ZeroRates[1], mkt.TimeToMaturity[1], mkt.ImpliedDividend[1])
             @test length(prices) == length(mkt.Strikes)
             @test all(prices .> 0)
-            loss0 = FC.Loss(p0, cal, mkt)
+            loss0 = FC.Loss(p0, model, method, mkt)
             @test loss0 < 1e4
-            res = calibrate(cal, mkt)
+            res = calibrate(model, method, mkt)
             @test res isa CalibratedData
             @test res.OptimalValue <= loss0
             @test size(res.ModelVolatility) == size(mkt.Volatility)
         end
 
+        @testset "Numerical methods agree" begin
+            p0 = [0.2, -0.03, 0.16]
+            model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
+            args = (mkt.S0, mkt.Strikes, mkt.ZeroRates[1], mkt.TimeToMaturity[1], mkt.ImpliedDividend[1])
+            ref = FC.smile_prices(model, CarrMadanMethod(400.0, 14), p0, args...)
+            for m in (CarrMadanLewisMethod(400.0, 14), CosMethod(256))
+                @test isapprox(FC.smile_prices(model, m, p0, args...), ref; rtol = 1e-3)
+            end
+        end
+
         @testset "Shifted lognormal mixture" begin
             Random.seed!(0)
-            cal = CalibratorShiftedLogNormalMixture(0.2 * ones(4), rand(3) / 4, -0.22, und)
-            p0 = FinancialMonteCarlo.get_parameters(cal.Model)
+            model = ShiftedLogNormalMixture(0.2 * ones(4), rand(3) / 4, -0.22, und)
+            method = ClosedFormMethod()
+            p0 = FinancialMonteCarlo.get_parameters(model)
             @test length(p0) == 8
-            @test FC.Loss(p0, cal, mkt) < 1e4
+            @test FC.Loss(p0, model, method, mkt) < 1e4
         end
     end
 
-    @testset "Abstract pricer is not implemented" begin
-        struct DummyCalibrator <: FC.CalibratorBase end
-        @test_throws ErrorException FC.pricer(DummyCalibrator(), 100.0, [100.0], 0.01, 1.0, [0.1], 0.0)
+    @testset "ClosedFormMethod on a model without closed form" begin
+        und = FinancialMonteCarlo.Underlying(100.0)
+        model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
+        @test_throws ErrorException FC.smile_prices(model, ClosedFormMethod(), [0.2, -0.03, 0.16], 100.0, [100.0], 0.01, 1.0, 0.0)
     end
 end

@@ -1,5 +1,5 @@
-using FinancialCalibrator, FinancialMonteCarlo
-import FinancialCalibrator: CalibrationID, IOFileInputStrategy, retriever, adapter, calibrate, CalibratorCarrMadan, CalibratorShiftedLogNormalMixture
+using FinancialCalibrator, FinancialMonteCarlo, FinancialFFT
+import FinancialCalibrator: CalibrationID, IOFileInputStrategy, retriever, adapter, calibrate, ClosedFormMethod
 
 ####Input Retriever
 currency="EUR"
@@ -20,9 +20,10 @@ const mktData=adapter(rawMarketData);
 
 ## Initial Parameters
 #Infinite Activity starting Point and Model
-calibratorNIG=CalibratorCarrMadan(NormalInverseGaussianProcess(0.2, -0.03, 0.16));
+modelNIG=NormalInverseGaussianProcess(0.2, -0.03, 0.16, UnderlyingData)
+methodNIG=CarrMadanMethod(400.0, 14)
 #Calibration
-ModelVolatilityNIG=calibrate(calibratorNIG, mktData)
+ModelVolatilityNIG=calibrate(modelNIG, methodNIG, mktData)
 
 ################################################
 ########Shifted LogNormal Mixture Model
@@ -38,9 +39,9 @@ InitialPointSLNM[1:length(eta0)]=eta0;
 InitialPointSLNM[(length(eta0)+1):(end-1)]=lambda0;
 InitialPointSLNM[end]=alpha0;
 ## Define the Model
-calibratorShiftedLogNormalMixture=CalibratorShiftedLogNormalMixture(eta0, lambda0, alpha0, UnderlyingData);
+modelSLNM=ShiftedLogNormalMixture(eta0, lambda0, alpha0, UnderlyingData)
 #Calibration
-ModelVolatilitySLNM=calibrate(calibratorShiftedLogNormalMixture, mktData)
+ModelVolatilitySLNM=calibrate(modelSLNM, ClosedFormMethod(), mktData)
 
 ####Plotting
 

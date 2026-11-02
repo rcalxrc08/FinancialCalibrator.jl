@@ -10,12 +10,12 @@ include("structs.jl")
 include("RetrieverCalibration.jl")
 include("AdapterCalibration.jl")
 include("shiftedLognormalMixturePricer.jl")
-include("Calibrator.jl")
+include("calibrated_data.jl")
 include("pricer.jl")
 include("loss.jl")
 include("calibrate.jl")
 
 export CalibrationID, IOFileInputStrategy, retriever, adapter, calibrate
-export CalibratorCarrMadan, CalibratorShiftedLogNormalMixture, CalibratedData, MarketData, RawMarketData
+export ClosedFormMethod, CalibratedData, MarketData, RawMarketData
 
 end # module

@@ -1,6 +1,6 @@
 using BenchmarkTools
-using FinancialCalibrator, FinancialMonteCarlo
-import FinancialCalibrator: CalibrationID, IOFileInputStrategy, retriever, adapter, calibrate, CalibratorCarrMadan, CalibratorShiftedLogNormalMixture
+using FinancialCalibrator, FinancialMonteCarlo, FinancialFFT
+import FinancialCalibrator: CalibrationID, IOFileInputStrategy, retriever, adapter, calibrate, ClosedFormMethod
 
 ####Input Retriever
 currency="EUR"
