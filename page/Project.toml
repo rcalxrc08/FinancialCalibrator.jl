@@ -1,0 +1,12 @@
+[deps]
+FinancialCalibrator = "60ce4190-d1b0-11e9-1cf6-9f8fd6ff6838"
+FinancialFFT = "ccc4acef-1676-4a84-946d-4093fe376f06"
+FinancialMonteCarlo = "078f23cc-2637-5a1d-aba6-8a9ba9a6ff83"
+Franklin = "713c75ef-9fc9-4b05-94a9-213340da978e"
+NodeJS = "2bd173c7-0d6d-553b-b6af-13a54713934c"
+PkgPage = "e7214860-93a8-4f22-b43d-bd447d1a2094"
+
+[compat]
+Franklin = "0.10"
+NodeJS = "1, 2"
+PkgPage = "0.4"

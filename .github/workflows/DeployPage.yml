@@ -1,0 +1,35 @@
+name: Build and Deploy
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Install Julia
+      uses: julia-actions/setup-julia@v2
+      with:
+        version: '1'
+    # Julia >= 1.12: Franklin creates the module Utils_1 from page/utils.jl during the build and looks up its names
+    # from the older world age of the build call, where the module does not exist yet. Defining Utils_1 beforehand
+    # makes those lookups succeed.
+    - run: julia -e '
+            import Pkg;
+            Pkg.Registry.add("General");
+            Pkg.Registry.add(Pkg.RegistrySpec(url = "https://github.com/rcalxrc08/LocalRegistry.git"));
+            Pkg.activate("page"); Pkg.develop(path = "."); Pkg.instantiate();
+            Pkg.build(); using FinancialCalibrator;
+            using NodeJS;
+            run(`$(npm_cmd()) install highlight.js purgecss`);
+            import PkgPage, Franklin;
+            Core.eval(Main, :(module Utils_1; import Franklin; include($(abspath("page/utils.jl"))); end));
+            PkgPage.optimize(input="page", output="")'
+    - run: touch page/__site/.nojekyll
+    - name: Deploy
+      uses: JamesIves/github-pages-deploy-action@releases/v4
+      with:
+        BRANCH: gh-pages
+        FOLDER: page/__site
