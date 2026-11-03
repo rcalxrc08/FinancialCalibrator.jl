@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- META -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Nicola Scaramuzzino">
+  <title>FinancialCalibrator.jl</title>
+
+  <link rel="icon" type="image/png"  href="/FinancialCalibrator.jl/assets/favicon.ico">
+
+  <!-- CSS -->
+  
+   <link rel="stylesheet" href="/FinancialCalibrator.jl/libs/highlight/styles/atom-one-dark.css">
+   
+  <link rel="stylesheet" href="/FinancialCalibrator.jl/css/bootstrap.min.css">
+  <style>.bg-primary {
+  background-color: #3f6388 !important;
+}
+
+a {
+  color: #2669DD;
+}
+
+a:hover {
+  color: teal;
+}
+
+.section-bg-color {
+  background-color: #f6f8fa;
+}
+
+footer a {
+  color: cornflowerblue;
+}
+
+
+header {
+  margin-top: 59px !important;
+}
+
+
+
+.jumbotron {
+  background-image: url("assets/diagonal-lines.svg");
+  background-repeat: repeat;
+}
+
+
+/* CODE ADJUSTMENTS */
+
+pre code.hljs {
+  border-radius: 10px;
+}
+
+pre code.hljs.plaintext {
+  margin-left: 15px;
+}
+</style>
+  <link rel="stylesheet" href="/FinancialCalibrator.jl/css/custom.css">
+
+  <script async defer src="https://buttons.github.io/buttons.js"></script>
+</head>
+<body id="page-top">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top" id="mainNav">
+  <div class="container">
+    <span class="navbar-brand">
+      
+        <img src="/FinancialCalibrator.jl/assets/logo.png" class="img-fluid" style="height:         25px;
+padding-right:  10px;
+" alt="Logo"/>
+      
+      <a href="#page-top">FinancialCalibrator.jl</a>
+      
+    </span>
+    <input type="checkbox" id="navbar-toggler-cbox" class="d-none" />
+    <label for="navbar-toggler-cbox" class="navbar-toggler" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </label>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="navbar-nav ml-auto">
+        
+        <li class="nav-item">
+          <a class="nav-link" href="#about">About</a>
+        </li>
+        
+        <li class="nav-item">
+          <a class="nav-link" href="#getting_started">Getting started</a>
+        </li>
+        
+        <li class="nav-item">
+          <a class="nav-link" href="#usage">Usage</a>
+        </li>
+        
+        <li class="nav-item">
+          <a class="nav-link" href="#methods">Methods</a>
+        </li>
+        
+        <li class="nav-item">
+          <a class="nav-link" href="#gpu">GPU</a>
+        </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  <header class="text-white text-center">
+  
+    <div class="jumbotron jumbotron-fluid container-fluid bg-primary">
+  
+    <h1>FinancialCalibrator.jl</h1>
+    <div class="lead">Calibration of option pricing models to implied volatility surfaces.
+</div>
+    
+      <a class="github-button" href="https://github.com/rcalxrc08/FinancialCalibrator.jl" data-size="large" aria-label="View FinancialCalibrator.jl on GitHub">View on GitHub</a>
+    
+    
+      <a class="github-button" href="https://github.com/rcalxrc08/FinancialCalibrator.jl" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star FinancialCalibrator.jl on GitHub">Star</a>
+    
+  </div>
+</header>
+
+  <!-- Content appended here -->
+<div class="franklin-content"><section id="about" class="scrollspy">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-10 mx-auto">
+        <h2>About this Package</h2></p>
+<p><div class="lead">FinancialCalibrator.jl calibrates option pricing models to an implied volatility surface.</div> Models and pricers come from <a href="https://github.com/rcalxrc08/FinancialMonteCarlo.jl">FinancialMonteCarlo.jl</a> and <a href="https://github.com/rcalxrc08/FinancialFFT.jl">FinancialFFT.jl</a>, the minimization from <a href="https://github.com/JuliaNLSolvers/Optim.jl">Optim.jl</a>. It provides:</p>
+<ul>
+<li><p><strong>One entry point</strong>: <code>calibrate&#40;model, pricing_method, mkt&#41;</code>. The pricing method decides how every smile is priced, numerically or in closed form.</p>
+</li>
+<li><p><strong>Any model with a Fourier pricer</strong>: Black and Scholes, Merton, Kou, Variance Gamma, Normal Inverse Gaussian, Heston.</p>
+</li>
+<li><p><strong>Four numerical methods</strong>: <code>CarrMadanMethod</code>, <code>CarrMadanLewisMethod</code>, <code>LewisMethod</code>, <code>CosMethod</code>.</p>
+</li>
+<li><p><strong>A closed form</strong> for the shifted lognormal mixture, through <code>AnalyticMethod&#40;&#41;</code>.</p>
+</li>
+<li><p><strong>Float32 and GPU</strong>: the whole pipeline is generic in the floating point type, and strikes and volatilities can live on the GPU.</p>
+</li>
+</ul>
+<p>      </div>
+    </div>
+  </div>
+</section>
+<section id="getting_started" class="scrollspy section-bg-color">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-10 mx-auto">
+        <h2>Getting started</h2></p>
+<p>FinancialFFT is published in the <a href="https://github.com/rcalxrc08/LocalRegistry">LocalRegistry</a>, add it first, then add the package:</p>
+<pre><code class="julia hljs">pkg&gt; registry add https://github.com/rcalxrc08/LocalRegistry.git
+pkg&gt; add https://github.com/rcalxrc08/FinancialCalibrator.jl</code></pre>
+<p>and load it:</p>
+<pre><code class="julia hljs"><span class="hljs-keyword">using</span> FinancialCalibrator, FinancialMonteCarlo, FinancialFFT</code></pre>
+<p>      </div>
+    </div>
+  </div>
+</section>
+<section id="usage" class="scrollspy">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-10 mx-auto">
+        <h2>Example of Usage</h2></p>
+<p><strong>Market data</strong>:<br /><code>adapter</code> reads the quotes and returns the underlying &#40;spot and implied dividend curve&#41; next to the market data &#40;maturities, zero rates, strikes and volatilities&#41;. The sample data is the DAX surface of the 22nd of August 2016.</p>
+<pre><code class="julia hljs">id = CalibrationID(<span class="hljs-string">&quot;Dax&quot;</span>, <span class="hljs-string">&quot;22Aug2016&quot;</span>, <span class="hljs-string">&quot;EUR&quot;</span>)
+und, mkt = adapter(retriever(id, IOFileInputStrategy()))
+println(<span class="hljs-string">&quot;Spot: &quot;</span>, und.S0)
+println(<span class="hljs-string">&quot;Maturities: &quot;</span>, length(mkt.TimeToMaturity), <span class="hljs-string">&quot;, strikes: &quot;</span>, length(mkt.Strikes))</code></pre><pre><code class="plaintext hljs">Spot: 10514.46
+Maturities: 9, strikes: 12
+</code></pre>
+<pre><code class="plaintext hljs">Spot: 10514.46
+Maturities: 9, strikes: 12
+</code></pre>
+<p><strong>Numerical calibration</strong>:<br />Spot and dividends are those of the model&#39;s underlying, so the model is built on the underlying returned by <code>adapter</code>. The second argument selects the pricing method.</p>
+<pre><code class="julia hljs">model = NormalInverseGaussianProcess(<span class="hljs-number">0.2</span>, -<span class="hljs-number">0.03</span>, <span class="hljs-number">0.16</span>, und)
+res = calibrate(model, CarrMadanMethod(<span class="hljs-number">400.0</span>, <span class="hljs-number">14</span>), mkt)
+
+res.OptimalParam      <span class="hljs-comment"># calibrated parameters</span>
+res.OptimalValue      <span class="hljs-comment"># value of the loss at the optimum</span>
+res.ModelVolatility   <span class="hljs-comment"># model volatility surface, same shape as mkt.Volatility</span></code></pre>
+<p><strong>Closed form calibration</strong>:<br /></p>
+<pre><code class="julia hljs">model = ShiftedLogNormalMixture([<span class="hljs-number">0.2</span>, <span class="hljs-number">0.2</span>, <span class="hljs-number">0.2</span>, <span class="hljs-number">0.2</span>], [<span class="hljs-number">0.1</span>, <span class="hljs-number">0.1</span>, <span class="hljs-number">0.1</span>], -<span class="hljs-number">0.22</span>, und)
+res = calibrate(model, AnalyticMethod(), mkt)</code></pre>
+<p><strong>Optimizer settings</strong>:<br />Any Optim optimizer and <code>Optim.Options</code> can be given, nothing is printed unless <code>verbose &#61; true</code>.</p>
+<pre><code class="julia hljs"><span class="hljs-keyword">using</span> Optim
+calibrate(model, CosMethod(<span class="hljs-number">1024</span>), mkt, NelderMead(), Optim.Options(iterations = <span class="hljs-number">200</span>); verbose = <span class="hljs-literal">true</span>)</code></pre>
+<p>      </div>
+    </div>
+  </div>
+</section>
+<section id="methods" class="scrollspy section-bg-color">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-10 mx-auto">
+        <h2>Models and Methods</h2></p>
+<p>Every model can be priced with every numerical method, except where noted:</p>
+<table><tr><th align="left">Model</th><th align="center"><code>CarrMadanMethod</code></th><th align="center"><code>CarrMadanLewisMethod</code></th><th align="center"><code>LewisMethod</code></th><th align="center"><code>CosMethod</code></th><th align="center"><code>AnalyticMethod</code></th></tr><tr><td align="left"><code>BlackScholesProcess</code></td><td align="center">✓</td><td align="center">✓</td><td align="center">✓</td><td align="center">✓</td><td align="center"></td></tr><tr><td align="left"><code>MertonProcess</code></td><td align="center">✓</td><td align="center">✓</td><td align="center">✓</td><td align="center">✓</td><td align="center"></td></tr><tr><td align="left"><code>KouProcess</code></td><td align="center">✓</td><td align="center">✓</td><td align="center">✓</td><td align="center">✓</td><td align="center"></td></tr><tr><td align="left"><code>VarianceGammaProcess</code></td><td align="center">✓</td><td align="center">✓</td><td align="center">✓</td><td align="center">✓</td><td align="center"></td></tr><tr><td align="left"><code>NormalInverseGaussianProcess</code></td><td align="center">✓</td><td align="center">✓</td><td align="center">✓</td><td align="center">✓</td><td align="center"></td></tr><tr><td align="left"><code>HestonProcess</code></td><td align="center">✓</td><td align="center">✓</td><td align="center"></td><td align="center"></td><td align="center"></td></tr><tr><td align="left"><code>ShiftedLogNormalMixture</code></td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center">✓</td></tr></table>
+<p>Heston with <code>LewisMethod</code> and <code>CosMethod</code> returns negative prices on far out of the money strikes at the default parameters, so the loss falls back to its penalty. Adding a model and method pair only requires a <code>pricer</code> method from the FinancialMonteCarlo interface.       </div>
+    </div>
+  </div>
+</section>
+<section id="gpu" class="scrollspy">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-10 mx-auto">
+        <h2>Float32 and GPU</h2></p>
+<p>The floating point type is chosen when reading the data, and the model follows:</p>
+<pre><code class="julia hljs">und, mkt = adapter(retriever(id, IOFileInputStrategy()), <span class="hljs-built_in">Float32</span>)
+model = ShiftedLogNormalMixture(<span class="hljs-number">0.2f0</span> * ones(<span class="hljs-built_in">Float32</span>, <span class="hljs-number">4</span>), fill(<span class="hljs-number">0.1f0</span>, <span class="hljs-number">3</span>), -<span class="hljs-number">0.22f0</span>, und)
+calibrate(model, AnalyticMethod(), mkt)</code></pre>
+<p>With <a href="https://github.com/JuliaGPU/CUDA.jl">CUDA.jl</a> loaded, strikes and volatilities can be moved to the device, and the smiles are priced there &#40;<code>CarrMadanLewisMethod</code>, <code>LewisMethod</code>, <code>CosMethod</code> and <code>AnalyticMethod</code>&#41;:</p>
+<pre><code class="julia hljs"><span class="hljs-keyword">using</span> CUDA, Adapt
+calibrate(model, CosMethod(<span class="hljs-number">1024</span>), adapt(CuArray, mkt))</code></pre>
+<p><code>CarrMadanMethod</code> does not run on the GPU yet, and <code>CarrMadanLewisMethod</code> needs a constant dividend underlying there.       </div>
+    </div>
+  </div>
+</section>
+<footer class="py-5 bg-dark">
+  <div class="container">
+    <p class="m-0 text-center text-white">&copy; Nicola Scaramuzzino. Website powered by <a href="https://github.com/tlienart/Franklin.jl">Franklin.jl</a>, <a href="https://github.com/tlienart/PkgPage.jl">PkgPage.jl</a> and the <a href="https://julialang.org">Julia</a> programming language.</p>
+  </div>
+</footer>
+</div><!-- CONTENT ENDS HERE -->
+  
+  
+      
+
+
+  
+  <script src="/FinancialCalibrator.jl/libs/simple-scrollspy.min.js"></script>
+  <script>
+  window.onload = function () {
+    scrollSpy('#navbarResponsive', {
+      sectionClass: '.scrollspy',
+      menuActiveTarget: '.nav-link',
+      offset: 100
+    })
+  }
+  </script>
+  </body>
+</html>
