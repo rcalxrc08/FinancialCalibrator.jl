@@ -1,6 +1,7 @@
 # FinancialCalibrator.jl
 
 [![CI](https://github.com/rcalxrc08/FinancialCalibrator.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/rcalxrc08/FinancialCalibrator.jl/actions/workflows/CI.yml)
+[![codecov](https://codecov.io/gh/rcalxrc08/FinancialCalibrator.jl/graph/badge.svg)](https://codecov.io/gh/rcalxrc08/FinancialCalibrator.jl)
 
 Calibration of option pricing models (Carr-Madan Lévy processes, shifted lognormal mixture) to implied volatility surfaces.
 
