@@ -1,24 +1,29 @@
+# Everything the loss needs that depends neither on the parameters nor on the optimizer iteration: the smiles, the rates
+# and the dividends of each maturity, and the execution mode. Built once per calibration.
+function loss_cache(model::FinancialMonteCarlo.BaseProcess, mktData::MarketData)
+    # the call flags live where the strikes live
+    isCall = fill!(similar(mktData.Strikes, Bool), true)
+    maturities = mktData.TimeToMaturity
+    return (smiles = [FinancialMonteCarlo.EuropeanOptionSmile(t, mktData.Strikes, isCall) for t in maturities], zero_rates = [ZeroRate(r) for r in mktData.ZeroRates], dividends = [implied_dividend(model.underlying, t) for t in maturities], mode = pricing_mode(mktData.Strikes))
+end
 
-function loss(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}) where {T}
+function loss(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}, cache = loss_cache(model, mktData)) where {T}
     total = zero(T)
     try
         # set_parameters! returns a new model, it does not mutate `model`
         new_model = FinancialMonteCarlo.set_parameters!(model, params)
-        # the call flags live where the strikes live
-        isCall = fill!(similar(mktData.Strikes, Bool), true)
-        mode = pricing_mode(mktData.Strikes)
-        @simd for i = 1:length(mktData.TimeToMaturity)
-            smile = FinancialMonteCarlo.EuropeanOptionSmile(mktData.TimeToMaturity[i], mktData.Strikes, isCall)
-            OutputPriceVec = vec(pricer(new_model, ZeroRate(mktData.ZeroRates[i]), method, smile, mode))
-            if (minimum(OutputPriceVec) <= 0.0)
-                @show "negative price"
+        for i = 1:length(mktData.TimeToMaturity)
+            prices = vec(pricer(new_model, cache.zero_rates[i], method, cache.smiles[i], cache.mode))
+            if minimum(prices) <= 0
+                @debug "loss: negative price, penalised" params
                 return T(1000000)
             end
-            VolaTmp = blsimpv.(model.underlying.S0, mktData.Strikes, mktData.ZeroRates[i], mktData.TimeToMaturity[i], OutputPriceVec, implied_dividend(model.underlying, mktData.TimeToMaturity[i]))
-            total += T(norm(VolaTmp-mktData.Volatility[i, 1:end]))
+            vols = blsimpv.(model.underlying.S0, mktData.Strikes, mktData.ZeroRates[i], mktData.TimeToMaturity[i], prices, cache.dividends[i])
+            total += T(norm(vols .- @view(mktData.Volatility[i, :])))
         end
     catch e
-        @show e
+        # invalid parameters are penalised; enable with JULIA_DEBUG=FinancialCalibrator to see why
+        @debug "loss: exception, penalised" params exception = e
         total = T(10000)
     end
     return total

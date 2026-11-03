@@ -6,7 +6,7 @@ function retriever(calId::CalibrationID, ioInput::IOFileInputStrategy)::RawMarke
     refDate=calId.refDate
     path=DATA_DIR
     SpotRelPath=joinpath(path, "Spot"*underlying*refDate*".json")
-    RfRelPath=joinpath(path, "Rf"*currency*refDate*".json")
+    RfRelPath=joinpath(path, "Rf" * currency * refDate * ".json")
     ImplDivRelPath=joinpath(path, "ImplDiv"*underlying*refDate*".json")
     VolaRelPath = joinpath(path, "Volatility"*underlying*refDate*".json")
     TupleString=io_retriever(SpotRelPath, RfRelPath, ImplDivRelPath, VolaRelPath)
