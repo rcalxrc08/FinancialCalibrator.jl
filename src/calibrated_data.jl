@@ -1,12 +1,16 @@
 """
-    AnalyticMethod()
+    AnalyticMethod(; mode = SerialMode())
 
-Pricing method tag selecting the closed-form pricer of a model, through the `pricer` interface of FinancialMonteCarlo:
+Pricing method selecting the closed-form pricer of a model, through the `pricer` interface of FinancialMonteCarlo:
 `pricer(model, zero_rate, AnalyticMethod(), smile)`. Currently implemented for `ShiftedLogNormalMixture`. Numerical
 pricing methods (`CarrMadanMethod`, `CosMethod`, ...) come from FinancialFFT, so the kind of calibration is entirely
-determined by the pricing method.
+determined by the pricing method. Like every method of FinancialMonteCarlo 0.6 it carries its execution mode:
+`FinancialMonteCarlo.CudaMode()` prices the strikes of a smile on the GPU.
 """
-struct AnalyticMethod <: FinancialMonteCarlo.AbstractMethod end
+struct AnalyticMethod{modeType <: FinancialMonteCarlo.AbstractMode} <: FinancialMonteCarlo.AbstractMethod
+    mode::modeType
+end
+AnalyticMethod(; mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = AnalyticMethod(mode)
 
 struct CalibratedData{T <: AbstractFloat}
     OptimalParam::Vector{T}

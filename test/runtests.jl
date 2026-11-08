@@ -10,7 +10,7 @@ const FC = FinancialCalibrator
 # Prices of the call smile of `model` re-parametrized with `p`, through the `pricer` interface.
 function smile_prices(model, method, p, K, r, T)
     smile = FinancialMonteCarlo.EuropeanOptionSmile(T, K, fill!(similar(K, Bool), true))
-    return vec(pricer(FinancialMonteCarlo.set_parameters!(model, p), ZeroRate(r), method, smile, FC.pricing_mode(K)))
+    return vec(pricer(FinancialMonteCarlo.set_parameters!(model, p), ZeroRate(r), FC.calibration_method(method, K), smile))
 end
 
 @testset "FinancialCalibrator" begin
@@ -73,6 +73,33 @@ end
             @test res isa CalibratedData
             @test res.OptimalValue <= loss0
             @test size(res.ModelVolatility) == size(mkt.Volatility)
+        end
+
+        # Every AbstractMethod can calibrate (FinancialMonteCarlo 0.6): a Monte Carlo configuration, with the same seed at
+        # every evaluation of the loss. On the strikes near the money and the longer maturities: far out of the money a few
+        # thousand paths price zero, which the loss penalises.
+        @testset "Monte Carlo / Black Scholes" begin
+            m, k = 4:length(mkt.TimeToMaturity), 4:9
+            near = MarketData(mkt.TimeToMaturity[m], mkt.MaturityDates[m], mkt.ZeroRates[m], mkt.Strikes[k], mkt.Volatility[m, k])
+            model = BlackScholesProcess(0.25, und)
+            mc = MonteCarloConfiguration(2_000, 1; sampling = FinancialMonteCarlo.AntitheticMC())
+            loss0 = FC.loss(FinancialMonteCarlo.get_parameters(model), model, mc, near)
+            @test loss0 < 1e4
+            @test FC.loss(FinancialMonteCarlo.get_parameters(model), model, mc, near) == loss0
+            res = calibrate(model, mc, near, FC.Optim.NelderMead(), FC.Optim.Options(iterations = 10))
+            @test res.OptimalValue <= loss0
+        end
+
+        # The loss and the closed-form pricer are inferred: set_parameters! is not, hence the function barrier in loss.
+        @testset "Inferred" begin
+            model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
+            p0 = FinancialMonteCarlo.get_parameters(model)
+            @test (@inferred FC.loss(p0, model, CosMethod(256), mkt)) isa Float64
+            slnm = ShiftedLogNormalMixture([0.2, 0.25, 0.3], [0.2, 0.3], -0.1, und)
+            smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, mkt.Strikes, fill(true, length(mkt.Strikes)))
+            @test (@inferred pricer(slnm, ZeroRate(0.01), AnalyticMethod(), smile)) isa Vector{Float64}
+            @test (@inferred pricer(slnm, ZeroRate(0.01), AnalyticMethod(), FinancialMonteCarlo.EuropeanOption(1.0, 100.0))) isa Float64
+            @test (@inferred FC.loss(FinancialMonteCarlo.get_parameters(slnm), slnm, AnalyticMethod(), mkt)) isa Float64
         end
 
         @testset "Numerical methods agree" begin

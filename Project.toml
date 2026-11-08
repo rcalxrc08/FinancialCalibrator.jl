@@ -1,6 +1,6 @@
 name = "FinancialCalibrator"
 uuid = "60ce4190-d1b0-11e9-1cf6-9f8fd6ff6838"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Nicola Scaramuzzino <nicola.scaramuzzino@yandex.com>"]
 
 [deps]
@@ -30,8 +30,8 @@ Dates = "1"
 DelimitedFiles = "1"
 Dierckx = "0.5.4"
 FFTW = "1.10.0"
-FinancialFFT = "0.2.1"
-FinancialMonteCarlo = "0.5.2"
+FinancialFFT = "0.5"
+FinancialMonteCarlo = "0.6"
 FinancialToolbox = "0.8.0"
 JSON = "0.21, 1"
 LinearAlgebra = "1"

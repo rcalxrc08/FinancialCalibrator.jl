@@ -106,7 +106,7 @@ model = ShiftedLogNormalMixture(0.2f0 * ones(Float32, 4), fill(0.1f0, 3), -0.22f
 calibrate(model, AnalyticMethod(), mkt)
 ```
 
-With [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl) loaded, strikes and volatilities can be moved to the device, and the smiles are priced there (`CarrMadanLewisMethod`, `LewisMethod`, `CosMethod` and `AnalyticMethod`):
+With [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl) loaded, strikes and volatilities can be moved to the device, and the smiles are priced there with every method (the execution mode of the method, part of the method since FinancialMonteCarlo 0.6, is moved to `CudaMode`):
 ```julia
 using CUDA, Adapt
 calibrate(model, CosMethod(1024), adapt(CuArray, mkt))

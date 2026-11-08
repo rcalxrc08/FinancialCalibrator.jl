@@ -31,11 +31,14 @@ accepts any Optim optimizer and `Optim.Options`.
 
 ### GPU
 
-With CUDA.jl loaded, strikes and volatilities can live on the device; the smiles are then priced there
-(`CarrMadanLewisMethod`, `LewisMethod`, `CosMethod` and `AnalyticMethod`):
+With CUDA.jl loaded, strikes and volatilities can live on the device; the smiles are then priced there, with every
+FinancialFFT method and `AnalyticMethod` (the execution mode of the method is moved to `CudaMode`):
 
 ```julia
 using CUDA, Adapt
 calibrate(model, CosMethod(1024), adapt(CuArray, mkt))
 ```
+
+The execution mode is part of the method (FinancialMonteCarlo 0.6): `CosMethod(1024; mode = FinancialMonteCarlo.CudaMode())`
+prices on the GPU with the market data on the host too.
 

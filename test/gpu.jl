@@ -26,12 +26,14 @@ const FC = FinancialCalibrator
 
     nig = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
     p0 = FinancialMonteCarlo.get_parameters(nig)
-    @testset "smile_prices / $name" for (name, method) in ("CarrMadanLewis" => CarrMadanLewisMethod(400.0, 14), "Lewis" => LewisMethod(100.0, 4001), "Cos" => CosMethod(1024))
+    @testset "smile_prices / $name" for (name, method) in ("CarrMadan" => CarrMadanMethod(400.0, 14), "CarrMadanLewis" => CarrMadanLewisMethod(400.0, 14), "Lewis" => LewisMethod(100.0, 4001), "Cos" => CosMethod(1024))
         cpu = smile_prices(nig, method, p0, args(mkt)...)
         gpu = smile_prices(nig, method, p0, args(gmkt)...)
         @test gpu isa CuVector
         @test isapprox(Array(gpu), cpu; rtol = 1e-8)
         @test FC.loss(p0, nig, method, gmkt) ≈ FC.loss(p0, nig, method, mkt) rtol = 1e-6
+        # a method in CudaMode with the strikes on the host: they go to the device
+        @test isapprox(Array(smile_prices(nig, FinancialMonteCarlo.with_mode(method, FinancialMonteCarlo.CudaMode()), p0, args(mkt)...)), cpu; rtol = 1e-8)
     end
 
     @testset "smile_prices / closed form" begin
@@ -42,6 +44,10 @@ const FC = FinancialCalibrator
         @test gpu isa CuVector
         @test isapprox(Array(gpu), cpu; rtol = 1e-8)
         @test FC.loss(ps, slnm, AnalyticMethod(), gmkt) ≈ FC.loss(ps, slnm, AnalyticMethod(), mkt) rtol = 1e-6
+        # in CudaMode with the strikes on the host: they go to the device
+        on_device = smile_prices(slnm, AnalyticMethod(; mode = FinancialMonteCarlo.CudaMode()), ps, args(mkt)...)
+        @test on_device isa CuVector
+        @test isapprox(Array(on_device), cpu; rtol = 1e-8)
     end
 
     @testset "calibrate on the GPU" begin

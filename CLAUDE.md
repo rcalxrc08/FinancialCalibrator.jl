@@ -31,13 +31,15 @@ calibrate(model, pricing_method, mkt, opt_method = NelderMead(), opt_options = O
 
 - `model` is a FinancialMonteCarlo process built on the `Underlying` that `adapter` returns. **Spot and dividends live
   in the model's underlying, never in `MarketData` and never as function arguments.**
-- `pricing_method` decides how each smile is priced, through `pricer(model, ZeroRate(r), method, smile, mode)`: a
+- `pricing_method` decides how each smile is priced, through `pricer(model, ZeroRate(r), method, smile)` (four arguments: since FinancialMonteCarlo 0.6 the execution mode is part of the method, `FinancialMonteCarlo.with_mode(method, mode)`): a
   FinancialFFT method (`CarrMadanMethod`, `CarrMadanLewisMethod`, `LewisMethod`, `CosMethod`) is numerical,
-  `AnalyticMethod()` is closed form (only `ShiftedLogNormalMixture`). There are no calibrator structs: add a model/method
+  `AnalyticMethod(; mode)` is closed form (only `ShiftedLogNormalMixture`; it has a `mode` field like every method). There are no calibrator structs: add a model/method
   pair by adding a `pricer` method.
 - `MarketData{T}` holds maturities, zero rates, strikes and volatilities only. `Strikes` and `Volatility` can be GPU
-  arrays (`Adapt.adapt(CuArray, mkt)`); `src/pricer.jl` has the `pricing_mode` hook the CUDA extension
-  (`ext/FinancialCalibratorCUDAExt.jl`) overrides to select `CudaMode`.
+  arrays (`Adapt.adapt(CuArray, mkt)`); `src/pricer.jl` has the `calibration_method(method, strikes)` hook (the method as
+  given), which the CUDA extension (`ext/FinancialCalibratorCUDAExt.jl`) overrides for a `CuArray` with
+  `with_mode(method, CudaMode())`; `loss` and `calibrate` apply it. A method already in `CudaMode` moves host strikes to the
+  device itself (`FinancialMonteCarlo.to_mode` in the pricers).
 - Floating point type is generic (`Float32` works): `MarketData`, `CalibratedData` are parametric and the signatures take
   `Real` / `AbstractVector{<:Real}`. Do not reintroduce `::Float64` annotations or Float64 literals in the pricing path.
 
@@ -45,6 +47,14 @@ Files in `src/` (included in this order by `FinancialCalibrator.jl`): `structs.j
 `implied_dividend`), `retriever_calibration.jl` (reads `data/json/`), `adapter_calibration.jl` (parsing, returns
 `(underlying, mkt)`), `calibrated_data.jl` (`AnalyticMethod`, `CalibratedData`), `shifted_lognormal_mixture_pricer.jl`
 (closed form and its `pricer` method), `pricer.jl`, `loss.jl`, `calibrate.jl`.
+
+`loss_cache(model, method, mktData)` builds once per calibration the smiles, rates and dividends of each maturity and
+the method moved to the mode of the strikes (`calibration_method`), so a `MonteCarloConfiguration` (whose `with_mode`
+rebuilds its random state) or a Vibrato method can be the `pricing_method` too. `loss` is inferred, although
+`FinancialMonteCarlo.set_parameters!` is not (it rebuilds the model field by field): the loop over the maturities is a
+function of its own, `maturity_losses`, behind that call, and `loss` is annotated `::T`. The closed-form `pricer` writes
+into an array of the price type (`slnm_prices`), since the tuples of the parameters have a length known only at run time.
+`test/runtests.jl` checks both with `@inferred`.
 
 `loss` prices every maturity, inverts the prices to implied vols with `blsimpv` (using the model's spot and the
 flat-equivalent dividend `implied_dividend(model.underlying, T)`), and sums the 2-norms against the market vols. It
@@ -54,8 +64,7 @@ returns a large penalty on invalid parameters, so exceptions thrown while optimi
 
 `test/runtests.jl` (data, closed form, calibration, Float32), `test/models_methods.jl` (models × methods grid and
 calibration of synthetic surfaces), `test/gpu.jl` (run only if `CUDA.functional()`). The tests define their own
-`smile_prices` helper on top of `pricer`. `CarrMadanMethod` does not run on the GPU, and `CarrMadanLewisMethod` only
-with a constant-dividend underlying (FinancialFFT limitations).
+`smile_prices` helper on top of `pricer`. Every FinancialFFT method runs on the GPU (FinancialFFT ≥ 0.5).
 
 ## Gotchas
 
