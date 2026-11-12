@@ -56,24 +56,16 @@ function general_adapter_strategy(SpotString::String, RfString::String, IdString
     IdAug=IdSplineInterpolator(yfrVolaArray)
 
     ##### Resize All the Inputs
-    #Dates
-    TimeToMaturity=[yfrVolaArray[i] for i = 1:length(yfrVolaArray) if (yfrVolaArray[i]>YfrTreshold[1])&&(yfrVolaArray[i]<YfrTreshold[2])]
-    maturityDates=[maturityDates[i] for i = 1:length(yfrVolaArray) if (yfrVolaArray[i]>YfrTreshold[1])&&(yfrVolaArray[i]<YfrTreshold[2])]
-
-    #Moneyness
-    Moneyness=[moneyness[i] for i = 1:length(moneyness) if (moneyness[i]>MoneynessTreshold[1])&&(moneyness[i]<MoneynessTreshold[2])]
-
-    #Zero Rate
-    ZeroRates=[ZeroRateAug[i] for i = 1:length(ZeroRateAug) if (yfrVolaArray[i]>YfrTreshold[1])&&(yfrVolaArray[i]<YfrTreshold[2])]
-    #Implied Dividend
-    ImpliedDividend=[IdAug[i] for i = 1:length(IdAug) if (yfrVolaArray[i]>YfrTreshold[1])&&(yfrVolaArray[i]<YfrTreshold[2])]
-
-    #Volatility Matrix
-    Volatility=Matrix{Float64}(undef, length(TimeToMaturity), length(Moneyness))
-    for i = 1:length(TimeToMaturity)
-        volaTmp=[VolaMatrix[i, j] for j = 1:length(moneyness) if (moneyness[j]>MoneynessTreshold[1])&&(moneyness[j]<MoneynessTreshold[2])]
-        Volatility[i, 1:end]=volaTmp
-    end
+    # The maturities and the moneyness points within the thresholds, and the same rows and columns of the volatilities:
+    # the rows of VolaMatrix are all the maturities, so they are selected with the mask of the maturities (#2).
+    rows = findall(t -> YfrTreshold[1] < t < YfrTreshold[2], yfrVolaArray)
+    columns = findall(m -> MoneynessTreshold[1] < m < MoneynessTreshold[2], moneyness)
+    TimeToMaturity = yfrVolaArray[rows]
+    maturityDates = maturityDates[rows]
+    Moneyness = moneyness[columns]
+    ZeroRates = ZeroRateAug[rows]
+    ImpliedDividend = IdAug[rows]
+    Volatility = Matrix{Float64}(VolaMatrix[rows, columns])
     Strikes=Moneyness .* S0
 
     return (S0, TimeToMaturity, maturityDates, ZeroRates, ImpliedDividend, Strikes, Volatility)

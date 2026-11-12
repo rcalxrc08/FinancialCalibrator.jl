@@ -3,8 +3,6 @@ abstract type InputType end
 
 struct IOFileInputStrategy <: InputType end
 
-struct WebFileInput <: InputType end
-
 struct CalibrationID
     underlying::String
     refDate::String
@@ -27,19 +25,6 @@ function io_retriever(SpotRelPath::String, RfRelPath::String, IdRelPath::String,
     RfString=read(RfRelPath, String)
     ImplDivString=read(IdRelPath, String)
     VolatString=read(VolaRelPath, String)
-
-    return (SpotString, RfString, ImplDivString, VolatString)
-end
-
-function web_retriever(SpotRelPath::String, RfRelPath::String, IdRelPath::String, VolaRelPath::String)
-    ####Input Retriever
-    SpotString=readdlm(download(SpotRelPath))[1]
-    if (SpotString=="[]")
-        error("Data Not Available")
-    end
-    RfString=readdlm(download(RfRelPath))[1]
-    ImplDivString=readdlm(download(IdRelPath))[1]
-    VolatString=readdlm(download(VolaRelPath))[1]
 
     return (SpotString, RfString, ImplDivString, VolatString)
 end

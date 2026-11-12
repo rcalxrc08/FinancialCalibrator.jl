@@ -110,9 +110,9 @@ end
             method = CosMethod(1024)
             nT, nK = size(mkt.Volatility)
             cache = FC.loss_cache(model, method, mkt)
-            # the quotes of tiny vega are left out (5 on this surface, at the short maturities and high strikes), and none
+            # the quotes of tiny vega are left out (9 on this surface, at the short maturities and high strikes), and none
             # with min_vega = 0
-            @test sum(length, cache.quoted) == nT * nK - 5
+            @test sum(length, cache.quoted) == nT * nK - 9
             @test sum(length, FC.loss_cache(model, method, mkt; min_vega = 0).quoted) == nT * nK
             # out of the money: puts below the forward, calls above
             @test all(!first(c) && last(c) for c in cache.is_call)
@@ -126,7 +126,7 @@ end
             J = ForwardDiff.jacobian(v -> vol_errors([0.2], model, method, mkt, cache; vols = reshape(v, nT, nK)), vec(mkt.Volatility))
             @test count(==(-1), J) == length(e) && count(iszero, J) == length(J) - length(e)
             @test all(==(-1), sum(J; dims = 2))
-            @test count(iszero, sum(J; dims = 1)) == 5
+            @test count(iszero, sum(J; dims = 1)) == 9
             # a price that is not positive is a DomainError, which the loss penalises
             @test_throws DomainError vol_errors([0.2], model, MonteCarloConfiguration(10, 1), mkt)
             @test FC.loss([0.2], model, MonteCarloConfiguration(10, 1), mkt) == 10000
@@ -142,7 +142,7 @@ end
             # without it, NelderMead stops at its own tolerances
             @test calibrate(model, method, mkt; polish = false).OptimalValue >= res.OptimalValue
             # no model volatility at the quotes left out of the loss
-            @test count(isnan, res.ModelVolatility) == 5
+            @test count(isnan, res.ModelVolatility) == 9
         end
 
         # The calibrated parameters as a function of the quotes, through the implicit function theorem. On Black-Scholes
@@ -209,6 +209,13 @@ end
 
 include("models_methods.jl")
 include("financialfft_example.jl")
+include("cboe.jl")
+# market data that is not in the repository: run where it is on disk
+if isfile(joinpath(@__DIR__, "..", "data", "json", "real", "CboeOptions_SPX12Nov2026.json"))
+    include(joinpath("local", "cboe_spx.jl"))
+else
+    @info "No SPX option chain in data/json/real: skipping the local tests"
+end
 include("aqua.jl")
 
 using CUDA

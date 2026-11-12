@@ -20,7 +20,11 @@ FinancialCalibrator.loss
 
 ```@docs
 MarketData
+retriever
 adapter
+CboeInputStrategy
+CboeWebInputStrategy
+cboe_snapshot
 ```
 
 ## Pricing

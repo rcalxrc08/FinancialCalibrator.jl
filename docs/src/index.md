@@ -29,8 +29,9 @@ to every quote is one gradient.</p>
   optimizer, then polishes the solution with Levenberg–Marquardt to where the gradient of the loss vanishes, see
   [Calibration](calibration.md).
 - [`calibrated_parameters`](@ref): the calibration as a differentiable function of the quoted volatilities, with
-  ForwardDiff and ChainRules (Zygote, Mooncake) rules from the implicit function theorem, see
-  [Sensitivity of the calibrated parameters to the quotes](@ref).
+  derivatives from the implicit function theorem for ForwardDiff, Zygote (ChainRules) and Mooncake (a rule of its own),
+  on the CPU and on the GPU, with the inner backends mixable, see [Sensitivity of the calibrated parameters to the
+  quotes](@ref) and [Methods, backends and arrays](backends.md).
 - Sensitivities of exotic contracts and positions to every quote of the surface, through the calibration and a Monte
   Carlo pricer, see [Sensitivities of exotics to the surface](exotics.md).
 - Any model of FinancialMonteCarlo.jl and any pricing method of its `pricer` interface: FinancialFFT.jl's Fourier
@@ -39,6 +40,7 @@ to every quote is one gradient.</p>
   [Automatic differentiation](@ref).
 - [`Parametrization`](@ref): unconstrained variables and fixed parameters.
 - Float32 and GPU execution through CUDA.jl, derivatives included, see [Arrays](@ref).
+- Market data: a DAX surface, and the free delayed quotes of the CBOE for US underlyings, see [Market data](#Market-data).
 
 ## Installation
 
@@ -55,8 +57,11 @@ FinancialFFT.jl is registered in a registry of its own, to be added once; the pa
 The package bundles an implied volatility surface of the DAX (22 August 2016). [`adapter`](@ref) parses it into the
 `Underlying` of the models (spot and implied dividends) and the [`MarketData`](@ref) of the calibration:
 
+The derivatives of a calibration (the Levenberg–Marquardt polish, the sensitivities) use ForwardDiff when it is loaded,
+and finite differences otherwise; no automatic differentiation package is a dependency of FinancialCalibrator.
+
 ```@example quickstart
-using FinancialCalibrator, FinancialMonteCarlo, FinancialFFT
+using FinancialCalibrator, FinancialMonteCarlo, FinancialFFT, ForwardDiff
 
 und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
 model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
@@ -67,10 +72,24 @@ res = calibrate(model, LewisMethod(100.0, 4001), mkt)
 The sensitivity of the calibrated parameters to one quoted volatility:
 
 ```@example quickstart
-using ForwardDiff
 i = CartesianIndex(4, 5)
 bump(h) = (V = mkt.Volatility .+ zero(h); V[i] += h; V)
 ForwardDiff.derivative(h -> calibrated_parameters(model, LewisMethod(100.0, 4001), mkt, bump(h)), 0.0)
+```
+
+## Market data
+
+[`retriever`](@ref) reads the raw data of a calibration and [`adapter`](@ref) turns it into the `Underlying` and the
+[`MarketData`](@ref). Besides the bundled DAX surface, the free delayed quotes of the CBOE give the implied volatility
+surface of a US underlying: [`CboeInputStrategy`](@ref) reads a saved option chain, implies the forward and the dividends from put–call parity, and resamples the out of the money
+volatilities on a moneyness grid.
+
+[`CboeWebInputStrategy`](@ref) downloads the current chain instead, and can save it for later:
+
+```julia
+id = CalibrationID("SPX", Dates.format(today(), "dduyyyy"), "USD")
+und, mkt = adapter(retriever(id, CboeWebInputStrategy(dir = "market_data")))   # downloaded, and saved in market_data/
+und, mkt = adapter(retriever(id, CboeInputStrategy(dir = "market_data")))      # read again from the saved chain
 ```
 
 ## Relation to the other packages

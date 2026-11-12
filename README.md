@@ -33,6 +33,17 @@ parametrization, autodiff, polish, polish_backend, min_vega, verbose)` accepts a
 and polishes the result with Levenberg–Marquardt. The loss is half the sum of the squared implied volatility errors of
 the out of the money quotes whose vega is at least `min_vega * S0`.
 
+## Market data from the CBOE
+
+```julia
+id = CalibrationID("SPX", Dates.format(today(), "dduyyyy"), "USD")
+und, mkt = adapter(retriever(id, CboeWebInputStrategy(rate = 0.04, dir = "market_data")))  # downloaded (and saved)
+und, mkt = adapter(retriever(id, CboeInputStrategy(rate = 0.04, dir = "market_data")))     # the saved chain, offline
+```
+
+The forward and the dividends of every expiry are implied by put–call parity, and the out of the money implied
+volatilities are resampled on a moneyness grid.
+
 ## Sensitivities to the quotes
 
 ```julia

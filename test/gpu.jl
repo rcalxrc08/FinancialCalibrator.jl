@@ -7,6 +7,9 @@ using FinancialFFT
 using Optim
 using ForwardDiff
 using Zygote
+using Mooncake
+using ADTypes: AutoMooncake
+import DifferentiationInterface as DI
 
 const FC = FinancialCalibrator
 
@@ -78,5 +81,8 @@ const FC = FinancialCalibrator
         @test g isa CuMatrix{Float64}
         @test Array(g) ≈ Zygote.gradient(V -> sum(calibrated_parameters(bs, method, mkt, V)), mkt.Volatility)[1] rtol = 1e-10
         @test Array(g)[i] ≈ host[1] rtol = 1e-10
+        # Mooncake from outside: the setup of the implicit function (copies from the device) has a zero derivative
+        gm = DI.gradient(V -> sum(calibrated_parameters(bs, method, gmkt, V)), AutoMooncake(; config = nothing), gmkt.Volatility)
+        @test Array(gm) ≈ Array(g) rtol = 1e-10
     end
 end

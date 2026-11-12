@@ -8,6 +8,9 @@ using Dates
 using ForwardDiff
 using LinearAlgebra
 using Zygote
+using Mooncake
+using ADTypes: AutoForwardDiff, AutoMooncake
+import DifferentiationInterface as DI
 
 const FC = FinancialCalibrator
 
@@ -107,6 +110,10 @@ end
             @test vec(Zygote.gradient(v -> dot(w, calibrated_parameters(start, method, smkt, v)), smkt.Volatility)[1]) ≈ transpose(J) * w rtol = 1e-10
             # a lazy cotangent (sum): ImplicitDifferentiation must not insist on the type it prepared the pullback with
             @test vec(Zygote.gradient(v -> sum(calibrated_parameters(start, method, smkt, v)), smkt.Volatility)[1]) ≈ vec(sum(J; dims = 1)) rtol = 1e-10
+            # Mooncake from outside (the rule of the extension), and Mooncake for the quotes inside the implicit function
+            mc = AutoMooncake(; config = nothing)
+            @test vec(DI.gradient(v -> dot(w, calibrated_parameters(start, method, smkt, v)), mc, smkt.Volatility)) ≈ transpose(J) * w rtol = 1e-10
+            @test vec(DI.gradient(v -> dot(w, calibrated_parameters(start, method, smkt, v; implicit_backends = (x = mc, y = AutoForwardDiff()))), mc, smkt.Volatility)) ≈ transpose(J) * w rtol = 1e-10
             i = LinearIndices(sz)[2, 3]
             recalibrate(h) = calibrated_parameters(start, method, smkt, reshape(vec(smkt.Volatility) .+ h .* (1:prod(sz) .== i), sz))
             h = 1e-4

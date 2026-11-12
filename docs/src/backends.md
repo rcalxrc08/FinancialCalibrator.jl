@@ -46,8 +46,44 @@ ForwardDiff.jacobian(f, mkt.Volatility)                    # ∂p*/∂v, forward
 Zygote.gradient(v -> w' * f(v), mkt.Volatility)            # wᵀ ∂p*/∂v, reverse mode (ChainRules)
 ```
 
-Mooncake takes the ChainRules rule through `Mooncake.@from_chainrules`. The test suite checks the Zygote gradient
-against the ForwardDiff Jacobian (to 1e-10), also with a lazy cotangent (`sum`), and on the GPU.
+Mooncake has a rule of its own, in the package extension loaded with Mooncake (ImplicitDifferentiation's ChainRules
+rule needs a `RuleConfig`, which `Mooncake.@from_rrule` does not pass):
+
+```julia
+using Mooncake, ADTypes
+import DifferentiationInterface as DI
+DI.gradient(v -> w' * f(v), AutoMooncake(; config = nothing), mkt.Volatility)
+```
+
+### Support
+
+Every derivative of the calibration runs through the implicit function theorem, so the outer backend never traces the
+optimizer: it only meets the rule of the implicit function, and the inner backends meet the loss. The backends can be
+mixed freely, forward over reverse or reverse over forward. The table shows the gradient of ``w^	op p^*(v)`` for
+Variance Gamma with `LewisMethod(100.0, 4001)` on 15 quotes, against the ForwardDiff gradient on the host:
+
+| Outer | Inner `x` / `y` | Host: first call | Host: next calls | Device: first call | Device: next calls | Error |
+|:--|:--|--:|--:|--:|--:|:--|
+| ForwardDiff | ForwardDiff / ForwardDiff | 1.1 s | 0.6 s | 129 s¹ | 0.6 s¹ | 0 (host), 1e-9 (device) |
+| Zygote | ForwardDiff / ForwardDiff | 16 s | 0.2 s | 32 s | 0.7 s | 5e-16, 2e-9 |
+| Zygote | Mooncake / ForwardDiff | 143 s | 2.1 s | ✗² | | 4e-16 |
+| Mooncake | ForwardDiff / ForwardDiff | 43 s | 1.1 s | 32 s | 2.5 s | 5e-16, 2e-9 |
+| Mooncake | Mooncake / ForwardDiff | 5.5 s | 1.5 s | ✗² | | 4e-16 |
+| Enzyme, reverse | ForwardDiff / ForwardDiff | ✗³ | | | | |
+| Enzyme, forward | ForwardDiff / ForwardDiff | ✗⁴ | | | | |
+
+¹ One direction: ForwardDiff cannot seed a `CuArray`, so on the device it gives one derivative at a time
+(`ForwardDiff.derivative` along a bump of one quote).
+² Mooncake differentiating the inner ForwardDiff gradient of the conditions meets a broadcast of dual numbers over a
+`CuArray`, which it does not support.
+³ An internal assertion of Enzyme (a pointer address space mismatch in the tape).
+⁴ ImplicitDifferentiation's Enzyme rule has no `forward` method for the configuration that DifferentiationInterface
+passes, batched or not.
+
+The first call includes the compilation, which dominates: once compiled, each gradient is a calibration (the solve)
+and a small linear system. The test suite checks ForwardDiff, Zygote and Mooncake against the formula
+``\partial p^*/\partial v = -H^{-1} \partial_v 
+abla_p L``, and Zygote and Mooncake on the GPU.
 
 ### Inside
 
@@ -71,8 +107,7 @@ using ADTypes, Mooncake
 calibrated_parameters(model, method, mkt, v; implicit_backends = (x = AutoMooncake(; config = nothing), y = AutoForwardDiff()))
 ```
 
-On a surface of 15 quotes, a Zygote gradient takes 22 s with the defaults and 160 s with Mooncake for `x` (most of it
-compilation), with the same result to 4e-16. Zygote for `x` does not work: it cannot differentiate the inner ForwardDiff
+The table above times these combinations. Zygote for `x` does not work: it cannot differentiate the inner ForwardDiff
 gradient of the conditions.
 
 ## Arrays

@@ -1,5 +1,5 @@
 """
-    calibrate(model, pricing_method, mktData::MarketData, opt_method = NelderMead(), opt_options = Optim.Options(); parametrization = Parametrization(), autodiff = AutoForwardDiff(), polish = true, polish_backend = AutoForwardDiff(), min_vega = 1e-3, verbose = false)
+    calibrate(model, pricing_method, mktData::MarketData, opt_method = NelderMead(), opt_options = Optim.Options(); parametrization = Parametrization(), autodiff, polish = true, polish_backend, min_vega = 1e-3, verbose = false)
 
 Calibrate the parameters of `model` to the implied volatility surface in `mktData`. Each smile is priced with
 `pricing_method`, any `FinancialMonteCarlo.AbstractMethod`: a FinancialFFT method such as `CarrMadanMethod`,
@@ -39,7 +39,7 @@ function calibrate_cached(model::FinancialMonteCarlo.BaseProcess, pricing_method
 end
 
 # The minimizer, in the variables of the parametrization: the optimizer, then the Levenberg–Marquardt polish.
-function optimal_variables(model, pricing_method, mktData::MarketData, cache, opt_method::Optim.AbstractOptimizer, opt_options::Optim.Options, parametrization::Parametrization; autodiff::ADTypes.AbstractADType = ADTypes.AutoForwardDiff(), polish::Bool = true, polish_backend::ADTypes.AbstractADType = ADTypes.AutoForwardDiff(), verbose::Bool = false)
+function optimal_variables(model, pricing_method, mktData::MarketData, cache, opt_method::Optim.AbstractOptimizer, opt_options::Optim.Options, parametrization::Parametrization; autodiff::ADTypes.AbstractADType = default_backend(), polish::Bool = true, polish_backend::ADTypes.AbstractADType = default_backend(), verbose::Bool = false)
     to_params = parametrization.to_params
     loss_function(x::AbstractVector{<:Real}) = loss(to_params(x), model, pricing_method, mktData, cache)
     result = optimize(loss_function, parametrization.from_params(FinancialMonteCarlo.get_parameters(model)), opt_method, opt_options; autodiff = autodiff)
@@ -68,7 +68,7 @@ end
 # point) and differentiates it, which takes from tens to hundreds of milliseconds, so the choice is the one that does not
 # degrade with the number of quotes.
 # Exceptions at `x` itself, where the optimizer stopped, propagate: they are not a matter of the step.
-function levenberg_marquardt(errors, x::AbstractVector{T}; backend::ADTypes.AbstractADType = ADTypes.AutoForwardDiff(), iterations::Integer = 100, μ::Real = 1e-2, xtol::Real = 1e-12) where {T <: Real}
+function levenberg_marquardt(errors, x::AbstractVector{T}; backend::ADTypes.AbstractADType = default_backend(), iterations::Integer = 100, μ::Real = 1e-2, xtol::Real = 1e-12) where {T <: Real}
     e = errors(x)
     for _ = 1:iterations
         J = DI.jacobian(errors, backend, x)
