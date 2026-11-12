@@ -64,11 +64,14 @@ git-tree-sha1 = "eec8a0ad4e4b673afba213931504c360fffb8f97"
 registries = "General"
 uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 version = "4.8.0"
-weakdeps = ["SparseArrays", "StaticArrays"]
 
     [deps.Adapt.extensions]
     AdaptSparseArraysExt = "SparseArrays"
     AdaptStaticArraysExt = "StaticArrays"
+
+    [deps.Adapt.weakdeps]
+    SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [[deps.AliasTables]]
 deps = ["PtrArrays", "Random"]
@@ -124,13 +127,6 @@ version = "7.30.2"
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 version = "1.11.0"
-
-[[deps.AxisAlgorithms]]
-deps = ["LinearAlgebra", "Random", "SparseArrays", "WoodburyMatrices"]
-git-tree-sha1 = "01b8ccb13d68535d73d2b0c23e39bd23155fb712"
-registries = "General"
-uuid = "13072b0f-2c55-5437-9ae7-d433b7a33950"
-version = "1.1.0"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -243,13 +239,6 @@ registries = "General"
 uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 version = "1.9.1"
 
-[[deps.Dictionaries]]
-deps = ["Indexing", "Random", "Serialization"]
-git-tree-sha1 = "a55766a9c8f66cf19ffcdbdb1444e249bb4ace33"
-registries = "General"
-uuid = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
-version = "0.4.6"
-
 [[deps.Dierckx]]
 deps = ["Dierckx_jll"]
 git-tree-sha1 = "7da4b14cc4c3443a1afc64abee17f4fcb45ad837"
@@ -317,11 +306,6 @@ version = "0.7.22"
     Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
     Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
     Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
-
-[[deps.Distributed]]
-deps = ["Random", "Serialization", "Sockets"]
-uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
-version = "1.11.0"
 
 [[deps.Distributions]]
 deps = ["AliasTables", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "Roots", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns"]
@@ -403,13 +387,18 @@ git-tree-sha1 = "831f86fde78ab7f6470d6ba4d1161a11fb6b4ec0"
 registries = "General"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
 version = "1.18.2"
-weakdeps = ["PDMats", "SparseArrays", "StaticArrays", "Statistics"]
 
     [deps.FillArrays.extensions]
     FillArraysPDMatsExt = "PDMats"
     FillArraysSparseArraysExt = "SparseArrays"
     FillArraysStaticArraysExt = "StaticArrays"
     FillArraysStatisticsExt = "Statistics"
+
+    [deps.FillArrays.weakdeps]
+    PDMats = "90014a1f-27ba-587c-ab20-58faa44d9150"
+    SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+    Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [[deps.FinancialCalibrator]]
 deps = ["Adapt", "Dates", "DelimitedFiles", "Dierckx", "FFTW", "FinancialFFT", "FinancialMonteCarlo", "FinancialToolbox", "JSON", "LinearAlgebra", "Optim", "Random"]
@@ -425,14 +414,15 @@ version = "0.2.0"
 
 [[deps.FinancialFFT]]
 deps = ["Adapt", "ChainRulesCore", "FFTA", "FFTW", "FinancialMonteCarlo", "IrrationalConstants", "MuladdMacro", "PatternVectors"]
-git-tree-sha1 = "05ab00c588196909de6557f1cfe148d75be3b0c5"
+git-tree-sha1 = "bad18b5b1369d9649c5e8217cd55966af3c2bea6"
 registries = "localregistry"
 uuid = "ccc4acef-1676-4a84-946d-4093fe376f06"
-version = "0.5.0"
+version = "0.6.0"
 
     [deps.FinancialFFT.extensions]
     FinancialFFTCUDAExt = "CUDA"
     FinancialFFTDualNumbersExt = "DualNumbers"
+    FinancialFFTEnzymeCoreExt = "EnzymeCore"
     FinancialFFTForwardDiffExt = "ForwardDiff"
     FinancialFFTHyperDualNumbersExt = "HyperDualNumbers"
     FinancialFFTMooncakeExt = "Mooncake"
@@ -442,6 +432,7 @@ version = "0.5.0"
     [deps.FinancialFFT.weakdeps]
     CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
     DualNumbers = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
+    EnzymeCore = "f151be2c-9106-41f4-ab19-57ee4f262869"
     ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
     HyperDualNumbers = "50ceba7f-c3ee-5a84-a6e8-3ad40456ec97"
     Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
@@ -449,17 +440,18 @@ version = "0.5.0"
     TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 
 [[deps.FinancialMonteCarlo]]
-deps = ["Accessors", "Adapt", "ChainRulesCore", "Dictionaries", "Distributions", "Interpolations", "IterTools", "LinearAlgebra", "Random", "Sobol", "Statistics", "StatsFuns"]
-git-tree-sha1 = "be9347c29bb394f0e1b98a0da33b92172122520f"
+deps = ["Accessors", "Adapt", "ChainRulesCore", "Distributions", "LinearAlgebra", "OrderedCollections", "Random", "Sobol", "Statistics", "StatsFuns"]
+git-tree-sha1 = "488c54634c83dc05288dddcd4e00646b210776aa"
 registries = "General"
 uuid = "078f23cc-2637-5a1d-aba6-8a9ba9a6ff83"
-version = "0.6.0"
+version = "0.7.0"
 
     [deps.FinancialMonteCarlo.extensions]
     FinancialMonteCarloCUDAExt = "CUDA"
     FinancialMonteCarloDifferentialEquationsExt = "DifferentialEquations"
     FinancialMonteCarloDistributedExt = "Distributed"
     FinancialMonteCarloDualNumbersExt = "DualNumbers"
+    FinancialMonteCarloEnzymeCoreExt = "EnzymeCore"
     FinancialMonteCarloMooncakeExt = "Mooncake"
     FinancialMonteCarloTaylorSeriesExt = "TaylorSeries"
     FinancialMonteCarloVectorizedRNGExt = "VectorizedRNG"
@@ -469,6 +461,7 @@ version = "0.6.0"
     DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
     Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
     DualNumbers = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
+    EnzymeCore = "f151be2c-9106-41f4-ab19-57ee4f262869"
     Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
     TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
     VectorizedRNG = "33b4df10-0173-11e9-2a0c-851a7edac40e"
@@ -549,10 +542,10 @@ version = "1.11.0"
 
 [[deps.Gamma]]
 deps = ["LogExpFunctions"]
-git-tree-sha1 = "becc397f7cfb06e343496ae6ffb04818a851da51"
+git-tree-sha1 = "462ab5e6578928370f632705e96af82f6c1c09a1"
 registries = "General"
 uuid = "a0844989-3bd2-4988-8bea-c9407ab0941b"
-version = "1.2.0"
+version = "1.2.1"
 
 [[deps.HTTP]]
 deps = ["Base64", "CodecZlib", "ConcurrentUtilities", "Dates", "ExceptionUnwrapping", "Logging", "LoggingExtras", "MbedTLS", "NetworkOptions", "OpenSSL", "PrecompileTools", "Random", "SimpleBufferStream", "Sockets", "URIs", "UUIDs"]
@@ -575,12 +568,6 @@ registries = "General"
 uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
 version = "1.0.0"
 
-[[deps.Indexing]]
-git-tree-sha1 = "ce1566720fd6b19ff3411404d4b977acd4814f9f"
-registries = "General"
-uuid = "313cdc1a-70c2-5d6a-ae34-0150d3930a38"
-version = "1.1.1"
-
 [[deps.IntegerMathUtils]]
 git-tree-sha1 = "c72458f1962faeb003bf23cbdb75164fe6280906"
 registries = "General"
@@ -599,21 +586,6 @@ deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 version = "1.11.0"
 
-[[deps.Interpolations]]
-deps = ["Adapt", "AxisAlgorithms", "ChainRulesCore", "LinearAlgebra", "OffsetArrays", "Random", "Ratios", "SharedArrays", "SparseArrays", "StaticArrays", "WoodburyMatrices"]
-git-tree-sha1 = "48922d06068130f87e43edef52382e6a94305ae6"
-registries = "General"
-uuid = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
-version = "0.16.3"
-
-    [deps.Interpolations.extensions]
-    InterpolationsForwardDiffExt = "ForwardDiff"
-    InterpolationsUnitfulExt = "Unitful"
-
-    [deps.Interpolations.weakdeps]
-    ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-    Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
-
 [[deps.InverseFunctions]]
 git-tree-sha1 = "5cc6ad3e2bfc75a11eed92632ee341d37f4a4536"
 registries = "General"
@@ -630,12 +602,6 @@ git-tree-sha1 = "d22e8bdb3f03c300a103ff23c0dd5a654c6701de"
 registries = "General"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
 version = "0.2.7"
-
-[[deps.IterTools]]
-git-tree-sha1 = "123311cf9834c6ee6a8347bba9af68f255615391"
-registries = "General"
-uuid = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
-version = "1.11.0"
 
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
@@ -704,10 +670,10 @@ version = "1.13.0"
 
 [[deps.Literate]]
 deps = ["Base64", "IOCapture", "JSON", "REPL"]
-git-tree-sha1 = "bb26d8b8ed0fa451ce3511e99c950653a2f31fe1"
+git-tree-sha1 = "efd9964fe1c6829ba53725239003e0db355f0cd8"
 registries = "General"
 uuid = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
-version = "2.21.0"
+version = "2.21.1"
 
 [[deps.LiveServer]]
 deps = ["HTTP", "LoggingExtras", "MIMEs", "Sockets", "Test"]
@@ -718,10 +684,10 @@ version = "1.5.0"
 
 [[deps.LogExpFunctions]]
 deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
-git-tree-sha1 = "28d620bcdb37a3fb02de9f521928ee453690f414"
+git-tree-sha1 = "52702dc5aba6392de19d734750c37ffb08515dc0"
 registries = "General"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "1.0.3"
+version = "1.0.5"
 
     [deps.LogExpFunctions.extensions]
     LogExpFunctionsChainRulesCoreExt = "ChainRulesCore"
@@ -829,16 +795,6 @@ registries = "General"
 uuid = "2bd173c7-0d6d-553b-b6af-13a54713934c"
 version = "1.3.0"
 
-[[deps.OffsetArrays]]
-git-tree-sha1 = "750d0f2b5aac238d50dfee5f7a44fae3175a3305"
-registries = "General"
-uuid = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
-version = "1.18.0"
-weakdeps = ["Adapt"]
-
-    [deps.OffsetArrays.extensions]
-    OffsetArraysAdaptExt = "Adapt"
-
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
@@ -851,10 +807,10 @@ version = "0.8.7+0"
 
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "NetworkOptions", "OpenSSL_jll", "Sockets"]
-git-tree-sha1 = "571a7f66ba42342ee37b46e5b927d3883983b3c1"
+git-tree-sha1 = "3a439152e86b2f771bcb852cd7c575f756af29c8"
 registries = "General"
 uuid = "4d8831e6-92b7-49fb-bdf8-b643e874388c"
-version = "1.11.0"
+version = "1.12.0"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -952,10 +908,10 @@ version = "0.2.4"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
-git-tree-sha1 = "edbeefc7a4889f528644251bdb5fc9ab5348bc2c"
+git-tree-sha1 = "1e697ad6f68af89cd3651bbe9b4a7b5d800adf5a"
 registries = "General"
 uuid = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
-version = "1.3.4"
+version = "1.4.0"
 
 [[deps.Preferences]]
 deps = ["TOML"]
@@ -1005,31 +961,11 @@ deps = ["SHA"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 version = "1.11.0"
 
-[[deps.Ratios]]
-deps = ["Requires"]
-git-tree-sha1 = "1342a47bf3260ee108163042310d26f2be5ec90b"
-registries = "General"
-uuid = "c84ed2f1-dad5-54f0-aa8e-dbefe2724439"
-version = "0.4.5"
-
-    [deps.Ratios.extensions]
-    RatiosFixedPointNumbersExt = "FixedPointNumbers"
-
-    [deps.Ratios.weakdeps]
-    FixedPointNumbers = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
-
 [[deps.Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
 registries = "General"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "1.2.2"
-
-[[deps.Requires]]
-deps = ["UUIDs"]
-git-tree-sha1 = "62389eeff14780bfe55195b7204c0d8738436d64"
-registries = "General"
-uuid = "ae029012-a4dd-5104-9daa-d747884805df"
-version = "1.3.1"
 
 [[deps.Rmath]]
 deps = ["Random", "Rmath_jll"]
@@ -1047,10 +983,10 @@ version = "0.5.2+0"
 
 [[deps.Roots]]
 deps = ["Accessors", "CommonSolve", "Printf"]
-git-tree-sha1 = "c5e8a0a52c0d5d043214de04f11f4d9c2c6ccdb8"
+git-tree-sha1 = "15f266d7b3039ca0608d2c53bb32225b96932310"
 registries = "General"
 uuid = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
-version = "3.0.13"
+version = "3.0.14"
 
     [deps.Roots.extensions]
     RootsChainRulesCoreExt = "ChainRulesCore"
@@ -1083,11 +1019,6 @@ registries = "General"
 uuid = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 version = "1.2.0"
 
-[[deps.SharedArrays]]
-deps = ["Distributed", "Mmap", "Random", "Serialization"]
-uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
-version = "1.11.0"
-
 [[deps.SimpleBufferStream]]
 git-tree-sha1 = "f305871d2f381d21527c770d4788c06c097c9bc1"
 registries = "General"
@@ -1119,26 +1050,14 @@ version = "1.13.0"
 
 [[deps.SpecialFunctions]]
 deps = ["IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
-git-tree-sha1 = "88ef0d98204515bc53dd4aaea5f7788882d1b66c"
+git-tree-sha1 = "d1a08b3cb5d1470a2b6dc98ba644f1436d5a740f"
 registries = "General"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "2.9.1"
+version = "2.9.2"
 weakdeps = ["ChainRulesCore"]
 
     [deps.SpecialFunctions.extensions]
     SpecialFunctionsChainRulesCoreExt = "ChainRulesCore"
-
-[[deps.StaticArrays]]
-deps = ["LinearAlgebra", "PrecompileTools", "Random", "StaticArraysCore"]
-git-tree-sha1 = "8a8a52f887f38d44014e24ee46b8a7311c625f6d"
-registries = "General"
-uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.9.24"
-weakdeps = ["ChainRulesCore", "Statistics"]
-
-    [deps.StaticArrays.extensions]
-    StaticArraysChainRulesCoreExt = "ChainRulesCore"
-    StaticArraysStatisticsExt = "Statistics"
 
 [[deps.StaticArraysCore]]
 git-tree-sha1 = "bf7e2d0d9ed9ac2a652fd598c0f784910cc759f2"
@@ -1232,13 +1151,6 @@ version = "1.11.0"
 [[deps.Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 version = "1.11.0"
-
-[[deps.WoodburyMatrices]]
-deps = ["LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "248a7031b3da79a127f14e5dc5f417e26f9f6db7"
-registries = "General"
-uuid = "efce3f68-66dc-5838-9240-27a6d6f5f9b6"
-version = "1.1.0"
 
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
