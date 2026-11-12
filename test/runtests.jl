@@ -4,6 +4,7 @@ using Dates
 using FinancialMonteCarlo
 using FinancialFFT
 using Random
+using FinancialToolbox
 using ForwardDiff
 using LinearAlgebra
 
@@ -53,10 +54,39 @@ end
         @test pc .- pp ≈ S0 * exp(-0.03 * T) .- strikes .* exp(-r * T)
         # a single option agrees with the smile
         @test pricer(model, zr, AnalyticMethod(), FinancialMonteCarlo.EuropeanOption(T, 100.0)) ≈ pc[2]
-        # and with the scalar formula
-        @test pc ≈ FC.shifted_lognormal_mixture.(S0, strikes, r, T, Ref([0.2, 0.25]), Ref([0.5]), -0.1, 0.03)
-        # invalid parameters are flagged with a negative price
-        @test FC.shifted_lognormal_mixture(S0, 100.0, r, T, [-0.2, 0.25], [0.5], -0.1, 0.0) < 0
+        # and with the mixture of Black and Scholes prices on the shifted spot and strike
+        shift = -0.1 * S0 * exp((r - 0.03) * T)
+        mixture(K, isCall) = 0.5 * blsprice(1.1 * S0, K - shift, r, T, 0.2, 0.03, isCall) + 0.5 * blsprice(1.1 * S0, K - shift, r, T, 0.25, 0.03, isCall)
+        @test pc ≈ mixture.(strikes, true) rtol = 1e-12
+        @test pp ≈ mixture.(strikes, false) rtol = 1e-12
+        # a positive shift and a strike below it: the call is a forward, the put is worthless
+        up = ShiftedLogNormalMixture([0.2, 0.25], [0.5], 0.5, und)
+        low = FinancialMonteCarlo.EuropeanOptionSmile(T, [10.0, 10.0], [true, false])
+        @test pricer(up, zr, AnalyticMethod(), low) ≈ [S0 * exp(-0.03 * T) - 10.0 * exp(-r * T), 0.0]
+        # a shift that leaves no mixture
+        @test_throws DomainError pricer(ShiftedLogNormalMixture([0.2, 0.25], [0.5], 1.0, und), zr, AnalyticMethod(), calls)
+    end
+
+    @testset "Black and Scholes, closed form" begin
+        S0, r, d, T, σ = 100.0, 0.01, 0.03, 1.0, 0.2
+        und = FinancialMonteCarlo.Underlying(S0, d)
+        bs = BlackScholesProcess(σ, und)
+        strikes = collect(40.0:10.0:250.0)
+        for isCall in (true, false)
+            smile = FinancialMonteCarlo.EuropeanOptionSmile(T, strikes, fill(isCall, length(strikes)))
+            @test (@inferred pricer(bs, ZeroRate(r), AnalyticMethod(), smile)) ≈ blsprice.(S0, strikes, r, T, σ, d, isCall) rtol = 1e-12
+        end
+        # a shifted lognormal mixture with no shift and equal volatilities is Black and Scholes
+        smile = FinancialMonteCarlo.EuropeanOptionSmile(T, strikes, strikes .>= S0)
+        @test pricer(ShiftedLogNormalMixture([σ, σ], [0.3], 0.0, und), ZeroRate(r), AnalyticMethod(), smile) ≈ pricer(bs, ZeroRate(r), AnalyticMethod(), smile) rtol = 1e-12
+        # far out of the money, where 1 + erf cancels: the implied volatility is still recovered
+        far = FinancialMonteCarlo.EuropeanOptionSmile(T, [20.0, 400.0], [false, true])
+        prices = pricer(bs, ZeroRate(r), AnalyticMethod(), far)
+        @test all(prices .> 0)
+        @test blsimpv.(S0, [20.0, 400.0], r, T, prices, d, [false, true]) ≈ [σ, σ] rtol = 1e-6
+        # calibration: the volatility of a Black and Scholes surface
+        mkt = MarketData([0.5, 1.0, 2.0], Date(2020) .+ Day.([182, 365, 730]), fill(r, 3), strikes[4:10], fill(0.25, 3, 7))
+        @test calibrate(bs, AnalyticMethod(), mkt).OptimalParam ≈ [0.25] rtol = 1e-8
     end
 
     @testset "Calibration" begin

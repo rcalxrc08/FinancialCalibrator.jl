@@ -8,6 +8,7 @@ using ADTypes, Adapt, Dierckx, FinancialMonteCarlo, FinancialToolbox, JSON, Opti
 import DifferentiationInterface as DI
 using ImplicitDifferentiation: ImplicitFunction, MatrixRepresentation, DirectLinearSolver
 import FinancialMonteCarlo: pricer
+using FinancialMonteCarlo: BlackScholesProcess, ShiftedLogNormalMixture
 
 # Directory containing the bundled example market data.
 const DATA_DIR = normpath(joinpath(@__DIR__, "..", "data", "json"))
@@ -17,7 +18,9 @@ include("retriever_calibration.jl")
 include("cboe.jl")
 include("adapter_calibration.jl")
 include("calibrated_data.jl")
-include("shifted_lognormal_mixture_pricer.jl")
+include("analytic/analytic_method.jl")
+include("analytic/black_scholes.jl")
+include("analytic/shifted_lognormal_mixture.jl")
 include("pricer.jl")
 include("loss.jl")
 include("parametrization.jl")

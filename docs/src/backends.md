@@ -11,7 +11,7 @@ kind of calibration is the choice of that argument:
 | Method | Package | Models |
 |:--|:--|:--|
 | `LewisMethod`, `CosMethod`, `CarrMadanLewisMethod`, `CarrMadanMethod` | [FinancialFFT.jl](https://github.com/rcalxrc08/FinancialFFT.jl) | every model with a characteristic exponent: Black–Scholes, Merton, Kou, Variance Gamma, NIG, Heston |
-| [`AnalyticMethod`](@ref) | FinancialCalibrator.jl | closed forms: `ShiftedLogNormalMixture` |
+| [`AnalyticMethod`](@ref) | FinancialCalibrator.jl | closed forms: `BlackScholesProcess`, `ShiftedLogNormalMixture`, see [Closed forms](closed_form.md) |
 | `MonteCarloConfiguration` | [FinancialMonteCarlo.jl](https://github.com/rcalxrc08/FinancialMonteCarlo.jl) | every model that it simulates, with the same seed at every evaluation |
 | `Vibrato`, `VibratoSaltando`, `PureLRM` | [VibratoMonteCarlo.jl](https://github.com/rcalxrc08/VibratoMonteCarlo.jl) | Monte Carlo with smooth estimators of the derivatives |
 

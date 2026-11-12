@@ -18,6 +18,10 @@
   Options*, Review of Financial Studies 6(2), 327–343, 1993.
 - H. Albrecher, P. Mayer, W. Schoutens and J. Tistaert, *The Little Heston Trap*, Wilmott Magazine, January 2007,
   83–92.
+- D. Brigo and F. Mercurio, *Lognormal-Mixture Dynamics and Calibration to Market Volatility Smiles*, International
+  Journal of Theoretical and Applied Finance 5(4), 427–446, 2002.
+- D. Brigo, F. Mercurio and F. Rapisarda, *Smile at the Uncertainty*, Risk 17(5), 97–101, 2004. Mixtures of
+  shifted lognormals, with uncertain volatilities.
 - F. Fang and C. W. Oosterlee, *A Novel Pricing Method for European Options Based on Fourier-Cosine Series
   Expansions*, SIAM Journal on Scientific Computing 31(2), 826–848, 2008.
 - A. L. Lewis, *A Simple Option Formula for General Jump-Diffusion and Other Exponential Lévy Processes*, 2001,

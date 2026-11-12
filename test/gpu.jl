@@ -55,6 +55,14 @@ const FC = FinancialCalibrator
         @test isapprox(Array(on_device), cpu; rtol = 1e-8)
     end
 
+    @testset "smile_prices / Black and Scholes closed form" begin
+        bs = BlackScholesProcess(0.2, und)
+        cpu = smile_prices(bs, AnalyticMethod(), [0.2], args(mkt)...)
+        gpu = smile_prices(bs, AnalyticMethod(), [0.2], args(gmkt)...)
+        @test gpu isa CuVector
+        @test isapprox(Array(gpu), cpu; rtol = 1e-10)
+    end
+
     @testset "calibrate on the GPU" begin
         method = CosMethod(1024)
         opts = Optim.Options(iterations = 5)

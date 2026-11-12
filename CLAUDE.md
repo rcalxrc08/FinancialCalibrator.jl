@@ -63,7 +63,7 @@ vol_errors(params, model, pricing_method, mkt, cache = loss_cache(...); vols = m
   in the model's underlying, never in `MarketData` and never as function arguments.**
 - `pricing_method` decides how each smile is priced, through `pricer(model, ZeroRate(r), method, smile)` (four arguments: since FinancialMonteCarlo 0.6 the execution mode is part of the method, `FinancialMonteCarlo.with_mode(method, mode)`): a
   FinancialFFT method (`CarrMadanMethod`, `CarrMadanLewisMethod`, `LewisMethod`, `CosMethod`) is numerical,
-  `AnalyticMethod(; mode)` is closed form (only `ShiftedLogNormalMixture`; it has a `mode` field like every method). There are no calibrator structs: add a model/method
+  `AnalyticMethod(; mode)` is closed form (`BlackScholesProcess`, `ShiftedLogNormalMixture`; it has a `mode` field like every method). There are no calibrator structs: add a model/method
   pair by adding a `pricer` method.
 - `MarketData{T}` holds maturities, zero rates, strikes and volatilities only. `Strikes` and `Volatility` can be GPU
   arrays (`Adapt.adapt(CuArray, mkt)`); `src/pricer.jl` has the `calibration_method(method, strikes)` hook (the method as
@@ -76,8 +76,10 @@ vol_errors(params, model, pricing_method, mkt, cache = loss_cache(...); vols = m
 Files in `src/` (included in this order by `FinancialCalibrator.jl`): `structs.jl` (input types, `MarketData`,
 `implied_dividend`), `retriever_calibration.jl` (reads `data/json/`), `cboe.jl` (`CboeInputStrategy` from a file, `CboeWebInputStrategy` downloading the current chain, `cboe_snapshot`:
 CBOE delayed quotes, #18), `adapter_calibration.jl` (parsing, returns
-`(underlying, mkt)`), `calibrated_data.jl` (`AnalyticMethod`, `CalibratedData`), `shifted_lognormal_mixture_pricer.jl`
-(closed form and its `pricer` method), `pricer.jl`, `loss.jl`, `parametrization.jl`, `calibrate.jl`, `sensitivities.jl`.
+`(underlying, mkt)`), `calibrated_data.jl` (`CalibratedData`), `analytic/` (`analytic_method.jl`: `AnalyticMethod`, the
+generic closed-form `pricer`, and `LognormalMixtureKernel`, an isbits callable `(K, isCall) -> price` summing `blkprice`
+over a tuple of components; `black_scholes.jl` and `shifted_lognormal_mixture.jl` define `analytic_price_type` and
+`analytic_kernel` for their model: a new closed form is those two methods), `pricer.jl`, `loss.jl`, `parametrization.jl`, `calibrate.jl`, `sensitivities.jl`.
 
 `Parametrization` (default: identity both ways) is how a calibration searches over unconstrained variables and fixes
 parameters: `get_parameters` returns every field, so Heston includes λ, which the quotes cannot separate from κ (singular
@@ -99,7 +101,7 @@ on invalid parameters and a `DomainError` on a non-positive price. `loss` is hal
 exact fit, unlike the old sum of per-maturity norms) and returns a large penalty on any exception, so exceptions thrown
 while optimizing are swallowed (see issue #3). The loop over the maturities, `maturity_errors`, sits behind
 `FinancialMonteCarlo.set_parameters!`, which is not inferred; `loss` converts to `promote_type(eltype(params), T)` and is
-`@inferred` in the tests, as the closed-form `pricer` (which writes into an array of the price type, `slnm_prices`).
+`@inferred` in the tests, as the closed-form `pricer` (which writes into an array of the price type computed by `analytic_price_type`, `analytic_prices`: the kernel of a mixture has its arity as a type parameter and is not inferred).
 
 `calibrate` builds the cache and calls `calibrate_cached`, which calls `optimal_variables`: Optim's `optimize` with
 `autodiff` (an ADTypes backend, used by gradient optimizers), then with `polish = true` `levenberg_marquardt` on

@@ -9,4 +9,4 @@ end
 module DocumentationFigures
 include(joinpath(@__DIR__, "figures.jl"))
 end
-makedocs(format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true", assets = ["assets/favicon.ico", "assets/figures.css", "assets/style.css"], edit_link = "master", size_threshold = 400 * 1024), repo = Remotes.GitHub("rcalxrc08", "FinancialCalibrator.jl"), sitename = "FinancialCalibrator.jl", modules = [FinancialCalibrator], checkdocs = :exports, pages = ["index.md", "calibration.md", "backends.md", "exotics.md", "api.md", "references.md"])
+makedocs(format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true", assets = ["assets/favicon.ico", "assets/figures.css", "assets/style.css"], edit_link = "master", size_threshold = 400 * 1024), repo = Remotes.GitHub("rcalxrc08", "FinancialCalibrator.jl"), sitename = "FinancialCalibrator.jl", modules = [FinancialCalibrator], checkdocs = :exports, pages = ["index.md", "calibration.md", "backends.md", "closed_form.md", "exotics.md", "api.md", "references.md"])
