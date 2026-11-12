@@ -64,7 +64,7 @@ returns a large penalty on invalid parameters, so exceptions thrown while optimi
 
 `test/runtests.jl` (data, closed form, calibration, Float32), `test/models_methods.jl` (models × methods grid and
 calibration of synthetic surfaces), `test/gpu.jl` (run only if `CUDA.functional()`). The tests define their own
-`smile_prices` helper on top of `pricer`. Every FinancialFFT method runs on the GPU (FinancialFFT ≥ 0.5).
+`smile_prices` helper on top of `pricer`. Every FinancialFFT method runs on the GPU (FinancialFFT ≥ 0.5). The compat is FinancialFFT 0.6 and FinancialMonteCarlo 0.7: their breaking changes needed no change here (`ImpliedCurve` still takes vectors, smiles have `AbstractVector` strikes).
 
 ## Gotchas
 
