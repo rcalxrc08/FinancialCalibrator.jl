@@ -12,6 +12,13 @@ struct AnalyticMethod{modeType <: FinancialMonteCarlo.AbstractMode} <: Financial
 end
 AnalyticMethod(; mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = AnalyticMethod(mode)
 
+"""
+    CalibratedData
+
+The result of [`calibrate`](@ref): `OptimalParam`, the calibrated parameters of the model (in the order of
+`FinancialMonteCarlo.get_parameters`), `OptimalValue`, the loss there, and `ModelVolatility`, the implied volatilities
+of the calibrated model at the quotes, shaped as the surface (`NaN` at the quotes left out of the loss).
+"""
 struct CalibratedData{T <: AbstractFloat}
     OptimalParam::Vector{T}
     OptimalValue::T

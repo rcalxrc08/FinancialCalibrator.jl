@@ -5,6 +5,8 @@ using FinancialCalibrator
 using FinancialMonteCarlo
 using FinancialFFT
 using Optim
+using ForwardDiff
+using Zygote
 
 const FC = FinancialCalibrator
 
@@ -58,5 +60,23 @@ const FC = FinancialCalibrator
         @test gpu.ModelVolatility isa Matrix{Float64}
         @test isapprox(gpu.OptimalParam, cpu.OptimalParam; rtol = 1e-4)
         @test gpu.OptimalValue ≈ cpu.OptimalValue rtol = 1e-4
+    end
+
+    # The calibrated parameters as a function of quotes on the device: the solve, the ForwardDiff derivative and the
+    # Zygote gradient (a CuArray, like the quotes) against the host. Black-Scholes: ∂σ*/∂vᵢ is 1/n on the quotes in the loss.
+    @testset "calibrated_parameters on the GPU" begin
+        bs = BlackScholesProcess(0.3, dax_und)
+        method = CosMethod(1024)
+        @test calibrated_parameters(bs, method, gmkt) ≈ calibrated_parameters(bs, method, mkt) rtol = 1e-10
+        i = CartesianIndex(4, 5)
+        # no scalar indexing on the device
+        bump(V, h) = (W = V .+ zero(h); W[i:i] .+= h; W)
+        host = ForwardDiff.derivative(h -> calibrated_parameters(bs, method, mkt, bump(mkt.Volatility, h)), 0.0)
+        device = ForwardDiff.derivative(h -> calibrated_parameters(bs, method, gmkt, bump(gmkt.Volatility, h)), 0.0)
+        @test device ≈ host rtol = 1e-10
+        g = Zygote.gradient(V -> sum(calibrated_parameters(bs, method, gmkt, V)), gmkt.Volatility)[1]
+        @test g isa CuMatrix{Float64}
+        @test Array(g) ≈ Zygote.gradient(V -> sum(calibrated_parameters(bs, method, mkt, V)), mkt.Volatility)[1] rtol = 1e-10
+        @test Array(g)[i] ≈ host[1] rtol = 1e-10
     end
 end

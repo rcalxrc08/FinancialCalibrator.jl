@@ -1,18 +1,20 @@
-# FinancialCalibrator.jl
+# FinancialCalibrator.jl <img src="etc/logo.png" width="40">
 
-[Documentation and examples](https://rcalxrc08.github.io/FinancialCalibrator.jl/)
-
-[![CI](https://github.com/rcalxrc08/FinancialCalibrator.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/rcalxrc08/FinancialCalibrator.jl/actions/workflows/CI.yml)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://rcalxrc08.github.io/FinancialCalibrator.jl/)
 [![codecov](https://codecov.io/gh/rcalxrc08/FinancialCalibrator.jl/graph/badge.svg)](https://codecov.io/gh/rcalxrc08/FinancialCalibrator.jl)
+[![CI](https://github.com/rcalxrc08/FinancialCalibrator.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/rcalxrc08/FinancialCalibrator.jl/actions/workflows/CI.yml)
+[![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
-Calibration of option pricing models (Carr-Madan Lévy processes, shifted lognormal mixture) to implied volatility surfaces.
+Calibration of option pricing models (Lévy processes, Heston, shifted lognormal mixture, ...) to implied volatility
+surfaces, with any pricing method of FinancialMonteCarlo's `pricer` interface, and differentiable: the calibrated
+parameters are a function of the quotes whose derivatives come from the implicit function theorem.
 
 ```julia
 using FinancialCalibrator, FinancialMonteCarlo
 und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
 ```
 
-See `examples/` for full calibration scripts (they need extra packages such as PyPlot / BenchmarkTools) and `data/json/` for the sample market data.
+See `examples/` for a calibration script (it plots with PyPlot, which is not a dependency) and `data/json/` for the sample market data.
 
 ## Calibration
 
@@ -22,12 +24,25 @@ und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInp
 model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)  # spot and dividends come from the underlying, not from the quotes
 
 # the pricing method decides how each smile is priced
-calibrate(model, CosMethod(1024), mkt)                  # any FinancialFFT method
+calibrate(model, LewisMethod(100.0, 4001), mkt)         # any FinancialFFT method
 calibrate(ShiftedLogNormalMixture(...), AnalyticMethod(), mkt)  # closed form
 ```
 
-Spot and dividends are those of the model's `Underlying`. `calibrate(model, method, mkt, opt_method, opt_options; verbose)`
-accepts any Optim optimizer and `Optim.Options`.
+Spot and dividends are those of the model's `Underlying`. `calibrate(model, method, mkt, opt_method, opt_options;
+parametrization, autodiff, polish, polish_backend, min_vega, verbose)` accepts any Optim optimizer and `Optim.Options`,
+and polishes the result with Levenberg–Marquardt. The loss is half the sum of the squared implied volatility errors of
+the out of the money quotes whose vega is at least `min_vega * S0`.
+
+## Sensitivities to the quotes
+
+```julia
+using ForwardDiff
+f(V) = calibrated_parameters(model, LewisMethod(100.0, 4001), mkt, V)   # the calibration, as a function of the quotes
+ForwardDiff.jacobian(f, mkt.Volatility)                                  # ∂p*/∂v; Zygote and Mooncake work too
+```
+
+The sensitivity of any contract priced with the calibrated model, to every quote, is one gradient of the composition;
+see the documentation.
 
 ### GPU
 

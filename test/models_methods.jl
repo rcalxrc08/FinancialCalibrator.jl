@@ -5,6 +5,9 @@ using FinancialFFT
 using FinancialToolbox
 using Optim
 using Dates
+using ForwardDiff
+using LinearAlgebra
+using Zygote
 
 const FC = FinancialCalibrator
 
@@ -39,7 +42,7 @@ end
     end
 
     @testset "Heston" begin
-        model = HestonProcess(0.3, 0.04, 1.0, 0.04, -0.5, 0.04, und)
+        model = HestonProcess(0.3, 0.2, 0.0, 1.5, -0.5, 0.04, und)
         pr_cm = prices(model, CarrMadanMethod(400.0, 14))
         pr_cml = prices(model, CarrMadanLewisMethod(400.0, 14))
         @test all(isfinite, pr_cm)
@@ -73,10 +76,41 @@ end
             smkt = synthetic_market(VarianceGammaProcess(0.2, -0.1, 0.2, und0), cm)
             start = VarianceGammaProcess(0.25, -0.05, 0.3, und0)
             loss0 = FC.loss(FinancialMonteCarlo.get_parameters(start), start, cm, smkt)
-            short = calibrate(start, cm, smkt, NelderMead(), Optim.Options(iterations = 2))
-            full = calibrate(start, cm, smkt, NelderMead(), Optim.Options(iterations = 100))
+            # without the Levenberg–Marquardt polish, which would take both to the minimum
+            short = calibrate(start, cm, smkt, NelderMead(), Optim.Options(iterations = 2); polish = false)
+            full = calibrate(start, cm, smkt, NelderMead(), Optim.Options(iterations = 100); polish = false)
             @test short.OptimalValue <= loss0
             @test full.OptimalValue < short.OptimalValue
+        end
+
+        # The calibration ends where the gradient of the loss vanishes, and calibrated_parameters differentiates it with
+        # respect to the quotes by the implicit function theorem: against central differences of recalibrations, and the
+        # whole Jacobian against the formula ∂p*/∂v = -H⁻¹ ∂ᵥ∇ₚL. Lewis for VG: the Cos derivatives of FinancialFFT are not
+        # those of its values where its series converges slowly (the truncation range is held constant).
+        @testset "Stationary and differentiable in the quotes / $name" for (name, truth, start, method) in (("BlackScholes", BlackScholesProcess(0.2, und0), BlackScholesProcess(0.3, und0), CosMethod(1024)), ("VarianceGamma", VarianceGammaProcess(0.2, -0.1, 0.2, und0), VarianceGammaProcess(0.25, -0.05, 0.3, und0), LewisMethod(100.0, 4001)))
+            exact = synthetic_market(truth, method)
+            # quotes that no model of the family fits exactly
+            smkt = MarketData(exact.TimeToMaturity, exact.MaturityDates, exact.ZeroRates, exact.Strikes, exact.Volatility .* (1 .+ 0.01 .* sin.(reshape(1:length(exact.Volatility), size(exact.Volatility)))))
+            cache = FC.loss_cache(start, method, smkt)
+            L(p, vols) = sum(abs2, vol_errors(p, start, method, smkt, cache; vols = vols)) / 2
+            res = calibrate(start, method, smkt)
+            p = res.OptimalParam
+            @test res.OptimalValue ≈ L(p, smkt.Volatility)
+            @test norm(ForwardDiff.gradient(q -> L(q, smkt.Volatility), p)) < 1e-9
+            sz = size(smkt.Volatility)
+            J = ForwardDiff.jacobian(v -> calibrated_parameters(start, method, smkt, reshape(v, sz)), vec(smkt.Volatility))
+            H = ForwardDiff.hessian(q -> L(q, smkt.Volatility), p)
+            ∂g_∂v = ForwardDiff.jacobian(v -> ForwardDiff.gradient(q -> L(q, reshape(v, sz)), p), vec(smkt.Volatility))
+            @test J ≈ -(H \ ∂g_∂v) rtol = 1e-10
+            # reverse mode from outside, through the ChainRules rule of ImplicitDifferentiation
+            w = collect(1.0:length(p))
+            @test vec(Zygote.gradient(v -> dot(w, calibrated_parameters(start, method, smkt, v)), smkt.Volatility)[1]) ≈ transpose(J) * w rtol = 1e-10
+            # a lazy cotangent (sum): ImplicitDifferentiation must not insist on the type it prepared the pullback with
+            @test vec(Zygote.gradient(v -> sum(calibrated_parameters(start, method, smkt, v)), smkt.Volatility)[1]) ≈ vec(sum(J; dims = 1)) rtol = 1e-10
+            i = LinearIndices(sz)[2, 3]
+            recalibrate(h) = calibrated_parameters(start, method, smkt, reshape(vec(smkt.Volatility) .+ h .* (1:prod(sz) .== i), sz))
+            h = 1e-4
+            @test J[:, i] ≈ (recalibrate(h) - recalibrate(-h)) / 2h rtol = 1e-3
         end
 
         @testset "ShiftedLogNormalMixture / Analytic" begin

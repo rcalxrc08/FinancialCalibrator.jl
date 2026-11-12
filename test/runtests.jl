@@ -4,6 +4,8 @@ using Dates
 using FinancialMonteCarlo
 using FinancialFFT
 using Random
+using ForwardDiff
+using LinearAlgebra
 
 const FC = FinancialCalibrator
 
@@ -102,6 +104,63 @@ end
             @test (@inferred FC.loss(FinancialMonteCarlo.get_parameters(slnm), slnm, AnalyticMethod(), mkt)) isa Float64
         end
 
+        # The volatility errors: one per quote, maturity by maturity, out of the money options only, generic in the quotes.
+        @testset "vol_errors" begin
+            model = BlackScholesProcess(0.2, und)
+            method = CosMethod(1024)
+            nT, nK = size(mkt.Volatility)
+            cache = FC.loss_cache(model, method, mkt)
+            # the quotes of tiny vega are left out (5 on this surface, at the short maturities and high strikes), and none
+            # with min_vega = 0
+            @test sum(length, cache.quoted) == nT * nK - 5
+            @test sum(length, FC.loss_cache(model, method, mkt; min_vega = 0).quoted) == nT * nK
+            # out of the money: puts below the forward, calls above
+            @test all(!first(c) && last(c) for c in cache.is_call)
+            e = vol_errors([0.2], model, method, mkt, cache)
+            quoted = reduce(vcat, [mkt.Volatility[i, q] for (i, q) in enumerate(cache.quoted)])
+            @test length(e) == length(quoted)
+            # Black-Scholes prices invert to its own volatility, puts and calls alike
+            @test e ≈ 0.2 .- quoted atol = 1e-12
+            @test FC.loss([0.2], model, method, mkt) ≈ sum(abs2, e) / 2
+            # derivatives with respect to the quotes: minus the selection of the quotes in the loss
+            J = ForwardDiff.jacobian(v -> vol_errors([0.2], model, method, mkt, cache; vols = reshape(v, nT, nK)), vec(mkt.Volatility))
+            @test count(==(-1), J) == length(e) && count(iszero, J) == length(J) - length(e)
+            @test all(==(-1), sum(J; dims = 2))
+            @test count(iszero, sum(J; dims = 1)) == 5
+            # a price that is not positive is a DomainError, which the loss penalises
+            @test_throws DomainError vol_errors([0.2], model, MonteCarloConfiguration(10, 1), mkt)
+            @test FC.loss([0.2], model, MonteCarloConfiguration(10, 1), mkt) == 10000
+        end
+
+        # The Levenberg–Marquardt polish ends where the gradient of the loss vanishes, on the market surface too.
+        @testset "Stationary on the market" begin
+            model = BlackScholesProcess(0.3, und)
+            method = CosMethod(1024)
+            res = calibrate(model, method, mkt)
+            g = ForwardDiff.gradient(p -> FC.loss(p, model, method, mkt), res.OptimalParam)
+            @test norm(g) < 1e-9
+            # without it, NelderMead stops at its own tolerances
+            @test calibrate(model, method, mkt; polish = false).OptimalValue >= res.OptimalValue
+            # no model volatility at the quotes left out of the loss
+            @test count(isnan, res.ModelVolatility) == 5
+        end
+
+        # The calibrated parameters as a function of the quotes, through the implicit function theorem. On Black-Scholes
+        # every quote in the loss weighs the same: ∂σ*/∂vᵢ = 1/n.
+        @testset "calibrated_parameters" begin
+            model = BlackScholesProcess(0.3, und)
+            method = CosMethod(1024)
+            n = sum(length, FC.loss_cache(model, method, mkt).quoted)
+            @test calibrated_parameters(model, method, mkt) ≈ calibrate(model, method, mkt).OptimalParam
+            i = CartesianIndex(4, 5)
+            bump(h) = (V = mkt.Volatility .+ zero(h); V[i] += h; V)
+            ∂σ = ForwardDiff.derivative(h -> calibrated_parameters(model, method, mkt, bump(h)), 0.0)
+            @test ∂σ ≈ [1 / n] rtol = 1e-8
+            h = 1e-4
+            @test ∂σ ≈ (calibrated_parameters(model, method, mkt, bump(h)) - calibrated_parameters(model, method, mkt, bump(-h))) / 2h rtol = 1e-4
+            @test_throws DimensionMismatch calibrated_parameters(model, method, mkt, mkt.Volatility[:, 2:end])
+        end
+
         @testset "Numerical methods agree" begin
             p0 = [0.2, -0.03, 0.16]
             model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
@@ -149,6 +208,8 @@ end
 end
 
 include("models_methods.jl")
+include("financialfft_example.jl")
+include("aqua.jl")
 
 using CUDA
 if CUDA.functional()

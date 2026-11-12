@@ -1,35 +1,44 @@
 name: Build and Deploy
+# Builds the documentation and publishes it with GitHub Pages, whose source is "GitHub Actions": the build is uploaded as
+# the Pages artifact and deployed by actions/deploy-pages, with no gh-pages branch and no separate Pages build.
 on:
   push:
     branches:
       - master
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write    # the deployment
+  id-token: write # the token of the deployment
+# one deployment at a time; a newer push does not cancel a deployment in progress
+concurrency:
+  group: pages
+  cancel-in-progress: false
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     - name: Install Julia
-      uses: julia-actions/setup-julia@v2
+      uses: julia-actions/setup-julia@v3
       with:
         version: '1'
-    # Julia >= 1.12: Franklin creates the module Utils_1 from page/utils.jl during the build and looks up its names
-    # from the older world age of the build call, where the module does not exist yet. Defining Utils_1 beforehand
-    # makes those lookups succeed.
-    - run: julia -e '
-            import Pkg;
-            Pkg.Registry.add("General");
-            Pkg.Registry.add(Pkg.RegistrySpec(url = "https://github.com/rcalxrc08/LocalRegistry.git"));
-            Pkg.activate("page"); Pkg.develop(path = "."); Pkg.instantiate();
-            Pkg.build(); using FinancialCalibrator;
-            using NodeJS;
-            run(`$(npm_cmd()) install highlight.js purgecss`);
-            import PkgPage, Franklin;
-            Core.eval(Main, :(module Utils_1; import Franklin; include($(abspath("page/utils.jl"))); end));
-            PkgPage.optimize(input="page", output="")'
-    - run: touch page/__site/.nojekyll
-    - name: Deploy
-      uses: JamesIves/github-pages-deploy-action@releases/v4
+    - run: julia --project=docs -e '
+            import Pkg; Pkg.Registry.add(Pkg.RegistrySpec(url = "https://github.com/rcalxrc08/LocalRegistry.git"));
+            Pkg.Registry.add("General"); Pkg.instantiate()'
+    - run: julia --project=docs --color=yes docs/make.jl
+    - uses: actions/configure-pages@v6
+    - uses: actions/upload-pages-artifact@v5
       with:
-        BRANCH: gh-pages
-        FOLDER: page/__site
+        path: docs/build
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy 🚀
+      id: deployment
+      uses: actions/deploy-pages@v5
