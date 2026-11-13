@@ -167,5 +167,5 @@ below the threshold, #2), `test/local/cboe_spx.jl` (local only, see above), `tes
 - Default arguments of `calibrate`/`calibrated_parameters` are the constants `DEFAULT_OPTIMIZER`/`DEFAULT_OPTIONS`, not
   `NelderMead()`: a default argument is evaluated in the method Mooncake traces, and `NelderMead()` builds `Dict(kwargs)`,
   whose constructor has a try/catch on Julia 1.10 (Mooncake fails). Do not construct anything with keywords there.
-- CI runs Julia 1.10 and 1 (no `pre`: Mooncake does not precompile on the nightly compiler).
+- CI runs Julia 1.13 (the local version) and 1; not 1.10 (Heston in the FinancialFFT example lands 2e-8 from the reference there) nor `pre` (Mooncake does not precompile on the nightly compiler).
 - Commit messages end with the `Co-Authored-By` line configured for the session.
