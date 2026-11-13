@@ -127,6 +127,10 @@ end
             model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
             p0 = FinancialMonteCarlo.get_parameters(model)
             @test (@inferred FC.loss(p0, model, CosMethod(256), mkt)) isa Float64
+            # also with dual numbers, in the parameters and in the quotes (the derivatives of the implicit function)
+            dual = ForwardDiff.Dual{Nothing}.(p0, 1.0)
+            @test (@inferred FC.vol_errors(dual, model, CosMethod(256), mkt)) isa Vector{eltype(dual)}
+            @test (@inferred FC.vol_errors(p0, model, CosMethod(256), mkt; vols = ForwardDiff.Dual{Nothing}.(mkt.Volatility, 1.0))) isa Vector{eltype(dual)}
             slnm = ShiftedLogNormalMixture([0.2, 0.25, 0.3], [0.2, 0.3], -0.1, und)
             smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, mkt.Strikes, fill(true, length(mkt.Strikes)))
             @test (@inferred pricer(slnm, ZeroRate(0.01), AnalyticMethod(), smile)) isa Vector{Float64}

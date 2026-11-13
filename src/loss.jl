@@ -28,18 +28,24 @@ number type of `params` and of `vols`, so that it can be differentiated with res
 parameters, and a `DomainError` on a price that is not positive.
 """
 function vol_errors(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData, cache = loss_cache(model, method, mktData); vols::AbstractMatrix{<:Real} = mktData.Volatility)
-    # set_parameters! returns a new model, it does not mutate `model`. Its type is not inferred (it rebuilds the model
-    # field by field): the loop over the maturities is a function of its own, compiled for the new model.
+    # set_parameters! returns a new model, it does not mutate `model` (inferred since FinancialMonteCarlo 0.7; the loop
+    # over the maturities stays a function of its own, a barrier should a model's type not be inferred).
     new_model = FinancialMonteCarlo.set_parameters!(model, params)
     return maturity_errors(new_model, model.underlying.S0, mktData, cache, vols)
 end
 
+# A loop with a concrete accumulator, not map and reduce: map cannot infer the element type of its closure with dual
+# numbers, and the abstract vector it then returns makes the loss uninferred, which costs little in Julia but makes
+# Mooncake compile a rule per dynamic call. A few maturities: the vcat of each step is cheap.
 function maturity_errors(new_model, S0, mktData::MarketData, cache, vols)
-    errors = map(filter(i -> !isempty(cache.quoted[i]), eachindex(cache.quoted))) do i
-        return model_volatilities(new_model, S0, mktData, cache, i) .- vols[i, cache.quoted[i]]
+    maturities = filter(i -> !isempty(cache.quoted[i]), eachindex(cache.quoted))
+    errors = maturity_error(new_model, S0, mktData, cache, vols, first(maturities))
+    for i in Iterators.drop(maturities, 1)
+        errors = vcat(errors, maturity_error(new_model, S0, mktData, cache, vols, i))
     end
-    return reduce(vcat, errors)
+    return errors
 end
+maturity_error(new_model, S0, mktData::MarketData, cache, vols, i::Integer) = model_volatilities(new_model, S0, mktData, cache, i) .- vols[i, cache.quoted[i]]
 
 # The model implied volatilities of the quotes of maturity i that enter the loss.
 function model_volatilities(new_model, S0, mktData::MarketData, cache, i::Integer)

@@ -59,31 +59,43 @@ DI.gradient(v -> w' * f(v), AutoMooncake(; config = nothing), mkt.Volatility)
 
 Every derivative of the calibration runs through the implicit function theorem, so the outer backend never traces the
 optimizer: it only meets the rule of the implicit function, and the inner backends meet the loss. The backends can be
-mixed freely, forward over reverse or reverse over forward. The table shows the gradient of ``w^	op p^*(v)`` for
-Variance Gamma with `LewisMethod(100.0, 4001)` on 15 quotes, against the ForwardDiff gradient on the host:
+mixed freely, forward over reverse or reverse over forward. The table shows the gradient of ``w^\top p^*(v)`` for
+Variance Gamma with `LewisMethod(100.0, 4001)` on 15 quotes, against the ForwardDiff gradient on the host. Every host
+case ran in a fresh Julia process, so its first call includes all of its compilation:
 
-| Outer | Inner `x` / `y` | Host: first call | Host: next calls | Device: first call | Device: next calls | Error |
-|:--|:--|--:|--:|--:|--:|:--|
-| ForwardDiff | ForwardDiff / ForwardDiff | 1.1 s | 0.6 s | 129 s¹ | 0.6 s¹ | 0 (host), 1e-9 (device) |
-| Zygote | ForwardDiff / ForwardDiff | 16 s | 0.2 s | 32 s | 0.7 s | 5e-16, 2e-9 |
-| Zygote | Mooncake / ForwardDiff | 143 s | 2.1 s | ✗² | | 4e-16 |
-| Mooncake | ForwardDiff / ForwardDiff | 43 s | 1.1 s | 32 s | 2.5 s | 5e-16, 2e-9 |
-| Mooncake | Mooncake / ForwardDiff | 5.5 s | 1.5 s | ✗² | | 4e-16 |
-| Enzyme, reverse | ForwardDiff / ForwardDiff | ✗³ | | | | |
-| Enzyme, forward | ForwardDiff / ForwardDiff | ✗⁴ | | | | |
+| Outer | Inner `x` / `y` | Host: first call | Host: next calls | Device: next calls | Error |
+|:--|:--|--:|--:|--:|:--|
+| ForwardDiff¹ | ForwardDiff / ForwardDiff | 1.1 s | 0.30 s | 0.6 s² | 0 (host), 1e-9 (device) |
+| Zygote | ForwardDiff / ForwardDiff | 16 s | 0.33 s | 0.7 s | 5e-16, 2e-9 |
+| Mooncake | ForwardDiff / ForwardDiff | 38 s | 0.58 s | 2.5 s | 5e-16, 2e-9 |
+| Zygote | Mooncake / ForwardDiff | 164 s | 1.7 s | ✗³ | 4e-16 |
+| Mooncake | Mooncake / ForwardDiff | 141 s | 1.4 s | ✗³ | 4e-16 |
+| Enzyme, reverse | ForwardDiff / ForwardDiff | ✗⁴ | | | |
+| Enzyme, forward | ForwardDiff / ForwardDiff | ✗⁵ | | | |
 
-¹ One direction: ForwardDiff cannot seed a `CuArray`, so on the device it gives one derivative at a time
+¹ With one chunk for all the quotes, `ForwardDiff.gradient(f, v, ForwardDiff.GradientConfig(f, v, ForwardDiff.Chunk{length(v)}()))`.
+ForwardDiff's default chunk (8) splits 15 quotes in two, and each chunk runs the whole calibration again: 0.6 s.
+² One direction: ForwardDiff cannot seed a `CuArray`, so on the device it gives one derivative at a time
 (`ForwardDiff.derivative` along a bump of one quote).
-² Mooncake differentiating the inner ForwardDiff gradient of the conditions meets a broadcast of dual numbers over a
+³ Mooncake differentiating the inner ForwardDiff gradient of the conditions meets a broadcast of dual numbers over a
 `CuArray`, which it does not support.
-³ An internal assertion of Enzyme (a pointer address space mismatch in the tape).
-⁴ ImplicitDifferentiation's Enzyme rule has no `forward` method for the configuration that DifferentiationInterface
+⁴ An internal assertion of Enzyme (a pointer address space mismatch in the tape) in ImplicitDifferentiation's Enzyme
+rule. Enzyme itself differentiates the loss (`vol_errors`, `LewisMethod`), to 4e-14, after 137 s of compilation.
+⁵ ImplicitDifferentiation's Enzyme rule has no `forward` method for the configuration that DifferentiationInterface
 passes, batched or not.
 
-The first call includes the compilation, which dominates: once compiled, each gradient is a calibration (the solve)
-and a small linear system. The test suite checks ForwardDiff, Zygote and Mooncake against the formula
-``\partial p^*/\partial v = -H^{-1} \partial_v 
-abla_p L``, and Zygote and Mooncake on the GPU.
+What the numbers say:
+
+- **Once compiled, a gradient costs about one calibration**, whatever the backend: here the solve takes 0.23 s
+  (NelderMead, 128 evaluations of the loss at 0.75 ms each, then the Levenberg–Marquardt polish), and the derivatives
+  of the implicit function theorem about 8 ms. Reverse mode outside pays off with many quotes, not with these 15.
+- **The first call is compilation**: Zygote and Mooncake compile their rules for the whole pricing method.
+- **A reverse backend for `x` is reverse over forward**: Mooncake differentiates the ForwardDiff gradient of the loss,
+  through the pricer. That compiles for minutes and runs 5 times slower than ForwardDiff for `x`; it can pay off only
+  with many quotes, where forward mode needs one direction per quote.
+
+The test suite checks ForwardDiff, Zygote and Mooncake against the formula
+``\partial p^*/\partial v = -H^{-1} \partial_v \nabla_p L``, and Zygote and Mooncake on the GPU.
 
 ### Inside
 

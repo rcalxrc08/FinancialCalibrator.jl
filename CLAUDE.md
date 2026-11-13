@@ -164,6 +164,16 @@ below the threshold, #2), `test/local/cboe_spx.jl` (local only, see above), `tes
   sensitivities look wrong).
 - Monte Carlo prices through FinancialMonteCarlo reseed at every call, so their AD gradient is the pathwise derivative
   on fixed paths: right for smooth payoffs, biased for barriers and binaries (the knock-out is not differentiated).
+- Timings (VG/Lewis, 15 quotes, `docs/src/backends.md`): once compiled a gradient of `calibrated_parameters` costs about
+  one calibration (0.23 s: NelderMead 128 loss evaluations at 0.75 ms, then the polish); the implicit derivatives ~8 ms.
+  ForwardDiff's default chunk (8) re-runs the calibration per chunk: use one chunk for all the quotes. First calls are
+  compilation (Zygote 16 s, Mooncake 38 s; Mooncake as inner `x` is reverse over forward through the pricer: ~150 s,
+  5x slower at run time). Benchmark each backend in a fresh process: in one process later cases reuse compiled code.
+  Enzyme differentiates the loss (137 s of compilation) but fails in ImplicitDifferentiation's Enzyme rules.
+- `maturity_errors` is a loop with a concrete accumulator: a `map` closure was not inferred with dual numbers and made
+  the loss `Any` (tested with `@inferred` on duals in the parameters and in the quotes).
+- Python edits of Julia or Markdown files: use raw strings (`r"""..."""`), `\t` and `\n` in `\top`/`\nabla` were once
+  turned into a tab and a newline in the docs.
 - Default arguments of `calibrate`/`calibrated_parameters` are the constants `DEFAULT_OPTIMIZER`/`DEFAULT_OPTIONS`, not
   `NelderMead()`: a default argument is evaluated in the method Mooncake traces, and `NelderMead()` builds `Dict(kwargs)`,
   whose constructor has a try/catch on Julia 1.10 (Mooncake fails). Do not construct anything with keywords there.

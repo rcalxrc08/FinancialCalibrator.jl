@@ -51,9 +51,9 @@ end
 """
     LognormalMixtureKernel(F, shift, σ, w, r, T)
 
-The price of a European option on ``S_T = A_T + \text{shift}`` where ``A_T`` is a mixture of lognormals of forward `F`:
-with weight `w[j]` its volatility is `σ[j]`, each priced by Black's formula (`blkprice` of FinancialToolbox). The strike of
-``A`` is ``κ = K - \text{shift}``; when ``κ ≤ 0`` the call is a forward (always exercised) and the put is worthless.
+The price of a European option on ``S_T = A_T + s`` (`s` the shift) where ``A_T`` is a mixture of lognormals of forward
+`F`: with weight `w[j]` its volatility is `σ[j]`, each priced by Black's formula (`blkprice` of FinancialToolbox). The
+strike of ``A`` is ``κ = K - s``; when ``κ ≤ 0`` the call is a forward (always exercised) and the put is worthless.
 """
 struct LognormalMixtureKernel{N, F_, S, V, W, R, T_}
     F::F_
