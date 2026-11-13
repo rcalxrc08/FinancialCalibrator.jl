@@ -1,7 +1,22 @@
+```@raw html
+<div class="fc-page-head">
+<p class="fc-kicker"><span>Guide 02</span> Three independent choices</p>
+```
+
 # Methods, backends and arrays
 
-A calibration combines three choices that the package keeps independent: how a smile is priced, how derivatives are
-taken, and where the arrays live. Each one is an argument, and changing one does not change the others.
+```@raw html
+<p class="fc-page-lede">A calibration combines three choices that the package keeps independent: <strong>how a smile
+is priced, how derivatives are taken, and where the arrays live</strong>. Each one is an argument, and changing one
+does not change the others.</p>
+<div class="fc-meta"><span>FinancialFFT</span><span>closed forms</span><span>Monte Carlo</span><span>ForwardDiff · Zygote · Mooncake · Enzyme</span><span>CUDA</span></div>
+</div>
+<div class="fc-grid fc-grid-3">
+<a class="fc-card fc-card-link" href="#Pricing-methods"><span class="fc-card-k is-blue">01 · Pricing method</span><h3>How a smile is priced</h3><p>Fourier for Lévy models and Heston, a closed form where one exists, Monte Carlo for everything else.</p><p class="fc-pick"><b>Default pick</b> <code>LewisMethod</code>; <code>CosMethod</code> where its series converges (Heston, Black–Scholes).</p></a>
+<a class="fc-card fc-card-link" href="#Automatic-differentiation"><span class="fc-card-k">02 · AD backend</span><h3>How derivatives are taken</h3><p>Outside the calibration any backend; inside, four keywords, each an ADTypes backend.</p><p class="fc-pick"><b>Default pick</b> ForwardDiff everywhere; a reverse backend outside with many quotes.</p></a>
+<a class="fc-card fc-card-link" href="#Arrays"><span class="fc-card-k is-amber">03 · Arrays</span><h3>Where the numbers live</h3><p><code>Float64</code> or <code>Float32</code>, on the host or on a CUDA device, derivatives included.</p><p class="fc-pick"><b>Default pick</b> the CPU for a surface of a hundred quotes; the GPU for large smiles.</p></a>
+</div>
+```
 
 ## Pricing methods
 
@@ -20,6 +35,12 @@ calibrate(model, CosMethod(2^10), mkt)                                   # Fouri
 calibrate(model, LewisMethod(400.0, 40001), mkt)                         # Fourier, another quadrature
 calibrate(slnm, AnalyticMethod(), mkt)                                   # closed form
 calibrate(model, MonteCarloConfiguration(10^5, 1), mkt)                  # simulation
+```
+
+The same Heston calibration of the DAX surface with three Fourier methods (measured by `docs/benchmarks.jl`):
+
+```@example backends
+Main.DocumentationFigures.engine_table()  # hide
 ```
 
 A new model and method pair needs only a `pricer` method for a smile. The model is any FinancialMonteCarlo process;
@@ -75,6 +96,8 @@ compilation of the derivatives only; the device is a laptop GPU (NVIDIA MX150):
 | Enzyme, forward⁴ | ForwardDiff / ForwardDiff | 80 s | 0.12 s | ✗⁵ | 1e-15 |
 
 One run per case: on this laptop the times of two runs differ by up to a third.
+
+![Compilation and run time of the gradient per AD backend](assets/figures/bench-ad-light.svg)![Compilation and run time of the gradient per AD backend](assets/figures/bench-ad-dark.svg)
 
 ¹ With one chunk for all the quotes, `ForwardDiff.gradient(f, v, ForwardDiff.GradientConfig(f, v, ForwardDiff.Chunk{length(v)}()))`.
 ForwardDiff's default chunk (8) splits 15 quotes in two, and each chunk runs the whole calibration again.
@@ -160,6 +183,11 @@ Measured on a laptop GPU (NVIDIA MX150) with the DAX surface of 108 quotes, once
 | one loss, Variance Gamma, `LewisMethod(100.0, 4001)` | 2.7 ms | 7.2 ms | |
 | Zygote gradient, Black–Scholes | | | 4e-14 |
 | Zygote gradient, Variance Gamma | | | 8e-8 |
+
+How the cost of one loss grows with the strikes of a smile, on the same laptop (Black–Scholes, `CosMethod(4096)`,
+measured by `docs/benchmarks.jl`):
+
+![Loss time against the number of strikes on CPU and GPU](assets/figures/bench-scaling-light.svg)![Loss time against the number of strikes on CPU and GPU](assets/figures/bench-scaling-dark.svg)
 
 A smile of 12 strikes is far too small to occupy a GPU, and these numbers time kernel launches: a loss costs 7 to 9 ms
 on the device whatever the model and the method. The device pays off with many strikes per smile, or many quotes. The

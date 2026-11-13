@@ -1,11 +1,30 @@
+```@raw html
+<div class="fc-page-head">
+<p class="fc-kicker"><span>Guide 01</span> From quotes to parameters to sensitivities</p>
+```
+
 # Calibration
 
-Calibrating a model means choosing its parameters so that its prices reproduce the quoted ones. This page calibrates
-Heston to four smiles with [`calibrate`](@ref), then computes the sensitivities of the calibrated parameters to the
-quotes with [`calibrated_parameters`](@ref), by automatic differentiation through the calibration, without
-recalibrating and without assembling a single Jacobian by hand. It follows the
-[calibration page of FinancialFFT.jl](https://rcalxrc08.github.io/FinancialFFT.jl/calibration/), which writes every step
-out; the test suite checks that the two give the same parameters and the same sensitivities.
+```@raw html
+<p class="fc-page-lede">Calibrating a model means choosing its parameters so that its prices reproduce the quoted
+ones. This page calibrates Heston to four smiles with <a href="../api/#FinancialCalibrator.calibrate"><code>calibrate</code></a>,
+then computes the sensitivities of the calibrated parameters to the quotes with
+<a href="../api/#FinancialCalibrator.calibrated_parameters"><code>calibrated_parameters</code></a>: by automatic
+differentiation through the calibration, <strong>without recalibrating and without assembling a single Jacobian by
+hand</strong>. It follows the <a href="https://rcalxrc08.github.io/FinancialFFT.jl/calibration/">calibration page of
+FinancialFFT.jl</a>, which writes every step out; the test suite checks that the two give the same parameters and the
+same sensitivities.</p>
+<div class="fc-meta"><span>Heston</span><span>CosMethod(2⁹)</span><span>Levenberg–Marquardt</span><span>ForwardDiff</span><span class="is-live">computed at build time</span></div>
+<nav class="fc-toc">
+<a href="#The-problem"><b>01</b>The problem</a>
+<a href="#The-variables-of-the-search"><b>02</b>Variables of the search</a>
+<a href="#Derivatives-of-the-model-volatilities"><b>03</b>Derivatives of the vols</a>
+<a href="#Levenberg–Marquardt"><b>04</b>Levenberg–Marquardt</a>
+<a href="#Identifiability"><b>05</b>Identifiability</a>
+<a href="#Sensitivity-of-the-calibrated-parameters-to-the-quotes"><b>06</b>Implicit sensitivities</a>
+</nav>
+</div>
+```
 
 ## The problem
 
@@ -125,6 +144,10 @@ p = res.OptimalParam
 (market = [0.5, 0.2, 0.0, 1.5, -0.7, 0.04], calibrated = p, rms_error = sqrt(2 * res.OptimalValue / length(vols)))
 ```
 
+```@example calibration
+Main.DocumentationFigures.calibration_tiles(res, vols, start, method, mkt, variables)  # hide
+```
+
 `min_vega = 0` keeps every quote, as the FinancialFFT page does. The root mean square error is about 6 basis points of
 volatility, from prices moved by up to 1%. `res.ModelVolatility` holds the model volatilities at the quotes:
 
@@ -144,6 +167,8 @@ J = ForwardDiff.jacobian(y -> vol_errors(variables.to_params(y), start, method, 
 F = svd(J)
 (singular_values = F.S, weakest_direction = F.V[:, end])
 ```
+
+![Singular values of the Jacobian and the weakest direction](assets/figures/identifiability-light.svg)![Singular values of the Jacobian and the weakest direction](assets/figures/identifiability-dark.svg)
 
 The weakest direction, in the variables ``x = (\log \sigma, \log \sigma_0, \log \kappa, \operatorname{artanh} \rho,
 \log \theta)``, is mostly ``\log \kappa``, with the volatility of the variance and the level ``\theta``
@@ -177,7 +202,11 @@ reverse rule. The whole ``6 \times n`` Jacobian is one call:
 size(∂p_∂v)
 ```
 
-Its columns follow the entries of `vols` (column major: maturity first). The quoted volatilities depend on the prices
+Its columns follow the entries of `vols` (column major: maturity first). Row by row, on the grid of the quotes:
+
+![The sensitivity of each calibrated parameter to each quote](assets/figures/implicit-light.svg)![The sensitivity of each calibrated parameter to each quote](assets/figures/implicit-dark.svg)
+
+The quoted volatilities depend on the prices
 through the inverse of the vega, ``\partial v_i / \partial m_i = 1 / \nu_i``, so the sensitivities to the quoted
 prices are
 

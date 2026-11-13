@@ -1,8 +1,24 @@
+```@raw html
+<div class="fc-page-head">
+<p class="fc-kicker"><span>Guide 03</span> Exact prices, no numerical method</p>
+```
+
 # Closed forms: the shifted lognormal mixture
 
-[`AnalyticMethod`](@ref) prices a smile with the closed form of the model, when it has one: Black and Scholes, and the
-shifted lognormal mixture of Brigo and Mercurio. The second is a model worth calibrating on its own, and this page is
-about it.
+```@raw html
+<p class="fc-page-lede"><a href="../api/#FinancialCalibrator.AnalyticMethod"><code>AnalyticMethod</code></a> prices
+a smile with the closed form of the model, when it has one: Black and Scholes, and the <strong>shifted lognormal
+mixture</strong> of Brigo and Mercurio. The second is a model worth calibrating on its own, and this page is about
+it.</p>
+<div class="fc-meta"><span>Brigo–Mercurio</span><span>AnalyticMethod</span><span>arbitrage free</span><span>GPU</span><span class="is-live">computed at build time</span></div>
+<nav class="fc-toc">
+<a href="#The-model"><b>01</b>The model</a>
+<a href="#Why-calibrate-it"><b>02</b>Why calibrate it</a>
+<a href="#On-the-DAX-surface"><b>03</b>On the DAX surface</a>
+<a href="#Other-closed-forms"><b>04</b>Other closed forms</a>
+</nav>
+</div>
+```
 
 ## The model
 
@@ -36,23 +52,15 @@ once per smile, then one Black price per component and strike, by `blkprice` of 
 
 ## Why calibrate it
 
-- **Exact and fast.** A price is ``n`` Black formulas: no quadrature, no truncation range, no simulation. A smile of a
-  few hundred strikes with three components prices in about 0.15 ms on a laptop, and it is exact, so the loss has no numerical noise: the optimizer and the Levenberg–Marquardt
-  polish reach a stationary point to machine precision, and the implicit derivatives of
-  [`calibrated_parameters`](@ref) are those of the exact calibration.
-- **Free of static arbitrage.** A mixture of arbitrage-free prices is arbitrage free: the prices are decreasing and
-  convex in the strike, and the forward is matched exactly, for every parameter, so no constraint is needed in the
-  calibration beyond the signs of ``\eta`` and ``\lambda``.
-- **A smile and a skew from intuitive parameters.** The mixture gives fat tails (the smile): the volatilities ``\eta``
-  are the regimes, the weights how likely they are. The shift gives the skew: ``\alpha < 0`` makes the spot more
-  lognormal than ``A``, with a downward sloping implied volatility; ``\alpha > 0`` the opposite.
-- **Differentiable everywhere, by every backend.** The formula is a broadcast of `blkprice`, which has closed form
-  ChainRules rules: ForwardDiff, Zygote and Mooncake differentiate it as well as the Fourier methods.
-- **On the GPU.** The components are a tuple whose length is a type parameter, so a smile is one broadcast over its
-  strikes, one GPU thread per strike, each summing its ``n`` components: with the strikes of
-  [`MarketData`](@ref) on the device (`Adapt.adapt(CuArray, mkt)`) or `AnalyticMethod(; mode = CudaMode())`, the
-  prices never leave it.
-
+```@raw html
+<div class="fc-grid fc-grid-3">
+<div class="fc-card"><span class="fc-card-k is-blue">Exact and fast</span><p>A price is <i>n</i> Black formulas: no quadrature, no truncation range, no simulation. A smile of a few hundred strikes with three components prices in about 0.15 ms on a laptop. The loss has no numerical noise, so the optimizer and the Levenberg–Marquardt polish reach a stationary point to machine precision, and the implicit derivatives of <code>calibrated_parameters</code> are those of the exact calibration.</p></div>
+<div class="fc-card"><span class="fc-card-k">Free of static arbitrage</span><p>A mixture of arbitrage-free prices is arbitrage free: the prices are decreasing and convex in the strike, and the forward is matched exactly, for every parameter, so no constraint is needed beyond the signs of η and λ.</p></div>
+<div class="fc-card"><span class="fc-card-k is-amber">Intuitive parameters</span><p>The mixture gives fat tails, the smile: the volatilities η are the regimes, the weights how likely they are. The shift gives the skew: α &lt; 0 makes the spot more lognormal than <i>A</i>, with a downward sloping implied volatility; α &gt; 0 the opposite.</p></div>
+<div class="fc-card"><span class="fc-card-k is-blue">Differentiable by every backend</span><p>The formula is a broadcast of <code>blkprice</code>, which has closed-form ChainRules rules: ForwardDiff, Zygote and Mooncake differentiate it as well as the Fourier methods.</p></div>
+<div class="fc-card"><span class="fc-card-k">On the GPU</span><p>The components are a tuple whose length is a type parameter, so a smile is one broadcast over its strikes, one thread per strike. With the strikes of <code>MarketData</code> on the device, or <code>AnalyticMethod(; mode = CudaMode())</code>, the prices never leave it.</p></div>
+</div>
+```
 Its limit is the term structure. The parameters are the same at every maturity, and the smile of a mixture of
 lognormals flattens with the maturity as ``1/\sqrt{T}`` in log-moneyness: one set of parameters fits a few maturities,
 or one maturity at a time, better than a whole surface. Its local volatility dynamics also give forward smiles that are
@@ -74,6 +82,14 @@ bs = calibrate(BlackScholesProcess(0.2, underlying), AnalyticMethod(), mkt)
 slnm = calibrate(ShiftedLogNormalMixture([0.1, 0.2, 0.35], [0.3, 0.4], -0.1, underlying), AnalyticMethod(), mkt)
 (black_scholes = rms(bs), shifted_lognormal_mixture = rms(slnm))
 ```
+
+```@example closed_form
+Main.DocumentationFigures.closed_form_tiles(bs, slnm)  # hide
+```
+
+Four of the nine maturities, the model volatilities at the quotes:
+
+![Black–Scholes and the shifted lognormal mixture against the DAX quotes](assets/figures/closed-form-light.svg)![Black–Scholes and the shifted lognormal mixture against the DAX quotes](assets/figures/closed-form-dark.svg)
 
 The calibrated parameters, ``(\eta_1, \eta_2, \eta_3, \lambda_1, \lambda_2, \alpha)``:
 

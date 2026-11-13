@@ -1,8 +1,23 @@
+```@raw html
+<div class="fc-page-head">
+<p class="fc-kicker"><span>Guide 04</span> Quote-to-risk</p>
+```
+
 # Sensitivities of exotics to the surface
 
-A calibrated model is used to price what the quotes do not contain: American and Asian options, barriers, a whole
-position. The price of such a contract depends on the quotes only through the calibration, so its sensitivity to every
-quoted volatility, the bucketed vega of the contract with respect to the surface, follows from the chain rule:
+```@raw html
+<p class="fc-page-lede">A calibrated model is used to price what the quotes do not contain: American and Asian
+options, barriers, a whole position. The price of such a contract depends on the quotes only through the calibration,
+so its sensitivity to every quoted volatility, <strong>the bucketed vega of the contract with respect to the
+surface</strong>, follows from the chain rule.</p>
+<div class="fc-meta"><span>Heston</span><span>Monte Carlo</span><span>Longstaff–Schwartz</span><span>implicit function theorem</span><span class="is-live">computed at build time</span></div>
+<nav class="fc-toc">
+<a href="#The-calibrated-model"><b>01</b>The calibrated model</a>
+<a href="#A-position,-priced-by-Monte-Carlo"><b>02</b>A position, by Monte Carlo</a>
+<a href="#Caveats"><b>03</b>Caveats</a>
+</nav>
+</div>
+```
 
 ```math
 V^*(v) = V\big(p^*(v)\big), \qquad
@@ -50,6 +65,14 @@ with `+`, `-` and `*`. The position here is long an American put (strike 95, one
 an Asian call (strike 100, one year, arithmetic average on the simulation dates) and long two European calls with a
 maturity that no quote has (strike 110, eighteen months):
 
+```@raw html
+<div class="fc-grid fc-grid-3">
+<div class="fc-card"><span class="fc-card-k">long 1 ×</span><h3>American put</h3><p>Strike 95, one year, exercised by Longstaff–Schwartz regressions.</p></div>
+<div class="fc-card"><span class="fc-card-k is-amber">short ½ ×</span><h3>Asian call</h3><p>Strike 100, one year, arithmetic average on the simulation dates.</p></div>
+<div class="fc-card"><span class="fc-card-k">long 2 ×</span><h3>European call</h3><p>Strike 110, eighteen months: a maturity that no quote has.</p></div>
+</div>
+```
+
 ```@example exotics
 position = AmericanOption(1.0, 95.0, false) - 0.5 * AsianFixedStrikeOption(1.0, 100.0) + 2 * EuropeanOption(1.5, 110.0)
 mc = MonteCarloConfiguration(20_000, 50)
@@ -71,6 +94,10 @@ Its sum is the sensitivity to a parallel shift of the whole surface:
 
 ```@example exotics
 (parallel_shift = sum(∂V_∂v), largest = maximum(abs, ∂V_∂v))
+```
+
+```@example exotics
+Main.DocumentationFigures.exotic_tiles(∂V_∂v, maturities, strikes)  # hide
 ```
 
 ![Sensitivity of the position to every quoted volatility](assets/figures/exotic-light.svg)![Sensitivity of the position to every quoted volatility](assets/figures/exotic-dark.svg)

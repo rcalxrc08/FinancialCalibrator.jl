@@ -1,0 +1,137 @@
+cpu = "Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz"
+julia = "1.13.3"
+measured = "2026-11-13"
+surface = "DAX, 22 August 2016: 9 maturities × 12 strikes, 99 quotes in the loss"
+threads = 1
+
+[[engines]]
+calibration_seconds = 0.7628854
+engine = "CosMethod(2^10)"
+loss_ms = 3.67995
+rmse_bp = 68.92108613601013
+[[engines]]
+calibration_seconds = 1.5759277
+engine = "LewisMethod(100, 4001)"
+loss_ms = 6.64935
+rmse_bp = 68.91088947595823
+[[engines]]
+calibration_seconds = 51.4616075
+engine = "CarrMadanLewisMethod(600, 16)"
+loss_ms = 251.42065000000002
+rmse_bp = 68.92118450167037
+
+[[optimizers]]
+model = "Black–Scholes"
+optimizer = "NelderMead"
+parameters = [0.2010124242424235]
+rmse_bp = 315.1968777376186
+seconds = 0.0766701
+[[optimizers]]
+model = "Black–Scholes"
+optimizer = "LBFGS"
+parameters = [0.2010124242424234]
+rmse_bp = 315.1968777376197
+seconds = 0.0710892
+[[optimizers]]
+model = "Black–Scholes"
+optimizer = "BFGS"
+parameters = [0.2010124242424234]
+rmse_bp = 315.1968777376197
+seconds = 0.0622324
+[[optimizers]]
+model = "Merton"
+optimizer = "NelderMead"
+parameters = [0.12239572137126496, 0.7490567806865482, -0.1798076775002337, 0.12016511095222115]
+rmse_bp = 90.61785831464697
+seconds = 0.8803978
+[[optimizers]]
+model = "Merton"
+optimizer = "LBFGS"
+parameters = [0.12239572271310549, 0.749056735203064, -0.1798076831267235, 0.12016511352414731]
+rmse_bp = 90.61785831464384
+seconds = 0.3936184
+[[optimizers]]
+model = "Merton"
+optimizer = "BFGS"
+parameters = [0.12239572273727993, 0.7490567343837271, -0.17980768322820656, 0.12016511357024177]
+rmse_bp = 90.6178583146223
+seconds = 0.4721564
+[[optimizers]]
+model = "Kou"
+optimizer = "NelderMead"
+parameters = [0.11748290701022426, 1.5715260334852093, 5.350102937779229e-16, 1.0000000000137086, 9.123598300768254]
+rmse_bp = 86.01558672375901
+seconds = 2.0733002
+[[optimizers]]
+model = "Kou"
+optimizer = "LBFGS"
+parameters = [0.11748290663952622, 1.5715260438890182, 9.159943899391916e-16, 1.0000000000234706, 9.123598322738662]
+rmse_bp = 86.01558672376245
+seconds = 1.7360006
+[[optimizers]]
+model = "Kou"
+optimizer = "BFGS"
+parameters = [0.1174829070073187, 1.571526033869095, 9.137412154457071e-16, 1.0000000000234128, 9.123598301918108]
+rmse_bp = 86.01558672376191
+seconds = 1.7373488
+[[optimizers]]
+model = "Variance Gamma"
+optimizer = "NelderMead"
+parameters = [0.1619754115925594, -0.29110029787867964, 0.27941909739582005]
+rmse_bp = 93.37177762846076
+seconds = 0.3218323
+[[optimizers]]
+model = "Variance Gamma"
+optimizer = "LBFGS"
+parameters = [0.16197541206859126, -0.29110029291776574, 0.27941910682899007]
+rmse_bp = 93.3717776284481
+seconds = 0.5037804
+[[optimizers]]
+model = "Variance Gamma"
+optimizer = "BFGS"
+parameters = [0.16197541500380408, -0.29110026810976386, 0.2794191524216675]
+rmse_bp = 93.37177762846655
+seconds = 0.3811609
+[[optimizers]]
+model = "NIG"
+optimizer = "NelderMead"
+parameters = [0.15967036960214767, -0.31502283136966547, 0.2667616330152099]
+rmse_bp = 86.67844138744664
+seconds = 0.7123781
+[[optimizers]]
+model = "NIG"
+optimizer = "LBFGS"
+parameters = [0.15967037266114506, -0.31502280426166873, 0.26676167860780314]
+rmse_bp = 86.67844138741229
+seconds = 0.3214499
+[[optimizers]]
+model = "NIG"
+optimizer = "BFGS"
+parameters = [0.15967037206013393, -0.31502280959324036, 0.2667616696383298]
+rmse_bp = 86.6784413874143
+seconds = 0.27199
+[[optimizers]]
+model = "Heston"
+optimizer = "NelderMead"
+parameters = [1.1446363105990436, 0.2078105385861009, 0.0, 6.108317323191884, -0.6916847526639632, 0.052248770034465486]
+rmse_bp = 68.91088947595823
+seconds = 1.6650979
+[[optimizers]]
+model = "Heston"
+optimizer = "LBFGS"
+parameters = [1.1446363241372903, 0.2078105385916392, 0.0, 6.108317480812524, -0.6916847533523478, 0.05224876989848836]
+rmse_bp = 68.91088947596992
+seconds = 0.7538277
+[[optimizers]]
+model = "Heston"
+optimizer = "BFGS"
+parameters = [1.1446363163448794, 0.20781053858844084, 0.0, 6.108317390093879, -0.6916847529562307, 0.052248769976748294]
+rmse_bp = 68.91088947596477
+seconds = 0.8870241
+
+[scaling]
+device = "NVIDIA GeForce MX150"
+device_float32_ms = [0.8838999999999999, 0.8007500000000001, 0.94925, 1.48445, 2.0861, 3.31695, 7.1209]
+device_float64_ms = [2.18045, 3.6898500000000003, 6.3387, 5.0147, 7.0559, 10.917050000000001, 26.114600000000003]
+host_float64_ms = [0.55845, 0.9761000000000001, 2.2215999999999996, 4.74405, 9.08645, 17.785349999999998, 43.73515]
+strikes = [12, 50, 200, 500, 1000, 2000, 5000]

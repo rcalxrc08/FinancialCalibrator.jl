@@ -8,8 +8,9 @@ gr()
 const FIGURES = mkpath(joinpath(@__DIR__, "src", "assets", "figures"))
 
 # Categorical slots in fixed order (validated for colour vision deficiencies on adjacent pairs, in both modes), and
-# the ink of the text, of the axes and of the grid: the palette of the figures of FinancialFFT.jl.
-const THEMES = (light = (series = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"], text = "#1f2328", muted = "#5b6470", axis = "#b9b4ab", grid = "#e6e3de", diverging = ["#eb6834", "#f7f6f3", "#2a78d6"]), dark = (series = ["#4f8cff", "#ff8a5c", "#00d4aa", "#ffb84d", "#ff6b9d", "#7ee081"], text = "#f5f7fa", muted = "#a0aec0", axis = "#3a4466", grid = "#252d47", diverging = ["#ff8a5c", "#151b2e", "#4f8cff"]))
+# the ink of the text, of the axes and of the grid: the visualisation palette of the site (blue, teal, amber, cyan,
+# green), in darker steps for the light theme; the diverging map is blue below zero and amber above.
+const THEMES = (light = (series = ["#2563d9", "#0a8a6f", "#b86e0b", "#0b7fb3", "#2f8a3c", "#c2456e"], text = "#1f2328", muted = "#5b6470", axis = "#b9b4ab", grid = "#e6e3de", diverging = ["#2563d9", "#f7f6f3", "#c47a12"]), dark = (series = ["#4f8cff", "#00d4aa", "#ffb84d", "#38cfff", "#7ee787", "#ff6b9d"], text = "#f5f7fa", muted = "#a0aec0", axis = "#3a4466", grid = "#252d47", diverging = ["#4f8cff", "#151b2e", "#ffb84d"]))
 # The secondary encoding of the series: the light slots 3-5 are below 3:1 contrast on the surface.
 const MARKERS = [:circle, :rect, :utriangle, :diamond, :dtriangle, :star5]
 
@@ -30,6 +31,8 @@ function page_module(page_name, block_name, last_name)
     page = read(joinpath(@__DIR__, "src", page_name), String)
     example = Module(Symbol(block_name))
     for block in eachmatch(Regex("```@example $block_name\\r?\\n(.*?)```", "s"), page)
+        # the hidden blocks that call back into this module (the tiles of the page) draw nothing the figures need
+        occursin("Main.DocumentationFigures", block.captures[1]) && continue
         Base.include_string(example, block.captures[1])
         isdefined(example, last_name) && break
     end
@@ -57,7 +60,9 @@ function exotic_figure(theme, (maturities, strikes, sensitivities))
     return p
 end
 
-let calibration = page_module("calibration.md", "calibration", :res)
+# up to the implicit derivatives: pages.jl draws them, and the singular values of the page, from the same module
+const CALIBRATION_PAGE = page_module("calibration.md", "calibration", :∂p_∂v)
+let calibration = CALIBRATION_PAGE
     data = Base.invokelatest(() -> (calibration.maturities, calibration.strikes, calibration.mkt.Volatility, calibration.res.ModelVolatility))
     save_themes(theme -> calibration_figure(theme, data), "calibration")
 end
@@ -65,3 +70,7 @@ let exotics = page_module("exotics.md", "exotics", :∂V_∂v)
     data = Base.invokelatest(() -> (exotics.maturities, exotics.strikes, exotics.∂V_∂v))
     save_themes(theme -> exotic_figure(theme, data), "exotic")
 end
+# The figures and the numbers of the home page
+include(joinpath(@__DIR__, "home.jl"))
+# The figures and the key numbers of the guides
+include(joinpath(@__DIR__, "pages.jl"))

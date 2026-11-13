@@ -1,4 +1,15 @@
+```@raw html
+<div class="fc-page-head fc-refs-page">
+<p class="fc-kicker"><span>Reference</span> Bibliography</p>
+```
+
 # References
+
+```@raw html
+<p class="fc-page-lede">The optimization, the implicit differentiation, the models and the Monte Carlo sensitivities
+the package builds on.</p>
+</div>
+```
 
 ## Optimization and implicit differentiation
 
