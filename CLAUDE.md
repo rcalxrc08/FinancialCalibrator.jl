@@ -164,4 +164,8 @@ below the threshold, #2), `test/local/cboe_spx.jl` (local only, see above), `tes
   sensitivities look wrong).
 - Monte Carlo prices through FinancialMonteCarlo reseed at every call, so their AD gradient is the pathwise derivative
   on fixed paths: right for smooth payoffs, biased for barriers and binaries (the knock-out is not differentiated).
+- Default arguments of `calibrate`/`calibrated_parameters` are the constants `DEFAULT_OPTIMIZER`/`DEFAULT_OPTIONS`, not
+  `NelderMead()`: a default argument is evaluated in the method Mooncake traces, and `NelderMead()` builds `Dict(kwargs)`,
+  whose constructor has a try/catch on Julia 1.10 (Mooncake fails). Do not construct anything with keywords there.
+- CI runs Julia 1.10 and 1 (no `pre`: Mooncake does not precompile on the nightly compiler).
 - Commit messages end with the `Co-Authored-By` line configured for the session.

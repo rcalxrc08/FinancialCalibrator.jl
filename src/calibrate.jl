@@ -1,3 +1,9 @@
+# The default optimizer and options, built once: a default argument is evaluated in the body of the method that a
+# reverse mode backend traces, and NelderMead() builds a Dict of its keywords, whose constructor has a try/catch on
+# Julia 1.10, which Mooncake cannot differentiate. Both are immutable.
+const DEFAULT_OPTIMIZER = NelderMead()
+const DEFAULT_OPTIONS = Optim.Options()
+
 """
     calibrate(model, pricing_method, mktData::MarketData, opt_method = NelderMead(), opt_options = Optim.Options(); parametrization = Parametrization(), autodiff, polish = true, polish_backend, min_vega = 1e-3, verbose = false)
 
@@ -20,7 +26,7 @@ the gradient of the loss vanishes, not where the tolerances of `opt_method` stop
 a smooth function of the quotes, which the implicit function theorem can differentiate. Nothing is printed unless
 `verbose = true`.
 """
-function calibrate(model::FinancialMonteCarlo.BaseProcess, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData, opt_method::Optim.AbstractOptimizer = NelderMead(), opt_options::Optim.Options = Optim.Options(); min_vega::Real = 1e-3, kwargs...)
+function calibrate(model::FinancialMonteCarlo.BaseProcess, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData, opt_method::Optim.AbstractOptimizer = DEFAULT_OPTIMIZER, opt_options::Optim.Options = DEFAULT_OPTIONS; min_vega::Real = 1e-3, kwargs...)
     # what does not depend on the parameters is built once, not at every evaluation of the loss
     return calibrate_cached(model, pricing_method, mktData, loss_cache(model, pricing_method, mktData; min_vega = min_vega), opt_method, opt_options; kwargs...)
 end
