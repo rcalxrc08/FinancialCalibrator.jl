@@ -163,8 +163,7 @@ function cboe_raw_market_data(chain, root, r, grid)
         push!(dividends, Dict("referenceDate" => ref, "maturityDate" => maturity, "value" => r - log(F / S0) / T))
         append!(vols, [Dict("referenceDate" => ref, "maturityDate" => maturity, "pointValue" => m, "pointType" => "MONEYNESS", "value" => v) for (m, v) in zip(grid, smile)])
     end
-    # the adapter interpolates the rates and the dividends with cubic splines
-    length(rates) >= 4 || throw(ArgumentError("$(length(rates)) expiries of root $root cover the moneyness grid $(first(grid)) to $(last(grid)): at least 4 are needed"))
+    isempty(rates) && throw(ArgumentError("no expiry of root $root covers the moneyness grid $(first(grid)) to $(last(grid))"))
     spot = [Dict("referenceDate" => ref, "value" => S0)]
     return RawMarketData(refDate, JSON.json(spot), JSON.json(rates), JSON.json(dividends), JSON.json(vols))
 end

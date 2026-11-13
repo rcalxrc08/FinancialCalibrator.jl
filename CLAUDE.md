@@ -18,8 +18,8 @@ rule for `implicit_variables`: ImplicitDifferentiation's ChainRules rrule needs 
 `@zero_derivative` there: otherwise Mooncake traces it and fails on the device-to-host copies of the cache on the GPU.
 AD support (CPU and GPU timings, failures) is the table in `docs/src/backends.md`: ForwardDiff, Zygote, Mooncake work
 (Mooncake also on the GPU); Mooncake as inner `x` fails on the GPU (dual numbers broadcast over a CuArray); Enzyme
-works in both modes on the host through `ext/FinancialCalibratorEnzymeExt.jl` (see Gotchas, #20) and aborts on GPU quotes
-(LLVM assertion in Enzyme's `createCacheForScope`, #21). Removed as unused: DelimitedFiles (with the dead `web_retriever` and
+works in both modes on the host and in reverse mode on GPU quotes through `ext/FinancialCalibratorEnzymeExt.jl` (see
+Gotchas, #20, #21). Removed as unused: DelimitedFiles (with the dead `web_retriever` and
 `WebFileInput`, #15), FFTW, Random, FinancialFFT.
 
 ## Commands
@@ -76,7 +76,9 @@ vol_errors(params, model, pricing_method, mkt, cache = loss_cache(...); vols = m
 Files in `src/` (included in this order by `FinancialCalibrator.jl`): `structs.jl` (input types, `MarketData`,
 `implied_dividend`), `retriever_calibration.jl` (reads `data/json/`), `cboe.jl` (`CboeInputStrategy` from a file, `CboeWebInputStrategy` downloading the current chain, `cboe_snapshot`:
 CBOE delayed quotes, #18), `adapter_calibration.jl` (parsing, returns
-`(underlying, mkt)`), `calibrated_data.jl` (`CalibratedData`), `analytic/` (`analytic_method.jl`: `AnalyticMethod`, the
+`(underlying, mkt)`; the surface is filled in one pass over the JSON points, rates and dividends are interpolated
+linearly in the year fraction, flat outside the nodes, by `interpolate_linear`: no interpolation package, Dierckx was
+dropped; its cubic spline oscillated up to 2.5 bp between the nodes of the DAX rate curve), `calibrated_data.jl` (`CalibratedData`), `analytic/` (`analytic_method.jl`: `AnalyticMethod`, the
 generic closed-form `pricer`, and `LognormalMixtureKernel`, an isbits callable `(K, isCall) -> price` summing `blkprice`
 over a tuple of components; `black_scholes.jl` and `shifted_lognormal_mixture.jl` define `analytic_price_type` and
 `analytic_kernel` for their model: a new closed form is those two methods), `pricer.jl`, `loss.jl`, `parametrization.jl`, `calibrate.jl`, `sensitivities.jl`.
@@ -106,7 +108,10 @@ while optimizing are swallowed (see issue #3). The loop over the maturities, `ma
 `calibrate` builds the cache and calls `calibrate_cached`, which calls `optimal_variables`: Optim's `optimize` with
 `autodiff` (an ADTypes backend, used by gradient optimizers), then with `polish = true` `levenberg_marquardt` on
 `vol_errors` (Jacobian by `polish_backend` through DifferentiationInterface; steps that throw or do not decrease the sum of
-squares rejected; with J on the GPU, JᵀJ and Jᵀe are formed there and the p × p solve is on the host, timings in the
+squares rejected, `step_accepted`: a step is taken if it lowers the sum of squares (`Σ (e_new - e)(e_new + e)`, no
+cancellation) or, within sqrt(eps) of it, halves the gradient Jᵀe; near the optimum the noise of the implied vols
+(~1e-14, ±1e-15 on the sum) hides the decrease a step promises (6e-18 on DAX/BS), and the GPU polish stopped 9e-10
+short of σ* = mean of the quotes; the Jacobian is recomputed only after an accepted step; with J on the GPU, JᵀJ and Jᵀe are formed there and the p × p solve is on the host, timings in the
 comment above the function). The polish is what makes the
 end point stationary (|∇L| ~ 1e-8 on DAX instead of NelderMead's ~1e-3).
 
@@ -132,12 +137,13 @@ CboeInputStrategy(; rate, moneyness, root, dir))` turns a saved chain into the J
 `adapter` is reused: OCC symbols parsed by `parse_occ`, quotes with `bid > 0` and `1e-3 < iv < 5`, the forward of each
 expiry by put–call parity (median over the 6 strikes nearest to the spot), the dividend `r - log(F/S0)/T`, a flat
 `rate`, out of the money vols interpolated linearly in moneyness on the grid (expiries not covering it are dropped,
-since the adapter needs one grid for all maturities, #11). At least 4 expiries (Dierckx cubic splines). Yahoo's option
+since the adapter needs one grid for all maturities, #11). At least one expiry. Yahoo's option
 chain needs a cookie and crumb that it refuses to non-browser clients (401/429), so it is not implemented. No real chain is in the repository (too heavy): `test/cboe.jl` builds a synthetic chain
 in the CBOE format (Black–Scholes with a skew, bid/ask 1% around the price, so parity is exact) in a temporary
 directory; `test/local/cboe_spx.jl` (NIG calibrated to the real SPX chain and its implicit derivative against
-recalibration) runs only when `data/json/real/CboeOptions_SPX12Nov2026.json` exists, a git-ignored folder with the
-downloaded snapshots and a README. The adapter now selects the volatility rows with the same mask as the maturities (#2).
+recalibration) runs only when `data/json/cboe/2026-11-12/CboeOptions_SPX12Nov2026.json` exists. Snapshots are git-ignored (the
+chain is 14 MB): CBOE chain and spot and FRED Treasury curve in `data/json/cboe/<yyyy-mm-dd>/`, ECB and Yahoo in
+`data/json/real/`, whose README describes all the sources. The adapter now selects the volatility rows with the same mask as the maturities (#2).
 
 ## Tests
 
@@ -165,14 +171,21 @@ below the threshold, #2), `test/local/cboe_spx.jl` (local only, see above), `tes
 - Monte Carlo prices through FinancialMonteCarlo reseed at every call, so their AD gradient is the pathwise derivative
   on fixed paths: right for smooth payoffs, biased for barriers and binaries (the knock-out is not differentiated).
 - Timings (VG/Lewis, 15 quotes, `docs/src/backends.md`): once compiled a gradient of `calibrated_parameters` costs about
-  one calibration (0.23 s: NelderMead 128 loss evaluations at 0.75 ms, then the polish); the implicit derivatives ~8 ms.
-  ForwardDiff's default chunk (8) re-runs the calibration per chunk: use one chunk for all the quotes. First calls are
-  compilation (Zygote 16 s, Mooncake 38 s; Mooncake as inner `x` is reverse over forward through the pricer: ~150 s,
-  5x slower at run time). Benchmark each backend in a fresh process: in one process later cases reuse compiled code.
-  Enzyme (#20): `ext/FinancialCalibratorEnzymeExt.jl` (weak dep EnzymeCore) marks `implicit_calibration` inactive, so
-  the implicit function is `Const` and ImplicitDifferentiation's own Enzyme rules apply; they also need the solver
-  inferred, hence the type assertion at the end of `optimal_variables` (Optim's result and the polish are not
-  inferred). Reverse 160 s to compile then 0.29 s, forward 0.39 s, exact; tested in `test/models_methods.jl`.
+  one calibration (0.15-0.2 s: NelderMead 128 loss evaluations at 0.75 ms, then the polish); the implicit derivatives ~8 ms.
+  ForwardDiff's default chunk (8) re-runs the calibration per chunk: use one chunk for all the quotes. First calls after a
+  calibration are compilation (ForwardDiff 10 s, Zygote 27 s, Mooncake 28-36 s, Enzyme ~100 s; Mooncake as inner `x` is
+  reverse over forward through the pricer: ~140 s, 4x slower at run time). On the MX150 the device is launch-bound on
+  DAX (a loss 7-9 ms whatever the precision): Float32 pays only on large smiles (2000 strikes, Cos 4096: 6.7 ms vs 14 ms). Benchmark each backend in a fresh process: in one process later cases reuse compiled code.
+  Enzyme (#20, #21): `calibrated_parameters` calls `calibrated_variables(vols, setup...)` (build the implicit function
+  and call it); `ext/FinancialCalibratorEnzymeExt.jl` (weak dep EnzymeCore) gives it forward, augmented primal and
+  reverse rules that build the implicit function as plain Julia code and delegate to ImplicitDifferentiation's own
+  Enzyme rules with `Const(implicit)`, keeping only `y` of `(y, z)`. Enzyme must never trace the construction: even
+  marked `inactive`, the struct went on its tape (a tape type mismatch on the host, an LLVM assertion in
+  `createCacheForScope` on GPU quotes). Those rules check the type of the shadow against the result, so the solver must
+  be inferred: `levenberg_marquardt` prepares its Jacobian once and writes the trial point into a copy of `x` (an
+  unprepared `DI.jacobian` picks ForwardDiff's chunk at run time, which made everything `Any`); `@inferred` test of
+  `optimal_variables` in `test/runtests.jl`, no type assertion. Tested in `test/models_methods.jl` and `test/gpu.jl`
+  (reverse on the device compiles for about 18 minutes, then 2.3 s on BS/Cos DAX).
 - `maturity_errors` is a loop with a concrete accumulator: a `map` closure was not inferred with dual numbers and made
   the loss `Any` (tested with `@inferred` on duals in the parameters and in the quotes).
 - Python edits of Julia or Markdown files: use raw strings (`r"""..."""`), `\t` and `\n` in `\top`/`\nabla` were once

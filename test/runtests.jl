@@ -136,6 +136,12 @@ end
             @test (@inferred pricer(slnm, ZeroRate(0.01), AnalyticMethod(), smile)) isa Vector{Float64}
             @test (@inferred pricer(slnm, ZeroRate(0.01), AnalyticMethod(), FinancialMonteCarlo.EuropeanOption(1.0, 100.0))) isa Float64
             @test (@inferred FC.loss(FinancialMonteCarlo.get_parameters(slnm), slnm, AnalyticMethod(), mkt)) isa Float64
+            # the solver of calibrated_parameters (Optim, then the polish, whose Jacobian is not inferred): Enzyme's rules
+            # for the implicit function need it inferred
+            bs = BlackScholesProcess(0.2, und)
+            cache = FC.loss_cache(bs, CosMethod(256), mkt)
+            options = FC.Optim.Options(iterations = 5)
+            @test (@inferred FC.optimal_variables(bs, CosMethod(256), mkt, cache, FC.DEFAULT_OPTIMIZER, options, Parametrization())) isa Vector{Float64}
         end
 
         # The volatility errors: one per quote, maturity by maturity, out of the money options only, generic in the quotes.
@@ -245,10 +251,10 @@ include("models_methods.jl")
 include("financialfft_example.jl")
 include("cboe.jl")
 # market data that is not in the repository: run where it is on disk
-if isfile(joinpath(@__DIR__, "..", "data", "json", "real", "CboeOptions_SPX12Nov2026.json"))
+if isfile(joinpath(@__DIR__, "..", "data", "json", "cboe", "2026-11-12", "CboeOptions_SPX12Nov2026.json"))
     include(joinpath("local", "cboe_spx.jl"))
 else
-    @info "No SPX option chain in data/json/real: skipping the local tests"
+    @info "No SPX option chain in data/json/cboe/2026-11-12: skipping the local tests"
 end
 include("aqua.jl")
 

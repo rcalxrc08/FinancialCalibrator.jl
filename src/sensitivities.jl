@@ -74,10 +74,15 @@ one to change: the pullback needs ``(\\partial_v \\nabla_x L)^\\top w``, which f
 """
 function calibrated_parameters(model::FinancialMonteCarlo.BaseProcess, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData, vols::AbstractMatrix{<:Real} = mktData.Volatility, opt_method::Optim.AbstractOptimizer = DEFAULT_OPTIMIZER, opt_options::Optim.Options = DEFAULT_OPTIONS; parametrization::Parametrization = Parametrization(), autodiff::ADTypes.AbstractADType = default_backend(), polish_backend::ADTypes.AbstractADType = default_backend(), conditions_backend::ADTypes.AbstractADType = default_backend(), implicit_backends::NamedTuple{(:x, :y)} = (x = default_backend(), y = default_backend()), min_vega::Real = 1e-3)
     size(vols) == size(mktData.Volatility) || throw(DimensionMismatch("vols is $(size(vols)), the surface of mktData $(size(mktData.Volatility))"))
-    implicit = implicit_calibration(model, pricing_method, mktData, opt_method, opt_options, parametrization, autodiff, polish_backend, conditions_backend, implicit_backends, min_vega)
     # the variables at the solution, with the rules of ImplicitDifferentiation; the parameters follow by the chain rule
-    return parametrization.to_params(implicit_variables(implicit, vols))
+    return parametrization.to_params(calibrated_variables(vols, model, pricing_method, mktData, opt_method, opt_options, parametrization, autodiff, polish_backend, conditions_backend, implicit_backends, min_vega))
 end
+
+# The implicit function built and called in one function, the quotes first and then the arguments of
+# implicit_calibration: the extension for Enzyme gives it rules that build the implicit function outside of the
+# differentiated code (Enzyme fails on a construction it traces, even marked inactive, #21), then apply the rules of
+# ImplicitDifferentiation. Mooncake traces it, with its rules for implicit_calibration and implicit_variables.
+calibrated_variables(vols::AbstractMatrix{<:Real}, setup::Vararg{Any, N}) where {N} = implicit_variables(implicit_calibration(setup...), vols)
 
 # The implicit function of a calibration: what does not depend on the quotes being differentiated (the quotes in the
 # loss, the solver, the conditions), in a function of its own with positional arguments, which the extension for

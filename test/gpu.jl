@@ -8,7 +8,8 @@ using Optim
 using ForwardDiff
 using Zygote
 using Mooncake
-using ADTypes: AutoMooncake
+using Enzyme
+using ADTypes: AutoMooncake, AutoEnzyme
 import DifferentiationInterface as DI
 
 const FC = FinancialCalibrator
@@ -92,5 +93,10 @@ const FC = FinancialCalibrator
         # Mooncake from outside: the setup of the implicit function (copies from the device) has a zero derivative
         gm = DI.gradient(V -> sum(calibrated_parameters(bs, method, gmkt, V)), AutoMooncake(; config = nothing), gmkt.Volatility)
         @test Array(gm) ≈ Array(g) rtol = 1e-10
+        # Enzyme from outside: its rules for calibrated_variables build the implicit function outside of the
+        # differentiated code (#21)
+        ge = DI.gradient(V -> sum(calibrated_parameters(bs, method, gmkt, V)), AutoEnzyme(; mode = Enzyme.set_runtime_activity(Enzyme.Reverse), function_annotation = Enzyme.Const), gmkt.Volatility)
+        @test ge isa CuMatrix{Float64}
+        @test Array(ge) ≈ Array(g) rtol = 1e-10
     end
 end

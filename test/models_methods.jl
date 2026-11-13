@@ -115,7 +115,7 @@ end
             mc = AutoMooncake(; config = nothing)
             @test vec(DI.gradient(v -> dot(w, calibrated_parameters(start, method, smkt, v)), mc, smkt.Volatility)) ≈ transpose(J) * w rtol = 1e-10
             @test vec(DI.gradient(v -> dot(w, calibrated_parameters(start, method, smkt, v; implicit_backends = (x = mc, y = AutoForwardDiff()))), mc, smkt.Volatility)) ≈ transpose(J) * w rtol = 1e-10
-            # Enzyme, through ImplicitDifferentiation's Enzyme rules (the setup is inactive, see the extension)
+            # Enzyme, through the rules of the extension, which apply ImplicitDifferentiation's Enzyme rules
             enzyme(mode) = AutoEnzyme(; mode = Enzyme.set_runtime_activity(mode), function_annotation = Enzyme.Const)
             @test vec(DI.gradient(v -> dot(w, calibrated_parameters(start, method, smkt, v)), enzyme(Enzyme.Reverse), smkt.Volatility)) ≈ transpose(J) * w rtol = 1e-10
             if name == "BlackScholes"

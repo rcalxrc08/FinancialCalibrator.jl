@@ -1,74 +1,48 @@
+# A curve given as JSON points (maturity date and value): year fractions from `refDate` and values, sorted by maturity.
+function parse_curve(points, refDate::Date, basis::Integer)
+    t = [yearfrac(refDate, Date(p["maturityDate"]), basis) for p in points]
+    order = sortperm(t)
+    return t[order], [Float64(p["value"]) for p in points][order]
+end
+
+# Linear interpolation of the nodes (x, y) (x increasing) at t, flat beyond the first and the last node.
+function interpolate_linear(x::AbstractVector, y::AbstractVector, t::Real)
+    t <= first(x) && return first(y)
+    t >= last(x) && return last(y)
+    i = searchsortedlast(x, t)
+    w = (t - x[i]) / (x[i+1] - x[i])
+    return (1 - w) * y[i] + w * y[i+1]
+end
+
 function general_adapter_strategy(SpotString::String, RfString::String, IdString::String, VolaString::String, YfrTreshold::Tuple{Real, Real} = (0.1, 5.0), MoneynessTreshold::Tuple{Real, Real} = (0.7, 2.0), BasisConvention::Integer = 1)
-    ####Input Parser and Adapter
+    spot = JSON.parse(SpotString)[1]
+    S0 = Float64(spot["value"])
+    refDate = Date(spot["referenceDate"])
+    rate_times, rates = parse_curve(JSON.parse(RfString), refDate, BasisConvention)
+    dividend_times, dividends = parse_curve(JSON.parse(IdString), refDate, BasisConvention)
 
-    # JSON.parse - string or stream to Julia data structures
-    jSpot = JSON.parse(SpotString)[1]
-    jRf = JSON.parse(RfString)
-    jImplDiv = JSON.parse(IdString)
-    jVolat = JSON.parse(VolaString)
-
-    ######## Parsing of Input Data
-    #BasisConvention=1;#ACT/365
-    #Spot Parsing
-    S0=jSpot["value"]
-    RefDate=Date(jSpot["referenceDate"])
-
-    #Zero Rate Parsing
-    RfArray=[jRf[i]["value"] for i = 1:length(jRf)]
-    DatesRfArray=Date.([jRf[i]["maturityDate"] for i = 1:length(jRf)])
-    yfrRfArray=[yearfrac(RefDate, matDate, BasisConvention) for matDate in DatesRfArray]
-    IndexRf=sortperm(yfrRfArray)
-    yfrRfArray=yfrRfArray[IndexRf]
-    RfArray=RfArray[IndexRf]
-
-    #Implied Dividend Parsing
-    IdArray=[jImplDiv[i]["value"] for i = 1:length(jImplDiv)]
-    DatesIdArray=Date.([jImplDiv[i]["maturityDate"] for i = 1:length(jImplDiv)])
-    yfrIdArray=[yearfrac(RefDate, matDate, BasisConvention) for matDate in DatesIdArray]
-    IndexId=sortperm(yfrIdArray)
-    yfrIdArray=yfrIdArray[IndexId]
-    IdArray=IdArray[IndexId]
-
-    #Implied Vol Parsing
-    maturityDates=((sort(unique([jVolat[i]["maturityDate"] for i = 1:length(jVolat)]))))
-    moneyness=sort(unique([jVolat[i]["pointValue"] for i = 1:length(jVolat)]))
-    VolaMatrix=Matrix(undef, length(maturityDates), length(moneyness))
-
-    for i = 1:length(maturityDates)
-        volaTmp=([jVolat[j]["value"] for j = 1:length(jVolat) if jVolat[j]["maturityDate"]==maturityDates[i]])
-        moneyTemp=([jVolat[j]["pointValue"] for j = 1:length(jVolat) if jVolat[j]["maturityDate"]==maturityDates[i]])
-        IndexMoney=sortperm(moneyTemp)
-        VolaMatrix[i, 1:end]=volaTmp[IndexMoney]
+    # The surface: one row per maturity, one column per moneyness, filled in a single pass over the points.
+    points = JSON.parse(VolaString)
+    maturities = sort!(unique(p["maturityDate"] for p in points))
+    moneyness = sort!(unique(Float64(p["pointValue"]) for p in points))
+    row = Dict(m => i for (i, m) in enumerate(maturities))
+    column = Dict(m => j for (j, m) in enumerate(moneyness))
+    vols = fill(NaN, length(maturities), length(moneyness))
+    for p in points
+        vols[row[p["maturityDate"]], column[Float64(p["pointValue"])]] = p["value"]
     end
+    any(isnan, vols) && throw(ArgumentError("the volatility surface does not have a quote at every maturity and moneyness"))
+    maturityDates = Date.(maturities)
+    times = [yearfrac(refDate, d, BasisConvention) for d in maturityDates]
 
-    maturityDates=Date.(maturityDates)
-
-    yfrVolaArray=[yearfrac(RefDate, matDate, BasisConvention) for matDate in maturityDates]
-
-    ##### Augmenting Phase
-
-    #Augment ZeroRate
-    ZeroSplineInterpolator=Dierckx.Spline1D(yfrRfArray, RfArray)
-    ZeroRateAug=ZeroSplineInterpolator(yfrVolaArray)
-
-    #Augment ZeroRate
-    IdSplineInterpolator=Dierckx.Spline1D(yfrIdArray, IdArray)
-    IdAug=IdSplineInterpolator(yfrVolaArray)
-
-    ##### Resize All the Inputs
-    # The maturities and the moneyness points within the thresholds, and the same rows and columns of the volatilities:
-    # the rows of VolaMatrix are all the maturities, so they are selected with the mask of the maturities (#2).
-    rows = findall(t -> YfrTreshold[1] < t < YfrTreshold[2], yfrVolaArray)
+    # The maturities and the moneyness points within the thresholds, and the same rows and columns of the volatilities (#2).
+    rows = findall(t -> YfrTreshold[1] < t < YfrTreshold[2], times)
     columns = findall(m -> MoneynessTreshold[1] < m < MoneynessTreshold[2], moneyness)
-    TimeToMaturity = yfrVolaArray[rows]
-    maturityDates = maturityDates[rows]
-    Moneyness = moneyness[columns]
-    ZeroRates = ZeroRateAug[rows]
-    ImpliedDividend = IdAug[rows]
-    Volatility = Matrix{Float64}(VolaMatrix[rows, columns])
-    Strikes=Moneyness .* S0
-
-    return (S0, TimeToMaturity, maturityDates, ZeroRates, ImpliedDividend, Strikes, Volatility)
+    TimeToMaturity = times[rows]
+    # rates and dividends at the maturities of the surface: linear in the year fraction
+    ZeroRates = [interpolate_linear(rate_times, rates, t) for t in TimeToMaturity]
+    ImpliedDividend = [interpolate_linear(dividend_times, dividends, t) for t in TimeToMaturity]
+    return (S0, TimeToMaturity, maturityDates[rows], ZeroRates, ImpliedDividend, moneyness[columns] .* S0, vols[rows, columns])
 end
 
 """

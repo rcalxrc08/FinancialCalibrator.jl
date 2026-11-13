@@ -58,10 +58,44 @@ function optimal_variables(model, pricing_method, mktData::MarketData, cache, op
         println(result)
         @show loss_function(x)
     end
-    # neither the result of optimize nor the polish (its trial steps may throw) is inferred: the minimizer has the type
-    # of the start, and saying so makes the solver of calibrated_parameters inferred, which Enzyme's rules for the
-    # implicit function need (they check the type of the shadow against the type of the result)
-    return convert(typeof(x0), x)::typeof(x0)
+    # inferred (the result of optimize and the polish): Enzyme's rules for the implicit function need the solver of
+    # calibrated_parameters inferred, they check the type of the shadow against the type of the result
+    return x
+end
+
+# J, JᵀJ and Jᵀe at x (e the residuals there): the products on the device of J, the p × p system on the host.
+function normal_equations(errors, prep, backend, x, e)
+    J = DI.jacobian(errors, prep, backend, x)
+    return J, Array(transpose(J) * J), Array(transpose(J) * e)
+end
+
+# Whether a step from the residuals e to e_new is accepted, with J the Jacobian and g = Jᵀe at the current point, and
+# the gradient phase: `nothing` until a step is accepted on the gradient, then the sum of squares where the phase began
+# and the last gradient accepted (each norm of Jᵀe_new with the J of its own step).
+# Returns (accepted, phase). Outside the phase a step is accepted if it decreases the sum of squares, computed as
+# Σ (e_new - e)(e_new + e), without the cancellation of |e_new|² - |e|²; or else, starting the phase, if it leaves the
+# sum within sqrt(eps) (relative) and halves the gradient (Jᵀe_new, with the same J). In the phase every step must halve
+# the last gradient accepted and keep the sum within sqrt(eps) of where the phase began.
+# Why: near the optimum the decrease a step promises is far below the noise of the residuals. On DAX with Black-Scholes
+# and GPU quotes, -6e-18 against changes of ±1e-15 from the implied volatilities (inverted to ~1e-14): tested on the
+# values alone, the polish stopped where the noise hid the decrease, 9e-10 (relative) short of the optimum, with a
+# gradient of 2e-8, which is resolved far better (noise ~1e-13). Why the phase: a step accepted on the gradient may
+# raise the sum a little, and the next one could then be accepted on a noisy "decrease"; with a FiniteDiff Jacobian the
+# two alternated for all the iterations (a random walk, 10 times slower). In the phase the gradient only halves, so the
+# polish stops after a few steps, at the noise of the gradient; halving the last gradient accepted, not g, which comes
+# from a new Jacobian at every step (a FiniteDiff Jacobian made g jump, and the phase walked as well).
+function step_accepted(e, e_new, J, g, phase)
+    S = sum(abs2, e)
+    tolerance = sqrt(eps(typeof(S)))
+    gradient = norm(transpose(J) * e_new)
+    if phase === nothing
+        change = sum((e_new .- e) .* (e_new .+ e))
+        change < 0 && return true, phase
+        change <= tolerance * S && gradient < norm(g) / 2 && return true, (S = S, gradient = gradient)
+        return false, phase
+    end
+    sum(abs2, e_new) <= (1 + tolerance) * phase.S && gradient < phase.gradient / 2 && return true, (S = phase.S, gradient = gradient)
+    return false, phase
 end
 
 # Levenberg–Marquardt on the residuals `errors(x)`, from `x`: (JᵀJ + μ diag(JᵀJ)) δ = -Jᵀe, with μ divided after a step
@@ -78,26 +112,42 @@ end
 # point) and differentiates it, which takes from tens to hundreds of milliseconds, so the choice is the one that does not
 # degrade with the number of quotes.
 # Exceptions at `x` itself, where the optimizer stopped, propagate: they are not a matter of the step.
+# Type stability: the result has the type of `x` (Enzyme's rules for calibrated_parameters need the solver inferred).
+# It used to be `Any`: `DI.jacobian(errors, backend, x)` unprepared lets ForwardDiff choose its chunk from `length(x)`,
+# a run-time value, so the chunk, the dual numbers and the Jacobian are not inferred; the step δ = -(A + μD) \ g
+# inherited that, and `x = x + δ` made the variables `Any` from the first accepted step, so the result was `Any`.
 function levenberg_marquardt(errors, x::AbstractVector{T}; backend::ADTypes.AbstractADType = default_backend(), iterations::Integer = 100, μ::Real = 1e-2, xtol::Real = 1e-12) where {T <: Real}
     e = errors(x)
+    # The Jacobian is prepared once (not at every step), but its type is still not inferred, since the chunk depends
+    # on length(x). So the trial point is written into an array of the type of x: the variables keep their type
+    # whatever the type of the step. x and x_trial swap at each accepted step, hence the copy: the caller's array is
+    # not overwritten.
+    x = copy(x)
+    prep = DI.prepare_jacobian(errors, backend, x)
+    x_trial = similar(x)
+    # the Jacobian and the normal equations at x, recomputed only when a step is accepted: a rejected step leaves x
+    J, A, g = normal_equations(errors, prep, backend, x, e)
+    phase = nothing   # the gradient phase, see step_accepted
     for _ = 1:iterations
-        J = DI.jacobian(errors, backend, x)
-        A = Array(transpose(J) * J)
-        g = Array(transpose(J) * e)
         D = Diagonal(max.(diag(A), eps(T) * maximum(diag(A))))
         δ = -((A + μ * D) \ g)
+        x_trial .= x .+ δ
         e_new = try
-            errors(x + δ)
+            errors(x_trial)
         catch err
             @debug "levenberg_marquardt: invalid step, rejected" x δ exception = err
             nothing
         end
-        if e_new !== nothing && all(isfinite, e_new) && sum(abs2, e_new) < sum(abs2, e)
-            x, e, μ = x + δ, e_new, μ / 3
+        accepted, phase = e_new === nothing || !all(isfinite, e_new) ? (false, phase) : step_accepted(e, e_new, J, g, phase)
+        if accepted
+            x, x_trial, e, μ = x_trial, x, e_new, μ / 3
             norm(δ) <= xtol * (1 + norm(x)) && break
+            J, A, g = normal_equations(errors, prep, backend, x, e)
         else
+            # no step decreases the loss: the rounding floor of the volatilities. A larger μ only shortens the step, so
+            # a rejected step already below the tolerance ends the polish (it took 25 more rejections to reach μ > 1e12)
+            norm(δ) <= xtol * (1 + norm(x)) && break
             μ *= 4
-            # no step decreases the loss: the rounding floor of the volatilities
             μ > 1e12 && break
         end
     end

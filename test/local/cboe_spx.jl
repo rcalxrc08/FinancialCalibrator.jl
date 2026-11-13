@@ -1,5 +1,5 @@
 # Run locally only: the real option chain of the SPX on 12 November 2026, as downloaded from the CBOE (13.8 MB, in the
-# untracked and git-ignored data/json/real, see its README). runtests.jl includes this file only when the chain is there.
+# untracked and git-ignored data/json/cboe/2026-11-12, see data/json/real/README.md). runtests.jl includes this file only when the chain is there.
 # Normal Inverse Gaussian is calibrated to the surface, and the calibrated parameters are differentiated with respect to
 # the quotes.
 using Test
@@ -10,7 +10,7 @@ using FinancialFFT
 using ForwardDiff
 using LinearAlgebra
 
-const SPX_DIR = joinpath(@__DIR__, "..", "..", "data", "json", "real")
+const SPX_DIR = joinpath(@__DIR__, "..", "..", "data", "json", "cboe", "2026-11-12")
 
 @testset "SPX from the CBOE (local)" begin
     und, mkt = adapter(retriever(CalibrationID("SPX", "12Nov2026", "USD"), CboeInputStrategy(rate = 0.04, dir = SPX_DIR)))
