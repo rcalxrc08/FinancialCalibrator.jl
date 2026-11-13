@@ -2,10 +2,15 @@
 # reverse mode backend traces, and NelderMead() builds a Dict of its keywords, whose constructor has a try/catch on
 # Julia 1.10, which Mooncake cannot differentiate. Both are immutable.
 const DEFAULT_OPTIMIZER = NelderMead()
-const DEFAULT_OPTIONS = Optim.Options()
+# The default options hand over to the polish: the optimizer stops once its simplex (or gradient) is below 1e-6, and the
+# Levenberg–Marquardt polish converges from there in a few steps. Optim's default, 1e-8, made the optimizer crawl to a
+# point the polish would reach anyway: on DAX the same optimum for the seven models tried, Kou 2.7 s -> 1.4 s, Merton
+# 0.9 s -> 0.6 s (#22). Without the polish the default is Optim's own (FULL_OPTIONS).
+const DEFAULT_OPTIONS = Optim.Options(g_tol = 1e-6)
+const FULL_OPTIONS = Optim.Options()
 
 """
-    calibrate(model, pricing_method, mktData::MarketData, opt_method = NelderMead(), opt_options = Optim.Options(); parametrization = Parametrization(), autodiff, polish = true, polish_backend, min_vega = 1e-3, verbose = false)
+    calibrate(model, pricing_method, mktData::MarketData, opt_method = NelderMead(), opt_options = Optim.Options(g_tol = 1e-6); parametrization = default_parametrization(model), autodiff, polish = true, polish_backend, min_vega = 1e-3, verbose = false)
 
 Calibrate the parameters of `model` to the implied volatility surface in `mktData`. Each smile is priced with
 `pricing_method`, any `FinancialMonteCarlo.AbstractMethod`: a FinancialFFT method such as `CarrMadanMethod`,
@@ -17,8 +22,10 @@ left out.
 
 The loss (`FinancialCalibrator.loss`), half the sum of the squared volatility errors, is minimized with the Optim optimizer `opt_method` and
 settings `opt_options` (iterations, time limit, tolerances, ...), starting from the current parameters of `model`, over
-the variables of `parametrization` (see [`Parametrization`](@ref); by default the parameters of
-`FinancialMonteCarlo.get_parameters`); a
+the variables of `parametrization` (see [`Parametrization`](@ref); by default [`default_parametrization`](@ref), on
+which every point is a valid model). The default options stop the optimizer at a tolerance of 1e-6 and leave the rest to
+the polish; with `polish = false` the default is Optim's own `Optim.Options()`. To start from a previous solution, pass
+the model with those parameters (`FinancialMonteCarlo.set_parameters!(model, p)`); a
 gradient-based optimizer gets its gradients from `autodiff` (an ADTypes backend). With `polish = true` the result is then
 refined by Levenberg–Marquardt on the volatility errors (their Jacobian by `polish_backend`, an ADTypes backend through
 DifferentiationInterface), so that the calibration ends where
@@ -31,36 +38,55 @@ function calibrate(model::FinancialMonteCarlo.BaseProcess, pricing_method::Finan
     return calibrate_cached(model, pricing_method, mktData, loss_cache(model, pricing_method, mktData; min_vega = min_vega), opt_method, opt_options; kwargs...)
 end
 
-function calibrate_cached(model::FinancialMonteCarlo.BaseProcess, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}, cache, opt_method::Optim.AbstractOptimizer, opt_options::Optim.Options; parametrization::Parametrization = Parametrization(), kwargs...)::CalibratedData{T} where {T}
-    x = optimal_variables(model, pricing_method, mktData, cache, opt_method, opt_options, parametrization; kwargs...)
+function calibrate_cached(model::FinancialMonteCarlo.BaseProcess, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}, cache, opt_method::Optim.AbstractOptimizer, opt_options::Optim.Options; parametrization::Parametrization = default_parametrization(model), kwargs...)::CalibratedData{T} where {T}
+    x, e = optimal_variables_and_errors(model, pricing_method, mktData, cache, opt_method, opt_options, parametrization; kwargs...)
     OptimalParameters = parametrization.to_params(x)
-    OptimalValue = loss(OptimalParameters, model, pricing_method, mktData, cache)
-    calibrated_model = FinancialMonteCarlo.set_parameters!(model, OptimalParameters)
     ModelVolatility = fill(T(NaN), length(mktData.TimeToMaturity), length(mktData.Strikes))
+    e === nothing && return CalibratedData(OptimalParameters, T(Inf), ModelVolatility)
+    # the value and the model volatilities from the errors at the optimum, which the polish has already computed: the
+    # surface is not priced again (#22). The errors are maturity by maturity, in the order of the quotes of the cache.
+    e = Array(e)
+    offset = 0
     for i in eachindex(cache.quoted)
-        isempty(cache.quoted[i]) && continue
-        ModelVolatility[i, cache.quoted[i]] = Array(model_volatilities(calibrated_model, model.underlying.S0, mktData, cache, i))
+        q = cache.quoted[i]
+        isempty(q) && continue
+        ModelVolatility[i, q] = Array(mktData.Volatility[i, q]) .+ e[(offset+1):(offset+length(q))]
+        offset += length(q)
     end
-    return CalibratedData(OptimalParameters, OptimalValue, ModelVolatility)
+    return CalibratedData(OptimalParameters, T(sum(abs2, e) / 2), ModelVolatility)
 end
 
 # The minimizer, in the variables of the parametrization: the optimizer, then the Levenberg–Marquardt polish.
-function optimal_variables(model, pricing_method, mktData::MarketData, cache, opt_method::Optim.AbstractOptimizer, opt_options::Optim.Options, parametrization::Parametrization; autodiff::ADTypes.AbstractADType = default_backend(), polish::Bool = true, polish_backend::ADTypes.AbstractADType = default_backend(), verbose::Bool = false)
+# Inferred (the result of optimize and the polish): Enzyme's rules for the implicit function need the solver of
+# calibrated_parameters inferred, they check the type of the shadow against the type of the result.
+optimal_variables(args...; kwargs...) = first(optimal_variables_and_errors(args...; kwargs...))
+
+# The minimizer and the volatility errors there (`nothing` if they cannot be priced), so that calibrate needs no other
+# pricing of the surface. With the default options and no polish, Optim runs with its own tolerances (FULL_OPTIONS).
+function optimal_variables_and_errors(model, pricing_method, mktData::MarketData, cache, opt_method::Optim.AbstractOptimizer, opt_options::Optim.Options, parametrization::Parametrization; autodiff::ADTypes.AbstractADType = default_backend(), polish::Bool = true, polish_backend::ADTypes.AbstractADType = default_backend(), verbose::Bool = false)
     to_params = parametrization.to_params
     loss_function(x::AbstractVector{<:Real}) = loss(to_params(x), model, pricing_method, mktData, cache)
+    errors(x) = vol_errors(to_params(x), model, pricing_method, mktData, cache)
     x0 = parametrization.from_params(FinancialMonteCarlo.get_parameters(model))
-    result = optimize(loss_function, x0, opt_method, opt_options; autodiff = autodiff)
+    options = !polish && opt_options === DEFAULT_OPTIONS ? FULL_OPTIONS : opt_options
+    result = optimize(loss_function, x0, opt_method, options; autodiff = autodiff)
     x = result.minimizer
-    if polish
-        x = levenberg_marquardt(y -> vol_errors(to_params(y), model, pricing_method, mktData, cache), x; backend = polish_backend)
-    end
+    x, e = polish ? levenberg_marquardt_and_errors(errors, x; backend = polish_backend) : (x, numerical_or_nothing(errors, x))
     if verbose
         println(result)
-        @show loss_function(x)
+        println("loss after the polish: ", e === nothing ? Inf : sum(abs2, e) / 2)
     end
-    # inferred (the result of optimize and the polish): Enzyme's rules for the implicit function need the solver of
-    # calibrated_parameters inferred, they check the type of the shadow against the type of the result
-    return x
+    return x, e
+end
+
+# errors(x), or nothing where the parameters cannot be priced
+function numerical_or_nothing(errors, x)
+    try
+        return errors(x)
+    catch err
+        numerical_failure(err) || rethrow()
+        return nothing
+    end
 end
 
 # J, JᵀJ and Jᵀe at x (e the residuals there): the products on the device of J, the p × p system on the host.
@@ -116,7 +142,10 @@ end
 # It used to be `Any`: `DI.jacobian(errors, backend, x)` unprepared lets ForwardDiff choose its chunk from `length(x)`,
 # a run-time value, so the chunk, the dual numbers and the Jacobian are not inferred; the step δ = -(A + μD) \ g
 # inherited that, and `x = x + δ` made the variables `Any` from the first accepted step, so the result was `Any`.
-function levenberg_marquardt(errors, x::AbstractVector{T}; backend::ADTypes.AbstractADType = default_backend(), iterations::Integer = 100, μ::Real = 1e-2, xtol::Real = 1e-12) where {T <: Real}
+levenberg_marquardt(errors, x::AbstractVector{<:Real}; kwargs...) = first(levenberg_marquardt_and_errors(errors, x; kwargs...))
+
+# The polish and the residuals at its end point.
+function levenberg_marquardt_and_errors(errors, x::AbstractVector{T}; backend::ADTypes.AbstractADType = default_backend(), iterations::Integer = 100, μ::Real = 1e-2, xtol::Real = 1e-12) where {T <: Real}
     e = errors(x)
     # The Jacobian is prepared once (not at every step), but its type is still not inferred, since the chunk depends
     # on length(x). So the trial point is written into an array of the type of x: the variables keep their type
@@ -129,12 +158,15 @@ function levenberg_marquardt(errors, x::AbstractVector{T}; backend::ADTypes.Abst
     J, A, g = normal_equations(errors, prep, backend, x, e)
     phase = nothing   # the gradient phase, see step_accepted
     for _ = 1:iterations
+        # a Jacobian that is not finite (an overflow in the derivatives of the pricer) gives no direction: stop here
+        all(isfinite, A) && all(isfinite, g) || break
         D = Diagonal(max.(diag(A), eps(T) * maximum(diag(A))))
         δ = -((A + μ * D) \ g)
         x_trial .= x .+ δ
         e_new = try
             errors(x_trial)
         catch err
+            numerical_failure(err) || rethrow()
             @debug "levenberg_marquardt: invalid step, rejected" x δ exception = err
             nothing
         end
@@ -151,5 +183,5 @@ function levenberg_marquardt(errors, x::AbstractVector{T}; backend::ADTypes.Abst
             μ > 1e12 && break
         end
     end
-    return x
+    return x, e
 end

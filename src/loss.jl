@@ -58,7 +58,8 @@ end
     loss(params, model, method, mktData, cache = loss_cache(model, method, mktData))
 
 Half the sum of the squared volatility errors of [`vol_errors`](@ref): smooth in the parameters, also where a maturity
-is fitted exactly. Invalid parameters (an exception while pricing) are penalised with a large constant.
+is fitted exactly. `Inf` where the parameters cannot be priced (see `numerical_failure`), which an Optim optimizer ranks
+as the worst point; any other exception propagates.
 """
 loss(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}, cache = loss_cache(model, method, mktData)) where {T} = loss(promote_type(eltype(params), T), params, model, method, mktData, cache)
 
@@ -67,8 +68,16 @@ function loss(::Type{R}, params, model, method, mktData, cache)::R where {R}
     try
         return R(sum(abs2, vol_errors(params, model, method, mktData, cache)) / 2)
     catch e
-        # invalid parameters are penalised; enable with JULIA_DEBUG=FinancialCalibrator to see why
-        @debug "loss: exception, penalised" params exception = e
-        return R(10000)
+        numerical_failure(e) || rethrow()
+        # enable with JULIA_DEBUG=FinancialCalibrator to see why
+        @debug "loss: parameters that cannot be priced, Inf" params exception = e
+        return R(Inf)
     end
 end
+
+# The exceptions that mean "these parameters cannot be priced", not a bug: a price that is not positive or has no implied
+# volatility (DomainError), a model constructor rejecting its parameters (AssertionError: FinancialMonteCarlo checks them
+# with @assert). The default parametrizations keep the constructors from ever failing; with Parametrization() they can.
+# Anything else (a MethodError after an API change, ...) is a bug and propagates (#3). A constant penalty used to stand
+# in for the loss there (#24): a plateau that a line search can stall on, and that looked like a value.
+numerical_failure(e) = e isa Union{DomainError, AssertionError}

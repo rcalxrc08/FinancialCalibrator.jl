@@ -30,8 +30,10 @@ julia --project=. -e 'using Pkg; Pkg.instantiate()'
 julia --project=docs -e 'using Pkg; Pkg.instantiate()'; julia --project=docs docs/make.jl   # the documentation (a few minutes)
 ```
 
-The documentation is Documenter.jl, in the style of FinancialFFT.jl (same `docs/src/assets/style.css` and `figures.css`,
-hero on `index.md`, figures computed at build time by `docs/figures.jl` in a light and a dark variant, from the
+The documentation is Documenter.jl, in the style of FinancialFFT.jl and of the website (the shared assets are
+`docs/src/assets/style.css`, with the "Dark Quant" palette of rcalxrc08.github.io, `dark.js`, which makes the dark theme
+the default for a reader who has not picked one, and `figures.css`; #26), hero on `index.md`, figures computed at build
+time by `docs/figures.jl` in a light and a dark variant (the dark one in the Dark Quant colours), from the
 `@example` blocks of the pages run in a module of their own). `.github/workflows/DeployPage.yml` builds it and publishes it
 with `actions/deploy-pages` (the Pages source of the repository must be "GitHub Actions"); the Franklin `page/` site was
 removed. The logo and favicon are drawn by `etc/logo.jl` (Luxor, run in a temporary environment): a bird whose wings are a
@@ -83,9 +85,12 @@ generic closed-form `pricer`, and `LognormalMixtureKernel`, an isbits callable `
 over a tuple of components; `black_scholes.jl` and `shifted_lognormal_mixture.jl` define `analytic_price_type` and
 `analytic_kernel` for their model: a new closed form is those two methods), `pricer.jl`, `loss.jl`, `parametrization.jl`, `calibrate.jl`, `sensitivities.jl`.
 
-`Parametrization` (default: identity both ways) is how a calibration searches over unconstrained variables and fixes
-parameters: `get_parameters` returns every field, so Heston includes λ, which the quotes cannot separate from κ (singular
-Hessian, no implicit derivative) unless a parametrization fixes it. The optimizer and the polish work on `x`;
+`Parametrization` is how a calibration searches over unconstrained variables and fixes parameters (`Parametrization()`
+is the identity). The default is `default_parametrization(model)` (#24): exp/tanh/logistic per parameter, θ of VG and
+NIG below the bound σ and κ set (`1/κ - σ²/2 - exp(x)`, `(1/κ - σ²)/2 - exp(x)`), mixture weights as a softmax with the
+remainder as one more class, so no model constructor ever throws; identity for other models. Heston's λ is fixed at 0:
+`get_parameters` returns every field, and the quotes cannot separate λ from κ (singular Hessian, no implicit
+derivative). The optimizer and the polish work on `x`;
 `CalibratedData.OptimalParam` and `calibrated_parameters` return `to_params(x*)`.
 
 `loss_cache(model, method, mktData; min_vega = 1e-3)` builds once per calibration what does not depend on the parameters:
@@ -100,18 +105,25 @@ a stationary point). `ModelVolatility` of `CalibratedData` is `NaN` at the quote
 `vol_errors` returns model minus quoted vols of those quotes, maturity by maturity, generic in the number type of the
 parameters and of `vols` (a keyword, so the quotes can be dual numbers while `MarketData` stays `AbstractFloat`). It throws
 on invalid parameters and a `DomainError` on a non-positive price. `loss` is half its sum of squares (smooth also at an
-exact fit, unlike the old sum of per-maturity norms) and returns a large penalty on any exception, so exceptions thrown
-while optimizing are swallowed (see issue #3). The loop over the maturities, `maturity_errors`, sits behind
+exact fit, unlike the old sum of per-maturity norms) and is `Inf` where the parameters cannot be priced
+(`numerical_failure`: `DomainError`, or the `AssertionError` of a model constructor, possible with `Parametrization()`);
+any other exception propagates (#3, #24; the polish rejects the same exceptions and rethrows the rest). The loop over the maturities, `maturity_errors`, sits behind
 `FinancialMonteCarlo.set_parameters!`, which is not inferred; `loss` converts to `promote_type(eltype(params), T)` and is
 `@inferred` in the tests, as the closed-form `pricer` (which writes into an array of the price type computed by `analytic_price_type`, `analytic_prices`: the kernel of a mixture has its arity as a type parameter and is not inferred).
 
-`calibrate` builds the cache and calls `calibrate_cached`, which calls `optimal_variables`: Optim's `optimize` with
+`calibrate` builds the cache and calls `calibrate_cached`, which calls `optimal_variables_and_errors` (`OptimalValue` and
+`ModelVolatility` come from the polish's last residuals, no re-pricing; #22): Optim's `optimize` with the default
+options `DEFAULT_OPTIONS = Optim.Options(g_tol = 1e-6)`, which hand over to the polish (Optim's `1e-8` crawled: Kou
+2.7 s -> 1.4 s on DAX, same optimum for 7 models; `FULL_OPTIONS` with `polish = false`), and
 `autodiff` (an ADTypes backend, used by gradient optimizers), then with `polish = true` `levenberg_marquardt` on
 `vol_errors` (Jacobian by `polish_backend` through DifferentiationInterface; steps that throw or do not decrease the sum of
 squares rejected, `step_accepted`: a step is taken if it lowers the sum of squares (`Σ (e_new - e)(e_new + e)`, no
 cancellation) or, within sqrt(eps) of it, halves the gradient Jᵀe; near the optimum the noise of the implied vols
 (~1e-14, ±1e-15 on the sum) hides the decrease a step promises (6e-18 on DAX/BS), and the GPU polish stopped 9e-10
-short of σ* = mean of the quotes; the Jacobian is recomputed only after an accepted step; with J on the GPU, JᵀJ and Jᵀe are formed there and the p × p solve is on the host, timings in the
+short of σ* = mean of the quotes; a step accepted on the gradient starts a phase in which every step must halve the
+last gradient and stay within sqrt(eps) of the sum where it began (with a FiniteDiff Jacobian the two criteria
+alternated for all 100 iterations); a rejected step below `xtol` or a non-finite Jacobian (Kou on DAX) ends the polish;
+the Jacobian is recomputed only after an accepted step; with J on the GPU, JᵀJ and Jᵀe are formed there and the p × p solve is on the host, timings in the
 comment above the function). The polish is what makes the
 end point stationary (|∇L| ~ 1e-8 on DAX instead of NelderMead's ~1e-3).
 
@@ -171,9 +183,9 @@ below the threshold, #2), `test/local/cboe_spx.jl` (local only, see above), `tes
 - Monte Carlo prices through FinancialMonteCarlo reseed at every call, so their AD gradient is the pathwise derivative
   on fixed paths: right for smooth payoffs, biased for barriers and binaries (the knock-out is not differentiated).
 - Timings (VG/Lewis, 15 quotes, `docs/src/backends.md`): once compiled a gradient of `calibrated_parameters` costs about
-  one calibration (0.15-0.2 s: NelderMead 128 loss evaluations at 0.75 ms, then the polish); the implicit derivatives ~8 ms.
+  one calibration (0.1-0.2 s: NelderMead 128 loss evaluations at 0.75 ms, then the polish); the implicit derivatives ~8 ms.
   ForwardDiff's default chunk (8) re-runs the calibration per chunk: use one chunk for all the quotes. First calls after a
-  calibration are compilation (ForwardDiff 10 s, Zygote 27 s, Mooncake 28-36 s, Enzyme ~100 s; Mooncake as inner `x` is
+  calibration are compilation (ForwardDiff 14 s, Zygote 29 s, Mooncake 30 s, Enzyme 80-90 s; Mooncake as inner `x` is
   reverse over forward through the pricer: ~140 s, 4x slower at run time). On the MX150 the device is launch-bound on
   DAX (a loss 7-9 ms whatever the precision): Float32 pays only on large smiles (2000 strikes, Cos 4096: 6.7 ms vs 14 ms). Benchmark each backend in a fresh process: in one process later cases reuse compiled code.
   Enzyme (#20, #21): `calibrated_parameters` calls `calibrated_variables(vols, setup...)` (build the implicit function

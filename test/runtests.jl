@@ -11,6 +11,9 @@ using LinearAlgebra
 const FC = FinancialCalibrator
 
 # Prices of the call smile of `model` re-parametrized with `p`, through the `pricer` interface.
+# a method without a pricer: the loss must not hide the MethodError
+struct NoPricer <: FinancialMonteCarlo.AbstractMethod end
+
 function smile_prices(model, method, p, K, r, T)
     smile = FinancialMonteCarlo.EuropeanOptionSmile(T, K, fill!(similar(K, Bool), true))
     return vec(pricer(FinancialMonteCarlo.set_parameters!(model, p), ZeroRate(r), FC.calibration_method(method, K), smile))
@@ -167,9 +170,12 @@ end
             @test count(==(-1), J) == length(e) && count(iszero, J) == length(J) - length(e)
             @test all(==(-1), sum(J; dims = 2))
             @test count(iszero, sum(J; dims = 1)) == 9
-            # a price that is not positive is a DomainError, which the loss penalises
+            # a price that is not positive is a DomainError: the loss is Inf there
             @test_throws DomainError vol_errors([0.2], model, MonteCarloConfiguration(10, 1), mkt)
-            @test FC.loss([0.2], model, MonteCarloConfiguration(10, 1), mkt) == 10000
+            @test FC.loss([0.2], model, MonteCarloConfiguration(10, 1), mkt) == Inf
+            # parameters the model rejects (an AssertionError of its constructor) too; any other exception propagates (#3)
+            @test FC.loss([-0.2], model, method, mkt) == Inf
+            @test_throws MethodError FC.loss([0.2], model, NoPricer(), mkt)
         end
 
         # The Levenberg–Marquardt polish ends where the gradient of the loss vanishes, on the market surface too.
@@ -183,6 +189,28 @@ end
             @test calibrate(model, method, mkt; polish = false).OptimalValue >= res.OptimalValue
             # no model volatility at the quotes left out of the loss
             @test count(isnan, res.ModelVolatility) == 9
+            # the model volatilities come from the errors of the polish: the same as pricing the surface again
+            cache = FC.loss_cache(model, method, mkt)
+            calibrated = FinancialMonteCarlo.set_parameters!(model, res.OptimalParam)
+            @test all(res.ModelVolatility[i, cache.quoted[i]] ≈ FC.model_volatilities(calibrated, und.S0, mkt, cache, i) for i in eachindex(cache.quoted) if !isempty(cache.quoted[i]))
+            @test res.OptimalValue ≈ FC.loss(res.OptimalParam, model, method, mkt)
+        end
+
+        # The default parametrizations: the inverse of each other on valid parameters, and every variable a valid model
+        # (the constraints between the parameters of VG, NIG and the mixtures included), so the loss is finite (#24).
+        @testset "Default parametrizations" begin
+            models = (BlackScholesProcess(0.2, und), MertonProcess(0.15, 0.3, -0.1, 0.2, und), KouProcess(0.15, 0.5, 0.4, 10.0, 15.0, und), VarianceGammaProcess(0.2, -0.03, 0.16, und), NormalInverseGaussianProcess(0.2, -0.03, 0.16, und), HestonProcess(0.3, 0.2, 0.0, 1.5, -0.6, 0.04, und), ShiftedLogNormalMixture([0.2, 0.25, 0.3], [0.2, 0.3], -0.1, und), FinancialMonteCarlo.LogNormalMixture([0.2, 0.3], [0.4], und))
+            for model in models
+                P = default_parametrization(model)
+                p = FinancialMonteCarlo.get_parameters(model)
+                x = P.from_params(p)
+                @test P.to_params(x) ≈ p
+                for y in (x .+ 3, x .- 3, -x, zero(x))
+                    @test FinancialMonteCarlo.set_parameters!(model, P.to_params(y)) isa typeof(model)
+                end
+            end
+            # Heston: λ is not calibrated, it is zero
+            @test default_parametrization(models[6]).to_params(zeros(5))[3] == 0
         end
 
         # The calibrated parameters as a function of the quotes, through the implicit function theorem. On Black-Scholes

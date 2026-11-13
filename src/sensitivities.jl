@@ -45,7 +45,7 @@ end
 implicit_variables(implicit::ImplicitFunction, vols::AbstractMatrix{<:Real}) = first(implicit(vols))
 
 """
-    calibrated_parameters(model, pricing_method, mktData, vols = mktData.Volatility, opt_method = NelderMead(), opt_options = Optim.Options(); parametrization = Parametrization(), autodiff, polish_backend, conditions_backend, implicit_backends = (x = ..., y = ...), min_vega = 1e-3)
+    calibrated_parameters(model, pricing_method, mktData, vols = mktData.Volatility, opt_method = NelderMead(), opt_options = Optim.Options(g_tol = 1e-6); parametrization = default_parametrization(model), autodiff, polish_backend, conditions_backend, implicit_backends = (x = ..., y = ...), min_vega = 1e-3)
 
 The parameters that [`calibrate`](@ref) finds for the quoted implied volatilities `vols` (a matrix shaped as
 `mktData.Volatility`, whose maturities, rates and strikes it takes; the quotes that enter the loss are chosen on
@@ -72,7 +72,7 @@ objects, ForwardDiff when it is loaded and finite differences otherwise by defau
 ForwardDiff everywhere suits a model with few parameters. With a reverse mode outer backend and many quotes, `x` is the
 one to change: the pullback needs ``(\\partial_v \\nabla_x L)^\\top w``, which forward mode gets one direction per quote.
 """
-function calibrated_parameters(model::FinancialMonteCarlo.BaseProcess, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData, vols::AbstractMatrix{<:Real} = mktData.Volatility, opt_method::Optim.AbstractOptimizer = DEFAULT_OPTIMIZER, opt_options::Optim.Options = DEFAULT_OPTIONS; parametrization::Parametrization = Parametrization(), autodiff::ADTypes.AbstractADType = default_backend(), polish_backend::ADTypes.AbstractADType = default_backend(), conditions_backend::ADTypes.AbstractADType = default_backend(), implicit_backends::NamedTuple{(:x, :y)} = (x = default_backend(), y = default_backend()), min_vega::Real = 1e-3)
+function calibrated_parameters(model::FinancialMonteCarlo.BaseProcess, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData, vols::AbstractMatrix{<:Real} = mktData.Volatility, opt_method::Optim.AbstractOptimizer = DEFAULT_OPTIMIZER, opt_options::Optim.Options = DEFAULT_OPTIONS; parametrization::Parametrization = default_parametrization(model), autodiff::ADTypes.AbstractADType = default_backend(), polish_backend::ADTypes.AbstractADType = default_backend(), conditions_backend::ADTypes.AbstractADType = default_backend(), implicit_backends::NamedTuple{(:x, :y)} = (x = default_backend(), y = default_backend()), min_vega::Real = 1e-3)
     size(vols) == size(mktData.Volatility) || throw(DimensionMismatch("vols is $(size(vols)), the surface of mktData $(size(mktData.Volatility))"))
     # the variables at the solution, with the rules of ImplicitDifferentiation; the parameters follow by the chain rule
     return parametrization.to_params(calibrated_variables(vols, model, pricing_method, mktData, opt_method, opt_options, parametrization, autodiff, polish_backend, conditions_backend, implicit_backends, min_vega))

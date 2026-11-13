@@ -73,7 +73,8 @@ The parameters are constrained: ``\sigma``, ``\sigma_0``, ``\kappa`` and ``\thet
 and ``\lambda`` is not determined by the quotes at all, since only ``\kappa + \lambda`` enters the prices. A
 [`Parametrization`](@ref) searches over unconstrained variables ``x``, with
 ``p = (e^{x_1}, e^{x_2}, 0, e^{x_3}, \tanh x_4, e^{x_5})``, so that every step gives a valid model, and ``\lambda`` stays
-at zero:
+at zero. This is also [`default_parametrization`](@ref) of a Heston model, which the calibration uses when no
+`parametrization` is given; it is spelled out here to show how one is written:
 
 ```@example calibration
 variables = Parametrization(x -> [exp(x[1]), exp(x[2]), zero(x[1]), exp(x[3]), tanh(x[4]), exp(x[5])],
@@ -103,7 +104,9 @@ the characteristic exponent, the pricing method and the implied volatility.
 [`calibrate`](@ref) minimises ``L`` in two stages. An Optim optimizer (`NelderMead()` by default; any other, with its
 options, as the fourth and fifth arguments) finds the basin; Levenberg–Marquardt then brings the solution to where the
 gradient of ``L`` vanishes, which an optimizer stopped by its own tolerances does not reach, and which the
-sensitivities below need. Gauss–Newton linearises the errors around the current point,
+sensitivities below need. The default options stop the optimizer early (`g_tol = 1e-6`, against Optim's `1e-8`), since
+the polish converges from there in a few steps: on DAX the same optimum for every model tried, in half the time for
+Kou and Merton. Where the parameters cannot be priced, ``L = \infty``, which the optimizer ranks as the worst point. Gauss–Newton linearises the errors around the current point,
 ``e(x + \delta) \approx e(x) + J \delta``, and takes the least squares solution of ``J \delta = -e``. Levenberg and
 Marquardt add a damping ``\mu > 0``:
 

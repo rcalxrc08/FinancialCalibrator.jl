@@ -29,6 +29,6 @@ include("calibrate.jl")
 include("sensitivities.jl")
 
 export CalibrationID, IOFileInputStrategy, CboeInputStrategy, CboeWebInputStrategy, cboe_snapshot, retriever, adapter, calibrate, calibrated_parameters
-export AnalyticMethod, CalibratedData, MarketData, RawMarketData, Parametrization, vol_errors
+export AnalyticMethod, CalibratedData, MarketData, RawMarketData, Parametrization, default_parametrization, vol_errors
 
 end # module

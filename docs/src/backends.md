@@ -66,15 +66,15 @@ compilation of the derivatives only; the device is a laptop GPU (NVIDIA MX150):
 
 | Outer | Inner `x` / `y` | Host: first call | Host: next calls | Device: next calls | Error |
 |:--|:--|--:|--:|--:|:--|
-| ForwardDiff¹ | ForwardDiff / ForwardDiff | 10–12 s | 0.19–0.20 s | 0.47 s² | 0 (host), 2e-13 (device) |
-| Zygote | ForwardDiff / ForwardDiff | 27 s | 0.16 s | 0.47–0.89 s | 5e-16, 5e-13 |
-| Mooncake | ForwardDiff / ForwardDiff | 28–36 s | 0.38–0.56 s | 1.2 s | 5e-16, 5e-13 |
-| Zygote | Mooncake / ForwardDiff | 130 s | 0.78 s | ✗³ | 4e-16 |
-| Mooncake | Mooncake / ForwardDiff | 123 s | 0.88 s | ✗³ | 4e-16 |
-| Enzyme, reverse⁴ | ForwardDiff / ForwardDiff | 98 s | 0.14 s | 0.66 s | 5e-16, 5e-13 |
-| Enzyme, forward⁴ | ForwardDiff / ForwardDiff | 103 s | 0.16 s | ✗⁵ | 3e-14 |
+| ForwardDiff¹ | ForwardDiff / ForwardDiff | 14 s | 0.20 s | 0.32 s² | 0 (host), 5e-13 (device) |
+| Zygote | ForwardDiff / ForwardDiff | 29 s | 0.15 s | 0.38 s | 2e-14, 2e-12 |
+| Mooncake | ForwardDiff / ForwardDiff | 30 s | 0.48 s | 0.74 s | 2e-14, 2e-12 |
+| Zygote | Mooncake / ForwardDiff | 138 s | 0.71 s | ✗³ | 2e-14 |
+| Mooncake | Mooncake / ForwardDiff | 127 s | 0.41 s | ✗³ | 2e-14 |
+| Enzyme, reverse⁴ | ForwardDiff / ForwardDiff | 87 s | 0.13 s | 0.43 s | 2e-14, 2e-12 |
+| Enzyme, forward⁴ | ForwardDiff / ForwardDiff | 80 s | 0.12 s | ✗⁵ | 1e-15 |
 
-A range is the spread over two runs in fresh processes.
+One run per case: on this laptop the times of two runs differ by up to a third.
 
 ¹ With one chunk for all the quotes, `ForwardDiff.gradient(f, v, ForwardDiff.GradientConfig(f, v, ForwardDiff.Chunk{length(v)}()))`.
 ForwardDiff's default chunk (8) splits 15 quotes in two, and each chunk runs the whole calibration again.
@@ -85,15 +85,15 @@ ForwardDiff's default chunk (8) splits 15 quotes in two, and each chunk runs the
 ⁴ Enzyme works through rules of the extension of FinancialCalibrator for EnzymeCore: they build the implicit function
 outside of the differentiated code, then apply ImplicitDifferentiation's Enzyme rules to it as a constant (Enzyme
 cannot trace the construction, and failed on the GPU when it did, #21). Those rules need the solver to return an
-inferred type, which it does. On the device the first call compiles for 7 minutes here, 18 on Black–Scholes with
+inferred type, which it does. On the device the first call compiles for 4 to 7 minutes here, 18 on Black–Scholes with
 `CosMethod(1024)`.
 ⁵ Enzyme's forward mode seeds the gradient with one-hot arrays that it fills by scalar indexing, which a `CuArray`
 refuses (EnzymeAD/Enzyme.jl#4048); the reverse mode works on the device.
 
 What the numbers say:
 
-- **Once compiled, a gradient costs about one calibration**, whatever the backend: here the solve takes 0.15 to 0.2 s
-  (NelderMead, 128 evaluations of the loss at 0.75 ms each, then the Levenberg–Marquardt polish), and the derivatives
+- **Once compiled, a gradient costs about one calibration**, whatever the backend: here the solve takes 0.1 to 0.2 s
+  (NelderMead, then the Levenberg–Marquardt polish), and the derivatives
   of the implicit function theorem about 8 ms. Reverse mode outside pays off with many quotes, not with these 15.
 - **The first call is compilation**: Zygote and Mooncake compile their rules for the whole pricing method.
 - **A reverse backend for `x` is reverse over forward**: Mooncake differentiates the ForwardDiff gradient of the loss,
@@ -154,8 +154,8 @@ Measured on a laptop GPU (NVIDIA MX150) with the DAX surface of 108 quotes, once
 
 | | Host | Device | Agreement |
 |:--|--:|--:|:--|
-| `calibrate`, Black–Scholes, `CosMethod(1024)` | 0.05 s | 0.29 s | 2e-15 |
-| `calibrate`, Variance Gamma, `LewisMethod(100.0, 4001)` | 1.7 s | 2.1 s | 4e-11 |
+| `calibrate`, Black–Scholes, `CosMethod(1024)` | 0.06 s | 0.41 s | 4e-15 |
+| `calibrate`, Variance Gamma, `LewisMethod(100.0, 4001)` | 0.36 s | 0.71 s | 3e-8 |
 | one loss, Black–Scholes, `CosMethod(1024)` | 1.1 ms | 8.5 ms | |
 | one loss, Variance Gamma, `LewisMethod(100.0, 4001)` | 2.7 ms | 7.2 ms | |
 | Zygote gradient, Black–Scholes | | | 4e-14 |
@@ -169,9 +169,8 @@ point here is that nothing in the calibration, nor in its derivatives, needs to 
 
 Consumer GPUs compute in `Float64` at a fraction of their `Float32` rate (1/32 on the MX150), and `adapter(raw, Float32)`
 gives a surface in `Float32`. On the DAX surface this changes nothing on the device, since the launches dominate: a loss
-costs 9.1 ms (Black–Scholes, Cos) and 7.6 ms (Variance Gamma, Lewis), and a calibration takes as long or longer, as the
-optimizer has a noisier loss to work with (Black–Scholes: 0.48 s; Variance Gamma: 42 s, parameters within 2e-4 of the
-host). On a smile large
+costs 9.1 ms (Black–Scholes, Cos) and 7.6 ms (Variance Gamma, Lewis), and a calibration takes about as long (Black–Scholes
+0.46 s, Variance Gamma 0.75 s, parameters within 2e-4 of the host in `Float32`). On a smile large
 enough to occupy the device, `Float32` pays: 2000 strikes with `CosMethod(4096)`:
 
 | | Host | Device |

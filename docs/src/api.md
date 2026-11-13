@@ -5,6 +5,7 @@
 ```@docs
 calibrate
 Parametrization
+default_parametrization
 CalibratedData
 ```
 

@@ -9,7 +9,7 @@ const FIGURES = mkpath(joinpath(@__DIR__, "src", "assets", "figures"))
 
 # Categorical slots in fixed order (validated for colour vision deficiencies on adjacent pairs, in both modes), and
 # the ink of the text, of the axes and of the grid: the palette of the figures of FinancialFFT.jl.
-const THEMES = (light = (series = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"], text = "#1f2328", muted = "#5b6470", axis = "#b9b4ab", grid = "#e6e3de", diverging = ["#eb6834", "#f7f6f3", "#2a78d6"]), dark = (series = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300"], text = "#e6e8eb", muted = "#9aa3ad", axis = "#4a525c", grid = "#2a2f36", diverging = ["#d95926", "#181b20", "#3987e5"]))
+const THEMES = (light = (series = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"], text = "#1f2328", muted = "#5b6470", axis = "#b9b4ab", grid = "#e6e3de", diverging = ["#eb6834", "#f7f6f3", "#2a78d6"]), dark = (series = ["#4f8cff", "#ff8a5c", "#00d4aa", "#ffb84d", "#ff6b9d", "#7ee081"], text = "#f5f7fa", muted = "#a0aec0", axis = "#3a4466", grid = "#252d47", diverging = ["#ff8a5c", "#151b2e", "#4f8cff"]))
 # The secondary encoding of the series: the light slots 3-5 are below 3:1 contrast on the surface.
 const MARKERS = [:circle, :rect, :utriangle, :diamond, :dtriangle, :star5]
 
