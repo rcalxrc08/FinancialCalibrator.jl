@@ -1,7 +1,7 @@
-/* The design system of the FinancialCalibrator.jl site, for every page: layout, type, the page header of the guides,
-   numbered sections, figures, maths, code, tables, docstrings, admonitions and the page footer. Built on the palette
-   variables of style.css (Dark Quant in the dark theme, its light counterpart otherwise); home.css adds the landing
-   page. Classes are fc-…. */
+/* The design system of the documentation of the rcalxrc08 packages (the same file in every repository), for every
+   page: layout, type, the page header of the guides, numbered sections, figures, maths, code, tables, docstrings,
+   admonitions and the page footer. Built on the palette variables of style.css (Dark Quant in the dark theme, its light
+   counterpart otherwise); home.css adds the landing page. Classes are fc-…. */
 
 html:root {
   --fc-cyan: #0b7fb3;
@@ -137,7 +137,8 @@ html:root .content .fc-page-head h1 {
   margin: 0 0 16px;
 }
 
-html:root .content .fc-page-lede {
+html:root .content .fc-page-lede,
+html:root .content .fc-page-head > p:not(.fc-kicker) {
   max-width: 44rem;
   margin: 0 0 20px;
   font-size: clamp(1.02rem, 1.5vw, 1.15rem);
@@ -145,7 +146,8 @@ html:root .content .fc-page-lede {
   color: var(--muted);
 }
 
-html:root .content .fc-page-lede strong {
+html:root .content .fc-page-lede strong,
+html:root .content .fc-page-head > p:not(.fc-kicker) strong {
   color: var(--text);
   font-weight: 600;
 }

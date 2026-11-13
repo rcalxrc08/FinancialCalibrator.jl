@@ -1,5 +1,6 @@
-/* The home page of FinancialCalibrator.jl: a landing page inside Documenter, on top of the design system of site.css
-   (variables, cards, tiles, figures). Everything here is scoped to a content that holds the hero (.fc-hero). */
+/* The home page of the documentation of the rcalxrc08 packages (the same file in every repository): a landing page
+   inside Documenter, on top of the design system of site.css. Everything here is scoped to a content that holds the
+   hero (.fc-hero). */
 
 /* a wider column for the landing page */
 html:root #documenter .docs-main:has(.fc-hero) {
@@ -362,7 +363,7 @@ html:root .content .fc-arch {
 
 html:root .content ol.fc-flow {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--fc-steps, 6), minmax(0, 1fr));
   gap: 26px;
   margin: 0;
   padding: 0;
@@ -466,8 +467,8 @@ html:root .content .fc-backflow em {
   html:root .content ol.fc-flow {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  html:root .content ol.fc-flow li:nth-child(4)::before,
-  html:root .content ol.fc-flow li:nth-child(4)::after {
+  html:root .content ol.fc-flow li:nth-child(3n+1)::before,
+  html:root .content ol.fc-flow li:nth-child(3n+1)::after {
     display: none;
   }
 }
