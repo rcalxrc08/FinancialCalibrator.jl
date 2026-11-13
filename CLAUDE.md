@@ -18,14 +18,14 @@ rule for `implicit_variables`: ImplicitDifferentiation's ChainRules rrule needs 
 `@zero_derivative` there: otherwise Mooncake traces it and fails on the device-to-host copies of the cache on the GPU.
 AD support (CPU and GPU timings, failures) is the table in `docs/src/backends.md`: ForwardDiff, Zygote, Mooncake work
 (Mooncake also on the GPU); Mooncake as inner `x` fails on the GPU (dual numbers broadcast over a CuArray); Enzyme
-fails in both modes (reverse: internal assertion; forward: ImplicitDifferentiation's Enzyme rule has no method for the
-config DI passes). Removed as unused: DelimitedFiles (with the dead `web_retriever` and
+works in both modes on the host through `ext/FinancialCalibratorEnzymeExt.jl` (see Gotchas, #20) and aborts on GPU quotes
+(LLVM assertion in Enzyme's `createCacheForScope`, #21). Removed as unused: DelimitedFiles (with the dead `web_retriever` and
 `WebFileInput`, #15), FFTW, Random, FinancialFFT.
 
 ## Commands
 
 ```julia
-julia --project=. -e 'using Pkg; Pkg.test()'     # all tests (about 10 minutes, 15 with the GPU part, skipped without a GPU)
+julia --project=. -e 'using Pkg; Pkg.test()'     # all tests (about 1 hour: Enzyme compiles for minutes per model; 25 more minutes for the GPU part, skipped without a GPU)
 julia --project=. -e 'using Pkg; Pkg.instantiate()'
 julia --project=docs -e 'using Pkg; Pkg.instantiate()'; julia --project=docs docs/make.jl   # the documentation (a few minutes)
 ```
@@ -169,7 +169,10 @@ below the threshold, #2), `test/local/cboe_spx.jl` (local only, see above), `tes
   ForwardDiff's default chunk (8) re-runs the calibration per chunk: use one chunk for all the quotes. First calls are
   compilation (Zygote 16 s, Mooncake 38 s; Mooncake as inner `x` is reverse over forward through the pricer: ~150 s,
   5x slower at run time). Benchmark each backend in a fresh process: in one process later cases reuse compiled code.
-  Enzyme differentiates the loss (137 s of compilation) but fails in ImplicitDifferentiation's Enzyme rules.
+  Enzyme (#20): `ext/FinancialCalibratorEnzymeExt.jl` (weak dep EnzymeCore) marks `implicit_calibration` inactive, so
+  the implicit function is `Const` and ImplicitDifferentiation's own Enzyme rules apply; they also need the solver
+  inferred, hence the type assertion at the end of `optimal_variables` (Optim's result and the polish are not
+  inferred). Reverse 160 s to compile then 0.29 s, forward 0.39 s, exact; tested in `test/models_methods.jl`.
 - `maturity_errors` is a loop with a concrete accumulator: a `map` closure was not inferred with dual numbers and made
   the loss `Any` (tested with `@inferred` on duals in the parameters and in the quotes).
 - Python edits of Julia or Markdown files: use raw strings (`r"""..."""`), `\t` and `\n` in `\top`/`\nabla` were once

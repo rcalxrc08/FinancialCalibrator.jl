@@ -9,7 +9,8 @@ using ForwardDiff
 using LinearAlgebra
 using Zygote
 using Mooncake
-using ADTypes: AutoForwardDiff, AutoMooncake
+using Enzyme
+using ADTypes: AutoForwardDiff, AutoMooncake, AutoEnzyme
 import DifferentiationInterface as DI
 
 const FC = FinancialCalibrator
@@ -114,6 +115,12 @@ end
             mc = AutoMooncake(; config = nothing)
             @test vec(DI.gradient(v -> dot(w, calibrated_parameters(start, method, smkt, v)), mc, smkt.Volatility)) ≈ transpose(J) * w rtol = 1e-10
             @test vec(DI.gradient(v -> dot(w, calibrated_parameters(start, method, smkt, v; implicit_backends = (x = mc, y = AutoForwardDiff()))), mc, smkt.Volatility)) ≈ transpose(J) * w rtol = 1e-10
+            # Enzyme, through ImplicitDifferentiation's Enzyme rules (the setup is inactive, see the extension)
+            enzyme(mode) = AutoEnzyme(; mode = Enzyme.set_runtime_activity(mode), function_annotation = Enzyme.Const)
+            @test vec(DI.gradient(v -> dot(w, calibrated_parameters(start, method, smkt, v)), enzyme(Enzyme.Reverse), smkt.Volatility)) ≈ transpose(J) * w rtol = 1e-10
+            if name == "BlackScholes"
+                @test vec(DI.gradient(v -> dot(w, calibrated_parameters(start, method, smkt, v)), enzyme(Enzyme.Forward), smkt.Volatility)) ≈ transpose(J) * w rtol = 1e-10
+            end
             i = LinearIndices(sz)[2, 3]
             recalibrate(h) = calibrated_parameters(start, method, smkt, reshape(vec(smkt.Volatility) .+ h .* (1:prod(sz) .== i), sz))
             h = 1e-4

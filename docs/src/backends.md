@@ -70,8 +70,8 @@ case ran in a fresh Julia process, so its first call includes all of its compila
 | Mooncake | ForwardDiff / ForwardDiff | 38 s | 0.58 s | 2.5 s | 5e-16, 2e-9 |
 | Zygote | Mooncake / ForwardDiff | 164 s | 1.7 s | ✗³ | 4e-16 |
 | Mooncake | Mooncake / ForwardDiff | 141 s | 1.4 s | ✗³ | 4e-16 |
-| Enzyme, reverse | ForwardDiff / ForwardDiff | ✗⁴ | | | |
-| Enzyme, forward | ForwardDiff / ForwardDiff | ✗⁵ | | | |
+| Enzyme, reverse⁴ | ForwardDiff / ForwardDiff | 160 s | 0.29 s | ✗⁵ | 5e-16 |
+| Enzyme, forward⁴ | ForwardDiff / ForwardDiff | 52 s⁶ | 0.39 s | | 0 |
 
 ¹ With one chunk for all the quotes, `ForwardDiff.gradient(f, v, ForwardDiff.GradientConfig(f, v, ForwardDiff.Chunk{length(v)}()))`.
 ForwardDiff's default chunk (8) splits 15 quotes in two, and each chunk runs the whole calibration again: 0.6 s.
@@ -79,10 +79,13 @@ ForwardDiff's default chunk (8) splits 15 quotes in two, and each chunk runs the
 (`ForwardDiff.derivative` along a bump of one quote).
 ³ Mooncake differentiating the inner ForwardDiff gradient of the conditions meets a broadcast of dual numbers over a
 `CuArray`, which it does not support.
-⁴ An internal assertion of Enzyme (a pointer address space mismatch in the tape) in ImplicitDifferentiation's Enzyme
-rule. Enzyme itself differentiates the loss (`vol_errors`, `LewisMethod`), to 4e-14, after 137 s of compilation.
-⁵ ImplicitDifferentiation's Enzyme rule has no `forward` method for the configuration that DifferentiationInterface
-passes, batched or not.
+⁴ Enzyme works through ImplicitDifferentiation's Enzyme rules, which apply to an implicit function annotated as
+constant: the extension of FinancialCalibrator for EnzymeCore marks its setup (`implicit_calibration`) inactive, and
+the solver returns an inferred type, which the rules need.
+⁵ With the quotes on the device (Black–Scholes, `CosMethod(1024)`, DAX), Enzyme aborts the process while compiling
+(an LLVM assertion in its `createCacheForScope`, through the CUDA broadcasts of the pricer): use Zygote or Mooncake
+outside on the GPU (#21).
+⁶ Measured after the reverse mode case, in the same process.
 
 What the numbers say:
 
@@ -94,7 +97,7 @@ What the numbers say:
   through the pricer. That compiles for minutes and runs 5 times slower than ForwardDiff for `x`; it can pay off only
   with many quotes, where forward mode needs one direction per quote.
 
-The test suite checks ForwardDiff, Zygote and Mooncake against the formula
+The test suite checks ForwardDiff, Zygote, Mooncake and Enzyme (reverse, and forward on Black–Scholes) against the formula
 ``\partial p^*/\partial v = -H^{-1} \partial_v \nabla_p L``, and Zygote and Mooncake on the GPU.
 
 ### Inside

@@ -48,7 +48,8 @@ end
 function optimal_variables(model, pricing_method, mktData::MarketData, cache, opt_method::Optim.AbstractOptimizer, opt_options::Optim.Options, parametrization::Parametrization; autodiff::ADTypes.AbstractADType = default_backend(), polish::Bool = true, polish_backend::ADTypes.AbstractADType = default_backend(), verbose::Bool = false)
     to_params = parametrization.to_params
     loss_function(x::AbstractVector{<:Real}) = loss(to_params(x), model, pricing_method, mktData, cache)
-    result = optimize(loss_function, parametrization.from_params(FinancialMonteCarlo.get_parameters(model)), opt_method, opt_options; autodiff = autodiff)
+    x0 = parametrization.from_params(FinancialMonteCarlo.get_parameters(model))
+    result = optimize(loss_function, x0, opt_method, opt_options; autodiff = autodiff)
     x = result.minimizer
     if polish
         x = levenberg_marquardt(y -> vol_errors(to_params(y), model, pricing_method, mktData, cache), x; backend = polish_backend)
@@ -57,7 +58,10 @@ function optimal_variables(model, pricing_method, mktData::MarketData, cache, op
         println(result)
         @show loss_function(x)
     end
-    return x
+    # neither the result of optimize nor the polish (its trial steps may throw) is inferred: the minimizer has the type
+    # of the start, and saying so makes the solver of calibrated_parameters inferred, which Enzyme's rules for the
+    # implicit function need (they check the type of the shadow against the type of the result)
+    return convert(typeof(x0), x)::typeof(x0)
 end
 
 # Levenberg–Marquardt on the residuals `errors(x)`, from `x`: (JᵀJ + μ diag(JᵀJ)) δ = -Jᵀe, with μ divided after a step
