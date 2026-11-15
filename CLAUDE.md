@@ -40,7 +40,7 @@ cards, maths panels, tile rows `fc-stats`, cards `fc-card`, docstring and refere
 sidebar groups the pages into Guides and Reference with short names (`make.jl`). The guides get their key numbers from
 hidden `@example` blocks calling `Main.DocumentationFigures` (`calibration_tiles`, `closed_form_tiles`, `exotic_tiles`,
 `engine_table`) and their extra figures (singular values, ∂p*/∂v, closed form against Black–Scholes) from
-`docs/pages.jl`; `page_module` skips those callback blocks. The home page (`index.md`, sidebar name "Home") is a landing page: raw HTML
+`docs/pages.jl`; `page_module` skips those callback blocks. The "Similar packages" section (ORE, DAL, finmath-lib, QuantLibAAD, stochastic-rs, Hedgehog.jl; surveyed 2026-11-15, features only, no quality or speed claims) is the same text at the end of `README.md` and before "The ecosystem" in `index.md`: edit both together. The home page (`index.md`, sidebar name "Home") is a landing page: raw HTML
 sections styled by `docs/src/assets/home.css` (scoped with `.content:has(.fc-hero)`, `fc-` classes; the hero opens a
 `<div>` in one `@raw html` block and closes it in the next, around the Markdown `#` title), figures and numbers from
 `docs/home.jl` (included by `figures.jl`): a Heston calibration to DAX drawn as a perspective SVG (`surface_svg`, hand

@@ -68,3 +68,25 @@ calibrate(model, CosMethod(1024), adapt(CuArray, mkt))
 The execution mode is part of the method (FinancialMonteCarlo 0.6): `CosMethod(1024; mode = FinancialMonteCarlo.CudaMode())`
 prices on the GPU with the market data on the host too.
 
+
+## Similar packages
+
+- [Open Source Risk Engine (ORE)](https://github.com/OpenSourceRisk/Engine): C++ with Python bindings, built on
+  QuantLib; exotics through a payoff scripting language and American Monte Carlo, sensitivities by bump and revalue
+  or adjoint AD, XVA, and an OpenCL/CUDA compute environment for the simulations.
+- [Derivatives Algorithms Library (DAL)](https://github.com/wegamekinglc/Derivatives-Algorithms-Lib): C++17 with
+  Python and Excel bindings; adjoint AD built in, a scripting language for exotic payoffs, curve and short-rate
+  calibration with adjoint Jacobians.
+- [finmath-lib](https://github.com/finmath/finmath-lib): Java; Monte Carlo models (LIBOR market model, Bermudans by
+  American Monte Carlo) with stochastic adjoint AD, conditional expectations included, and CUDA and OpenCL
+  extensions for the simulations.
+- [QuantLibAAD](https://github.com/auto-differentiation/QuantLib-Risks-Cpp) (formerly QuantLib-Risks): QuantLib
+  compiled with the XAD adjoint AD tool, for the sensitivities of QuantLib's pricing engines in C++ and Python.
+- [stochastic-rs](https://github.com/rust-dd/stochastic-rs): Rust with Python bindings; stochastic processes, pricers
+  with Greeks, volatility surface calibrators, simulations on CUDA and Metal.
+- [Hedgehog.jl](https://github.com/aleCombi/Hedgehog.jl): Julia, on SciML; Black–Scholes and Heston, European and
+  American options, Greeks with ForwardDiff, implied volatility calibration.
+
+FinancialCalibrator.jl differentiates through the calibration itself (implicit function theorem): the sensitivity of
+any contract priced with the calibrated model to every quote is one gradient, with ForwardDiff, Zygote, Mooncake or
+Enzyme, with the smiles priced on the CPU or on CUDA arrays.
