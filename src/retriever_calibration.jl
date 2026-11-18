@@ -7,24 +7,23 @@ dividends and implied volatilities), [`CboeInputStrategy`](@ref) an option chain
 downloaded. [`adapter`](@ref) turns
 the result into the `Underlying` and the [`MarketData`](@ref) of a calibration.
 """
-function retriever(calId::CalibrationID, ioInput::IOFileInputStrategy)::RawMarketData
-    ####Input Retriever
-    currency=calId.currency
-    underlying=calId.underlying
-    refDate=calId.refDate
-    path=DATA_DIR
-    SpotRelPath=joinpath(path, "Spot"*underlying*refDate*".json")
-    RfRelPath=joinpath(path, "Rf" * currency * refDate * ".json")
-    ImplDivRelPath=joinpath(path, "ImplDiv"*underlying*refDate*".json")
-    VolaRelPath = joinpath(path, "Volatility"*underlying*refDate*".json")
-    TupleString=io_retriever(SpotRelPath, RfRelPath, ImplDivRelPath, VolaRelPath)
+function retriever(calId::CalibrationID, ::IOFileInputStrategy)
+    (; underlying, refDate, currency) = calId
+    refDay = parse_ref_date(refDate)   # first: a malformed date fails here, not as a missing file
+    # the files of data/json are named <kind><underlying or currency><refDate>.json, e.g. SpotDax22Aug2016.json
+    read_json(kind, name) = read(joinpath(DATA_DIR, kind * name * refDate * ".json"), String)
+    return RawMarketData(refDay, read_json("Spot", underlying), read_json("Rf", currency), read_json("ImplDiv", underlying), read_json("Volatility", underlying))
+end
 
-    adjRefDate=refDate[1:2]*"-"*refDate[3:5]*"-"*refDate[6:end]
+# The reference date of a CalibrationID, `22Aug2016`: the format of the names of the data files, and the one the CBOE
+# strategies write the date of a downloaded chain in.
+const REF_DATE_FORMAT = dateformat"dduuuyyyy"   # uuu: a fixed-width month, which "dduyyyy" cannot parse
 
-    MyDateFormat=DateFormat("d-u-y")
-    RefDate=Date(adjRefDate, MyDateFormat)
-    MyDateFormat=DateFormat("d-u-y")
-    RefDate=Date(adjRefDate, MyDateFormat)
-    rawMarketData=RawMarketData(RefDate, TupleString[1], TupleString[2], TupleString[3], TupleString[4])
-    return rawMarketData
+function parse_ref_date(refDate::AbstractString)
+    try
+        return Date(refDate, REF_DATE_FORMAT)
+    catch e
+        e isa ArgumentError || rethrow()
+        throw(ArgumentError("the reference date of a CalibrationID is day, month and year as in \"22Aug2016\", not \"$refDate\""))
+    end
 end

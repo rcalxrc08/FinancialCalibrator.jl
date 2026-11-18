@@ -19,16 +19,6 @@ struct RawMarketData
     RawMarketData(refDate, SpotStringIn, RfStringIn, ImplDivStringIn, VolatStringIn) = new(refDate, SpotStringIn, RfStringIn, ImplDivStringIn, VolatStringIn)
 end
 
-function io_retriever(SpotRelPath::String, RfRelPath::String, IdRelPath::String, VolaRelPath::String)
-    ####Input Retriever
-    SpotString=read(SpotRelPath, String)
-    RfString=read(RfRelPath, String)
-    ImplDivString=read(IdRelPath, String)
-    VolatString=read(VolaRelPath, String)
-
-    return (SpotString, RfString, ImplDivString, VolatString)
-end
-
 """
     MarketData
 

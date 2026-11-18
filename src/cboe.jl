@@ -60,7 +60,7 @@ cboe_file(underlying, refDate::AbstractString, dir) = joinpath(dir, "CboeOptions
 function cboe_download(underlying::AbstractString; index::Bool = true)
     url = "https://cdn.cboe.com/api/global/delayed_quotes/options/" * (index ? "_" : "") * underlying * ".json"
     body = String(take!(Downloads.download(url, IOBuffer(); headers = ["User-Agent" => "FinancialCalibrator.jl"])))
-    return body, Dates.format(cboe_reference_date(JSON.parse(body)), "dduyyyy")
+    return body, Dates.format(cboe_reference_date(JSON.parse(body)), REF_DATE_FORMAT)
 end
 
 function save_chain(body, underlying, refDate, dir)
@@ -96,12 +96,12 @@ function parse_occ(symbol::AbstractString)
     return (root = String(m[1]), expiry = Date(m[2], dateformat"yymmdd") + Year(2000), isCall = m[3] == "C", strike = parse(Int, m[4]) / 1000)
 end
 
-function retriever(calId::CalibrationID, input::CboeInputStrategy)::RawMarketData
+function retriever(calId::CalibrationID, input::CboeInputStrategy)
     chain = JSON.parse(read(cboe_file(calId.underlying, calId.refDate, input.dir), String))
     return cboe_raw_market_data(chain, something(input.root, calId.underlying), input.rate, input.moneyness)
 end
 
-function retriever(calId::CalibrationID, input::CboeWebInputStrategy)::RawMarketData
+function retriever(calId::CalibrationID, input::CboeWebInputStrategy)
     body, refDate = cboe_download(calId.underlying; index = input.index)
     refDate == calId.refDate || @warn "The CBOE gives the current option chain only: it is of $refDate, not of $(calId.refDate)."
     input.dir === nothing || save_chain(body, calId.underlying, refDate, input.dir)
