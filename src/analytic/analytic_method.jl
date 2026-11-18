@@ -40,7 +40,8 @@ function pricer(model::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMont
 end
 
 # The kernel's type may depend on run time values (the number of components of a mixture): these functions are the
-# barrier, and they return the price type computed by `pricer`.
+# barrier, and they return the price type computed by `pricer`. The assertion of the single option is needed while the
+# arity of a mixture is the length of a vector (the kernel, its call and the conversion are then not inferred): #35.
 analytic_prices(::Type{PT}, kernel, opt::FinancialMonteCarlo.EuropeanOption) where {PT} = convert(PT, kernel(opt.K, opt.isCall))::PT
 function analytic_prices(::Type{PT}, kernel, opt::FinancialMonteCarlo.EuropeanOptionSmile) where {PT}
     prices = similar(opt.K, PT)

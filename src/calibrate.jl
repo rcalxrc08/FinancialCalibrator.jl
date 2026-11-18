@@ -38,7 +38,7 @@ function calibrate(model::FinancialMonteCarlo.BaseProcess, pricing_method::Finan
     return calibrate_cached(model, pricing_method, mktData, loss_cache(model, pricing_method, mktData; min_vega = min_vega), opt_method, opt_options; kwargs...)
 end
 
-function calibrate_cached(model::FinancialMonteCarlo.BaseProcess, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}, cache, opt_method::Optim.AbstractOptimizer, opt_options::Optim.Options; parametrization::Parametrization = default_parametrization(model), kwargs...)::CalibratedData{T} where {T}
+function calibrate_cached(model::FinancialMonteCarlo.BaseProcess, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}, cache, opt_method::Optim.AbstractOptimizer, opt_options::Optim.Options; parametrization::Parametrization = default_parametrization(model), kwargs...) where {T}
     x, e = optimal_variables_and_errors(model, pricing_method, mktData, cache, opt_method, opt_options, parametrization; kwargs...)
     OptimalParameters = parametrization.to_params(x)
     ModelVolatility = fill(T(NaN), length(mktData.TimeToMaturity), length(mktData.Strikes))

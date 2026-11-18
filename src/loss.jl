@@ -16,7 +16,17 @@ function loss_cache(model::FinancialMonteCarlo.BaseProcess, method::FinancialMon
     quoted_strikes = [strikes[q] for q in quoted]
     is_call = [k .>= S0 * exp((r - d) * t) for (k, t, r, d) in zip(quoted_strikes, maturities, rates, dividends)]
     smiles = [FinancialMonteCarlo.EuropeanOptionSmile(t, k, c) for (t, k, c) in zip(maturities, quoted_strikes, is_call)]
-    return (quoted = quoted, strikes = quoted_strikes, smiles = smiles, is_call = is_call, zero_rates = [ZeroRate(r) for r in rates], dividends = dividends, method = calibration_method(method, strikes))
+    # the maturities that have quotes, and the quotes of all of them in one array each (strikes, rates, maturities, dividends,
+    # call flags, and the position of each quote in the matrix of volatilities), so that the implied volatilities of all the
+    # maturities are one broadcast and their errors one subtraction, without concatenating them
+    # Nothing here mutates an array: Zygote traces loss_cache when it differentiates calibrated_parameters (through
+    # implicit_calibration) and rejects any copyto!/fill!, even of constants. The positions stay on the host: indexing
+    # the surface with them moves them to the device, without a bounds check there (see maturity_errors).
+    active = [i for i in eachindex(quoted) if !isempty(quoted[i])]
+    repeated(values) = reduce(vcat, [zero(quoted_strikes[i]) .+ values[i] for i in active])
+    positions = reduce(vcat, [vec(LinearIndices(mktData.Volatility)[i, quoted[i]]) for i in active])
+    flat = (strikes = reduce(vcat, quoted_strikes[active]), rates = repeated(rates), maturities = repeated(maturities), dividends = repeated(dividends), is_call = reduce(vcat, is_call[active]), positions = positions)
+    return (quoted = quoted, strikes = quoted_strikes, smiles = smiles, is_call = is_call, zero_rates = [ZeroRate(r) for r in rates], dividends = dividends, method = calibration_method(method, strikes), active = active, flat = flat)
 end
 
 """
@@ -31,27 +41,37 @@ function vol_errors(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.B
     # set_parameters! returns a new model, it does not mutate `model` (inferred since FinancialMonteCarlo 0.7; the loop
     # over the maturities stays a function of its own, a barrier should a model's type not be inferred).
     new_model = FinancialMonteCarlo.set_parameters!(model, params)
-    return maturity_errors(new_model, model.underlying.S0, mktData, cache, vols)
+    # the positions of the quotes in the cache index the surface of mktData: checked here on the sizes, on the host, so that
+    # maturity_errors reads them without a bounds check, which on the GPU is a reduction read back to the host (a sync)
+    size(vols) == size(mktData.Volatility) || throw(DimensionMismatch("vols is $(size(vols)), the surface of mktData $(size(mktData.Volatility))"))
+    return maturity_errors(new_model, model.underlying.S0, cache, vols)
 end
 
-# A loop with a concrete accumulator, not map and reduce: map cannot infer the element type of its closure with dual
-# numbers, and the abstract vector it then returns makes the loss uninferred, which costs little in Julia but makes
-# Mooncake compile a rule per dynamic call. A few maturities: the vcat of each step is cheap.
-function maturity_errors(new_model, S0, mktData::MarketData, cache, vols)
-    maturities = filter(i -> !isempty(cache.quoted[i]), eachindex(cache.quoted))
-    errors = maturity_error(new_model, S0, mktData, cache, vols, first(maturities))
-    for i in Iterators.drop(maturities, 1)
-        errors = vcat(errors, maturity_error(new_model, S0, mktData, cache, vols, i))
-    end
-    return errors
+# The comprehension over the maturities is inferred with dual numbers (tested with `@inferred`): the pricer of a maturity
+# is a function of its own, so its return type is known.
+function maturity_errors(new_model, S0, cache, vols)
+    # all the maturities are priced first, and the prices checked once: the check reads a reduction of the prices back to
+    # the host, a synchronization of the GPU that one per maturity would repeat. Then one broadcast for the implied
+    # volatilities of all the quotes
+    prices = reduce(vcat, [model_prices(new_model, cache, i) for i in cache.active])
+    check_prices(prices)
+    flat = cache.flat
+    # in bounds: the positions come from LinearIndices of the surface, whose size vol_errors has checked
+    return blsimpv.(S0, flat.strikes, flat.rates, flat.maturities, prices, flat.dividends, flat.is_call) .- @inbounds(vols[flat.positions])
 end
-maturity_error(new_model, S0, mktData::MarketData, cache, vols, i::Integer) = model_volatilities(new_model, S0, mktData, cache, i) .- vols[i, cache.quoted[i]]
+
+# The model prices of the quotes of maturity i that enter the loss.
+model_prices(new_model, cache, i::Integer) = vec(pricer(new_model, cache.zero_rates[i], cache.method, cache.smiles[i]))
+
+check_prices(prices) = minimum(prices) > 0 || throw(DomainError(minimum(prices), "a model price is not positive"))
+
+implied_volatilities(S0, mktData::MarketData, cache, prices, i::Integer) = blsimpv.(S0, cache.strikes[i], mktData.ZeroRates[i], mktData.TimeToMaturity[i], prices, cache.dividends[i], cache.is_call[i])
 
 # The model implied volatilities of the quotes of maturity i that enter the loss.
 function model_volatilities(new_model, S0, mktData::MarketData, cache, i::Integer)
-    prices = vec(pricer(new_model, cache.zero_rates[i], cache.method, cache.smiles[i]))
-    minimum(prices) > 0 || throw(DomainError(minimum(prices), "a model price is not positive"))
-    return blsimpv.(S0, cache.strikes[i], mktData.ZeroRates[i], mktData.TimeToMaturity[i], prices, cache.dividends[i], cache.is_call[i])
+    prices = model_prices(new_model, cache, i)
+    check_prices(prices)
+    return implied_volatilities(S0, mktData, cache, prices, i)
 end
 
 """
@@ -63,8 +83,9 @@ as the worst point; any other exception propagates.
 """
 loss(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}, cache = loss_cache(model, method, mktData)) where {T} = loss(promote_type(eltype(params), T), params, model, method, mktData, cache)
 
-# the type of the result as a parameter: the sum of the errors is not inferred (see vol_errors), its conversion is
-function loss(::Type{R}, params, model, method, mktData, cache)::R where {R}
+# the type of the result as a parameter, so that the loss and the Inf of a failure have the same type. No return type
+# assertion: vol_errors is inferred (Float64 and dual numbers, host and device), so the conversion is too.
+function loss(::Type{R}, params, model, method, mktData, cache) where {R}
     try
         return R(sum(abs2, vol_errors(params, model, method, mktData, cache)) / 2)
     catch e

@@ -94,7 +94,7 @@ vol_errors(params, model, pricing_method, mkt, cache = loss_cache(...); vols = m
   `Real` / `AbstractVector{<:Real}`. Do not reintroduce `::Float64` annotations or Float64 literals in the pricing path.
 
 Files in `src/` (included in this order by `FinancialCalibrator.jl`): `structs.jl` (input types, `MarketData`,
-`implied_dividend`), `retriever_calibration.jl` (reads `data/json/`), `cboe.jl` (`CboeInputStrategy` from a file, `CboeWebInputStrategy` downloading the current chain, `cboe_snapshot`:
+`implied_dividend`), `retriever_calibration.jl` (reads `data/json/`; the reference date `22Aug2016` is parsed and written with `REF_DATE_FORMAT = dateformat"dduuuyyyy"`, shared with `cboe.jl`: `"dduyyyy"` formats the same string but cannot parse it, the month has no fixed width; `parse_ref_date` throws an `ArgumentError` naming the expected format, #12), `cboe.jl` (`CboeInputStrategy` from a file, `CboeWebInputStrategy` downloading the current chain, `cboe_snapshot`:
 CBOE delayed quotes, #18), `adapter_calibration.jl` (parsing, returns
 `(underlying, mkt)`; the surface is filled in one pass over the JSON points, rates and dividends are interpolated
 linearly in the year fraction, flat outside the nodes, by `interpolate_linear`: no interpolation package, Dierckx was
@@ -216,7 +216,29 @@ below the threshold, #2), `test/local/cboe_spx.jl` (local only, see above), `tes
   unprepared `DI.jacobian` picks ForwardDiff's chunk at run time, which made everything `Any`); `@inferred` test of
   `optimal_variables` in `test/runtests.jl`, no type assertion. Tested in `test/models_methods.jl` and `test/gpu.jl`
   (reverse on the device compiles for about 18 minutes, then 2.3 s on BS/Cos DAX).
-- `maturity_errors` is a loop with a concrete accumulator: a `map` closure was not inferred with dual numbers and made
+- `maturity_errors` prices all the maturities first (`model_prices`, one `reduce(vcat, ...)` of a comprehension), checks
+  the prices once (`check_prices`: one reduction read back to the host, i.e. one GPU synchronization instead of one per
+  maturity), then one `blsimpv` broadcast over all the quotes and one subtraction, with the strikes, rates, maturities,
+  dividends, call flags and positions in the volatility matrix of all the maturities in `cache.flat` (built once by
+  `loss_cache`; `cache.active` are the maturities with quotes). Per-maturity cache fields stay for `calibrate` and
+  `model_volatilities` (one maturity, with its own check, used by the tests). `loss_cache` must not mutate any array
+  (`copyto!`, `fill!`): Zygote traces it through `implicit_calibration` when it differentiates `calibrated_parameters`
+  and fails ("Mutating arrays is not supported"). The positions stay on the host; `vols[flat.positions]` is `@inbounds`
+  after `vol_errors` checks `size(vols)` on the host: the bounds check of GPUArrays is an `all` reduction read back to
+  the host, one more sync. Measured on Heston/Lewis DAX, MX150, interleaved rounds (#23 comment): calibration 2.44 s
+  (check per maturity) -> 1.81 s (one check) -> 1.64 s (+ `@inbounds`) -> 1.30 s once FinancialMonteCarlo stops
+  re-validating each smile in `to_mode` (`minimum(K)` on the device, 9 syncs per loss, FinancialMonteCarlo#73); the
+  host takes ~1.3 s. Zero host checks (invalid prices masked to NaN on the device) gave nothing more. After that the
+  GPU loss is launch-bound: 140 launches per `vol_errors` (FinancialFFT#92).
+- Return type assertions: only `analytic_prices(::Type{PT}, kernel, ::EuropeanOption)::PT` is left, needed while the
+  arity of a mixture is a run-time length (#35). `loss`, `calibrate_cached` and the retrievers are inferred without
+  one; JET (`@report_opt`) is clean on `vol_errors`, `loss`, `loss_cache`, and reports only the uninferred loop of the
+  polish (#36).
+- Time split of a default calibration (Heston/Lewis 4001, DAX, host): Nelder–Mead 60% (142 losses, hands over at
+  L = 4.1e-3 vs 2.35e-3), polish 40% (17 linearly converging steps, then ~28 trials at the rounding floor, #37),
+  everything else < 1%. Polish only: 0.95 s vs 1.88 s, same optimum (#33). `LewisMethod(100, 2001)` halves the cost
+  at 7e-7 in the vols (#10). Scripts were in the session scratchpad, not in the repository.
+- (history) `maturity_errors` was a loop with a concrete accumulator because a `map` closure was not inferred with dual numbers and made
   the loss `Any` (tested with `@inferred` on duals in the parameters and in the quotes).
 - Python edits of Julia or Markdown files: use raw strings (`r"""..."""`), `\t` and `\n` in `\top`/`\nabla` were once
   turned into a tab and a newline in the docs.
