@@ -247,3 +247,7 @@ below the threshold, #2), `test/local/cboe_spx.jl` (local only, see above), `tes
   whose constructor has a try/catch on Julia 1.10 (Mooncake fails). Do not construct anything with keywords there.
 - CI runs Julia 1.13.3 (see below) and is meant to run 1; not 1.10 (Heston in the FinancialFFT example lands 2e-8 from the reference there) nor `pre` (Mooncake does not precompile on the nightly compiler). Since 2026-11-14 CI pins 1.13.3 instead of 1: Enzyme aborts on Julia 1.13.4 ("unsupported tag julia.gc_alloc_ptr_offsets"); the local Julia is 1.13.4, so the Enzyme tests need `juliaup add 1.13.3` and `julia +1.13.3` until Enzyme supports it, then put '1' back.
 - Commit messages end with the `Co-Authored-By` line configured for the session.
+
+## Sub-environments
+
+- **Compat of the package itself in the sub-environments** (`docs/`, which load it through `[sources]` with a path): each has a `[compat]` entry for the package, so CompatHelper does not open PRs to add one (it has no option to skip a dependency). Bump these entries in the same commit as a breaking version bump, otherwise the local package no longer satisfies them and the environment fails to resolve.
