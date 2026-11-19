@@ -151,6 +151,36 @@ calibrated_parameters(model, method, mkt, v; implicit_backends = (x = AutoMoonca
 The table above times these combinations. Zygote for `x` does not work: it cannot differentiate the inner ForwardDiff
 gradient of the conditions.
 
+### What each backend differentiates
+
+The inner backends differentiate two functions: `FinancialCalibrator.loss` (for `autodiff`) and [`vol_errors`](@ref)
+(for `polish_backend` and the conditions). `loss` returns ``\infty`` where the parameters cannot be priced, by catching
+the exception, and that `try`/`catch` is what separates the backends. Gradients on the DAX surface, against ForwardDiff
+(shifted lognormal mixture with `AnalyticMethod`, Variance Gamma with `LewisMethod(100.0, 2001)`):
+
+| Backend | `vol_errors` | `loss` |
+|:--|:--|:--|
+| ForwardDiff | ✓ | ✓ |
+| Zygote | ✓ | ✓ |
+| Mooncake | ✓ | ✗: no `try`/`catch` in reverse mode (FinancialCalibrator.jl#40) |
+| Enzyme, reverse | ✓ with `set_runtime_activity` | ✓ with `set_runtime_activity` |
+
+Enzyme needs runtime activity whenever the model is rebuilt from active parameters on an underlying with a dividend
+curve, which is what [`adapter`](@ref) returns (FinancialMonteCarlo.jl#79):
+`AutoEnzyme(; mode = Enzyme.set_runtime_activity(Enzyme.Reverse))`. With Mooncake as `autodiff`, use a derivative-free
+optimizer (the default `NelderMead()`); the polish and the implicit derivatives do not need `loss`.
+
+Zygote is correct but slow here: a gradient of `vol_errors` costs 7.7 ms on the mixture (ForwardDiff 0.13 ms) and 17 ms
+with Lewis (ForwardDiff 3 ms). Most of it is Zygote tracing the model setup of FinancialMonteCarlo (rebuilding the model
+and integrating the dividend curve, element by element), which the other backends differentiate in microseconds
+(FinancialMonteCarlo.jl#80). The
+inner backends have few parameters to differentiate, which is what ForwardDiff is for; Zygote belongs outside, on
+`calibrated_parameters`, where it meets only the rule of the implicit function.
+
+Every backend differentiates the pricing code itself, which is written for it: no branches, validations outside the
+derivatives, and for the closed forms a kernel whose Zygote gradient is inferred (see
+[Other closed forms](closed_form.md#Other-closed-forms)).
+
 ## Arrays
 
 ### Floating point types

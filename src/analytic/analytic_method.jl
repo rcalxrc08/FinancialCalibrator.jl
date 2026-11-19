@@ -43,11 +43,14 @@ end
 # The prices have the type computed by `pricer`. The number of components of a mixture is in the type of the model
 # (FinancialMonteCarlo's LogNormalMixture holds tuples), so the kernel and its call are inferred: no assertion (#35).
 analytic_prices(::Type{PT}, kernel, opt::FinancialMonteCarlo.EuropeanOption) where {PT} = convert(PT, kernel(opt.K, opt.isCall))
-function analytic_prices(::Type{PT}, kernel, opt::FinancialMonteCarlo.EuropeanOptionSmile) where {PT}
-    prices = similar(opt.K, PT)
-    prices .= kernel.(opt.K, opt.isCall)
-    return prices
+# One broadcast that allocates its result, no `.=` into `similar`: Zygote cannot differentiate a mutation ("Mutating
+# arrays is not supported"). The conversion to PT is an isbits callable, which a GPU broadcast captures (a closure over
+# the type PT is not isbits); Zygote differentiates its fields on the host and, by dual numbers, on the device.
+struct PriceAs{PT, K}
+    kernel::K
 end
+@inline (p::PriceAs{PT})(K, isCall::Bool) where {PT} = convert(PT, p.kernel(K, isCall))
+analytic_prices(::Type{PT}, kernel, opt::FinancialMonteCarlo.EuropeanOptionSmile) where {PT} = PriceAs{PT, typeof(kernel)}(kernel).(opt.K, opt.isCall)
 
 """
     LognormalMixtureKernel(F, shift, σ, w, r, T)
@@ -65,12 +68,27 @@ struct LognormalMixtureKernel{N, F_, S, V, W, R, T_}
     T::T_
 end
 
+# Σⱼ w[j] blkprice(σ[j]), unrolled at compile time into nested muladds. Not `sum(map(closure, w, σ))`: here Zygote did not
+# infer its pullback (a minimal `map` over tuples it does infer, the cause is not pinned down), and one uninferred
+# pullback makes the whole gradient dynamic (#39: with the
+# `promote` below, the Zygote gradient of a price is 1.4 times the price instead of ~30 times; Mooncake and Enzyme unchanged).
+@generated function mixture_price(F, κ, r, T, σ::NTuple{N, Any}, w::NTuple{N, Any}, isCall::Bool) where {N}
+    ex = :(w[$N] * blkprice(F, κ, r, T, σ[$N], isCall))
+    for j = (N-1):-1:1
+        ex = :(muladd(w[$j], blkprice(F, κ, r, T, σ[$j], isCall), $ex))
+    end
+    return ex
+end
+
 @inline function (k::LognormalMixtureKernel)(K, isCall::Bool)
     κ = K - k.shift
     positive = κ > 0
     # any positive strike where κ ≤ 0: that branch is discarded, it must only stay finite (and so its derivatives)
     κ⁺ = ifelse(positive, κ, one(κ))
-    mixture = sum(map((w, σ) -> w * blkprice(k.F, κ⁺, k.r, k.T, σ, isCall), k.w, k.σ))
-    linear = exp(-k.r * k.T) * (isCall ? k.F - κ : zero(k.F - κ))
-    return ifelse(positive, mixture, oftype(mixture, linear))
+    mixture = mixture_price(k.F, κ⁺, k.r, k.T, k.σ, k.w, isCall)
+    # no branch on isCall (#39): `Bool * x` is a select with a strong zero, straight-line code for every AD backend
+    linear = exp(-k.r * k.T) * (isCall * (k.F - κ))
+    # `promote`, not `oftype(mixture, linear)`: Zygote's pullback of `oftype` is not inferred, Base's `oftype` has an `isa`
+    # branch (FluxML/Zygote.jl#1751, Zygote 0.7.18; #39)
+    return ifelse(positive, promote(mixture, linear)...)
 end

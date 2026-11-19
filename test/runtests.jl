@@ -6,6 +6,7 @@ using FinancialFFT
 using Random
 using FinancialToolbox
 using ForwardDiff
+using Zygote
 using LinearAlgebra
 
 const FC = FinancialCalibrator
@@ -93,6 +94,16 @@ flush(stderr)
         # these closed forms: a calibrated mixture prices exotics by Monte Carlo consistently (#30)
         sobol = MonteCarloConfiguration(2^14, 50; sampling = FinancialMonteCarlo.SobolMC())
         @test pricer(model, zr, sobol, calls) ≈ pc atol = 0.05
+        # the kernel is straight code for Zygote (#39): no branch, no tuple `map`, no `oftype`, so its pullback is inferred
+        # (an uninferred one made the gradient 33 times slower); the gradient against ForwardDiff, also where κ ≤ 0
+        for (m, K) in ((model, 100.0), (up, 10.0)), isCall in (true, false)
+            k = FC.analytic_kernel(m, S0, r, 0.03, T)
+            price_of(k) = k(K, isCall)
+            @test !occursin("Any", string(only(Base.return_types(Zygote.pullback, Tuple{typeof(price_of), typeof(k)}))))
+            g = Zygote.gradient(price_of, k)[1]
+            fd = ForwardDiff.gradient(x -> FC.LognormalMixtureKernel(x[1], x[2], (x[3], x[4]), (x[5], x[6]), r, T)(K, isCall), [k.F, k.shift, k.σ..., k.w...])
+            @test [g.F, g.shift, g.σ..., g.w...] ≈ fd rtol = 1e-12
+        end
     end
 
     @testset "Black and Scholes, closed form" begin
@@ -201,6 +212,15 @@ flush(stderr)
             # parameters the model rejects (a DomainError of its constructor) too; any other exception propagates (#3)
             @test FC.loss([-0.2], model, method, mkt) == Inf
             @test_throws MethodError FC.loss([0.2], model, NoPricer(), mkt)
+            # Zygote differentiates the volatility errors and the loss (its try included) of a closed form: the prices
+            # are one allocating broadcast, not a write into an array (#39)
+            slnm = ShiftedProcess(LogNormalMixture((0.1, 0.2, 0.35), (0.3, 0.4), und), -0.1)
+            p = [0.1, 0.2, 0.35, 0.3, 0.4, -0.1]
+            scache = FC.loss_cache(slnm, AnalyticMethod(), mkt)
+            half_squares(x) = sum(abs2, vol_errors(x, slnm, AnalyticMethod(), mkt, scache)) / 2
+            reference = ForwardDiff.gradient(half_squares, p)
+            @test Zygote.gradient(half_squares, p)[1] ≈ reference rtol = 1e-12
+            @test Zygote.gradient(x -> FC.loss(x, slnm, AnalyticMethod(), mkt, scache), p)[1] ≈ reference rtol = 1e-12
         end
 
         # The Levenberg–Marquardt polish ends where the gradient of the loss vanishes, on the market surface too.

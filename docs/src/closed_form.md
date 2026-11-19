@@ -59,7 +59,7 @@ once per smile, then one Black price per component and strike, by `blkprice` of 
 <div class="fc-card"><span class="fc-card-k is-blue">Exact and fast</span><p>A price is <i>n</i> Black formulas: no quadrature, no truncation range, no simulation. A smile of a few hundred strikes with three components prices in about 0.15 ms on a laptop. The loss has no numerical noise, so the optimizer and the Levenberg–Marquardt polish reach a stationary point to machine precision, and the implicit derivatives of <code>calibrated_parameters</code> are those of the exact calibration.</p></div>
 <div class="fc-card"><span class="fc-card-k">Free of static arbitrage</span><p>A mixture of arbitrage-free prices is arbitrage free: the prices are decreasing and convex in the strike, and the forward is matched exactly, for every parameter, so no constraint is needed beyond the signs of η and λ.</p></div>
 <div class="fc-card"><span class="fc-card-k is-amber">Intuitive parameters</span><p>The mixture gives fat tails, the smile: the volatilities η are the regimes, the weights how likely they are. The shift gives the skew: α &lt; 0 makes the spot more lognormal than <i>A</i>, with a downward sloping implied volatility; α &gt; 0 the opposite.</p></div>
-<div class="fc-card"><span class="fc-card-k is-blue">Differentiable by every backend</span><p>The formula is a broadcast of <code>blkprice</code>, which has closed-form ChainRules rules: ForwardDiff, Zygote and Mooncake differentiate it as well as the Fourier methods.</p></div>
+<div class="fc-card"><span class="fc-card-k is-blue">Differentiable by every backend</span><p>The formula is straight-line code over <code>blkprice</code>, which has closed-form ChainRules rules, with no branch: ForwardDiff, Zygote, Mooncake and Enzyme differentiate it as well as the Fourier methods. Zygote's gradient of one price costs about 1.4 times the price itself, whatever the number of components.</p></div>
 <div class="fc-card"><span class="fc-card-k">On the GPU</span><p>The components are a tuple whose length is a type parameter, so a smile is one broadcast over its strikes, one thread per strike. With the strikes of <code>MarketData</code> on the device, or <code>AnalyticMethod(; mode = CudaMode())</code>, the prices never leave it.</p></div>
 </div>
 ```
@@ -105,3 +105,21 @@ A model gets a closed form by two methods, `FinancialCalibrator.analytic_price_t
 prices) and `FinancialCalibrator.analytic_kernel(model, S0, r, d, T)` (a callable `(K, isCall) -> price`, an isbits
 struct so that a GPU broadcast captures it); `pricer(model, zero_rate, AnalyticMethod(), smile)` does the rest, on the
 host or on the device.
+
+The kernel is the code that every backend differentiates, one strike at a time, so it is written for all of them:
+
+- **No branch**, neither on the call flag nor on a value. Calls and puts differ by a weight (`isCall * x` is exact,
+  `false * Inf == 0`), and a case such as ``\kappa \le 0`` is a select, `ifelse(positive, a, b)`, whose discarded side
+  is still finite. Mooncake and Enzyme compile a branch away; Zygote records it on its tape, and its gradient becomes
+  type unstable: about 7 times slower on a one-line kernel.
+- **Every step inferred under Zygote.** One construct whose pullback Zygote cannot infer makes the whole gradient
+  dynamic. Two met here: `sum(map(f, w, σ))` over the tuples of the components (the mixture sums them with a function unrolled at
+  compile time instead) and `oftype(x, y)` (`promote` instead). Together they made the gradient of one price about 30
+  times slower.
+- **Scalars and tuples, not arrays.** The kernel runs in a GPU thread, which cannot allocate, and reverse mode
+  differentiates the indexing of an array element by element.
+- **Checks outside the formula.** A domain check that throws goes in `analytic_kernel`, inside
+  `ChainRulesCore.@ignore_derivatives`, so that no backend traces it.
+
+A quick check of the last two points for Zygote is that
+`Base.return_types(Zygote.pullback, Tuple{typeof(f), typeof(kernel)})` contains no `Any`.

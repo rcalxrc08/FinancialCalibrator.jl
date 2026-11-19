@@ -7,11 +7,13 @@ optimization is done with Optim.
 
 Dependencies, by design: **no package that differentiates is a hard dependency**. ADTypes and DifferentiationInterface
 are interfaces (and hard dependencies of Optim through NLSolversBase anyway); ImplicitDifferentiation (the rules of
-`calibrated_parameters`) is a hard dependency by the author's choice. ForwardDiff, Zygote, Enzyme, Mooncake are not:
+`calibrated_parameters`) is a hard dependency by the author's choice. ChainRulesCore is a hard dependency since #39 (an
+interface, already loaded by FinancialMonteCarlo and ImplicitDifferentiation): the validations on the differentiated
+path are in `ChainRulesCore.@ignore_derivatives`. ForwardDiff, Zygote, Enzyme, Mooncake are not:
 `default_backend()` (`src/backends.jl`) is `AutoForwardDiff()` when DifferentiationInterface's ForwardDiff extension is
 loaded (i.e. the user loaded ForwardDiff) and `AutoFiniteDiff()` otherwise (FiniteDiff comes with NLSolversBase); every
 backend keyword defaults to it (`DI.check_available`, not `Base.get_extension`: the latter takes a lock that Zygote
-cannot differentiate through the keyword defaults). `ext/FinancialCalibratorMooncakeExt.jl` (Mooncake + ChainRulesCore) gives Mooncake a
+cannot differentiate through the keyword defaults). `ext/FinancialCalibratorMooncakeExt.jl` (triggered by Mooncake) gives Mooncake a
 rule for `implicit_variables`: ImplicitDifferentiation's ChainRules rrule needs a `RuleConfig`, which Mooncake's
 `@from_rrule` does not pass, so the extension calls it with a config without modes (the backends are always explicit in
 `calibrated_parameters`, the config is never used) and moves the cotangent of the quotes itself. The setup of the implicit function is `implicit_calibration`, marked
@@ -245,7 +247,52 @@ below the threshold, #2), `test/local/cboe_spx.jl` (local only, see above), `tes
 - Default arguments of `calibrate`/`calibrated_parameters` are the constants `DEFAULT_OPTIMIZER`/`DEFAULT_OPTIONS`, not
   `NelderMead()`: a default argument is evaluated in the method Mooncake traces, and `NelderMead()` builds `Dict(kwargs)`,
   whose constructor has a try/catch on Julia 1.10 (Mooncake fails). Do not construct anything with keywords there.
-- CI runs Julia 1.13.3 (see below) and is meant to run 1; not 1.10 (Heston in the FinancialFFT example lands 2e-8 from the reference there) nor `pre` (Mooncake does not precompile on the nightly compiler). Since 2026-11-14 CI pins 1.13.3 instead of 1: Enzyme aborts on Julia 1.13.4 ("unsupported tag julia.gc_alloc_ptr_offsets"); the local Julia is 1.13.4, so the Enzyme tests need `juliaup add 1.13.3` and `julia +1.13.3` until Enzyme supports it, then put '1' back.
+- CI runs Julia 1; not 1.10 (Heston in the FinancialFFT example lands 2e-8 from the reference there) nor `pre` (Mooncake does not precompile on the nightly compiler). From 2026-11-14 to 2026-11-19 CI pinned 1.13.3: Enzyme aborted on Julia 1.13.4 ("unsupported tag julia.gc_alloc_ptr_offsets"); Enzyme ≥ 0.13.220 runs there (checked with 0.13.221), so the test compat asks for Enzyme 0.13.220 and CI is back on 1.
+- **No branches on the differentiated path** (#39): no `if`/ternary on a flag or a value in the pricing and loss code. Use
+  selects (`ifelse`, `Bool * x`, which has a strong zero, `call_put_sign` weights, `max`/`min`); validations that throw
+  go in `ChainRulesCore.@ignore_derivatives` (`α < 1` of the shifted mixture, `check_prices`, the `size(vols)` checks),
+  as in FinancialMonteCarlo 0.8. Which backends differentiate `vol_errors` and `loss` (checked 2026-11-19, DAX, mixture with
+  `AnalyticMethod` and VG with Lewis, against ForwardDiff, one process each): Zygote both (it handles the `try` of `loss`
+  when nothing is thrown; it needed `analytic_prices` without `.=` into `similar`: one allocating broadcast through the
+  isbits callable `PriceAs{PT}`, a closure over `PT` is not isbits and a GPU broadcast refuses it), Mooncake
+  `vol_errors` only (it rejects the `try`/`catch` of `loss`, #40: no gradient optimizer with `autodiff = AutoMooncake`),
+  Enzyme both with `set_runtime_activity` only (any model built from active parameters on an `UnderlyingVec`, the
+  dividend curve holds `Vector`s: FinancialMonteCarlo#79). Table in `docs/src/backends.md`. Zygote on `vol_errors` is
+  correct but slow (mixture 7.7 ms vs ForwardDiff 0.13 ms, VG/Lewis 17 vs 3 ms): one smile costs ~0.8 ms, of which
+  `set_parameters!` ~0.2 ms and the dividend-curve `integral` ~0.45 ms per maturity (Zygote's dense one-hot `getindex`
+  pullbacks, untyped branchy pullbacks); ForwardDiff/Mooncake/Enzyme do the same in 3-13 μs. FinancialMonteCarlo's simulations are not
+  for Zygote but its structs (models, curves, `set_parameters!`) must be: FinancialMonteCarlo#80 (an `rrule` for
+  `integral` took it 449 -> 9.8 μs as a prototype). The branch stacks on that path (`Core._typeof_captured_variable`,
+  which Zygote has a rule for only in forward mode, FluxML/Zygote.jl#1753, 33-57 of them; `Adapt.adapt_structure`;
+  FinancialFFT's `pricer`) cost only 3-16% of it. Zygote upstream, filed 2026-11-19 (Zygote 0.7.18, recheck on new
+  releases): #1751 `oftype` pullback not inferred (our `promote`), #1752 `gradient`/`pullback` compiled for
+  `f::Function` (4.4 μs -> 57 ns specialized, the size-dependent slowdowns), #1753, #1754 branch-only stacks. Measured 2026-11-19 (i7-8550U, Julia 1.13.4, DifferentiationInterface 0.7.22, one
+  process per case, gradient in ns, ternary on `isCall` vs `Bool *`): toy kernel `exp(-rT) (F - κ)` Zygote 48100 vs
+  6675 (7x), Mooncake 0.5.71 110 vs 106, Enzyme 0.13.221 (reverse) 66 vs 62; the mixture kernel (3 components, one
+  option, from a vector) Zygote 43000 vs 42200, Mooncake 432 vs 421, Enzyme 797 vs 750. Mooncake and Enzyme compile the
+  branch to straight code (differences within noise); Zygote stores the branch decisions in `Vector{Any}` stacks, so its
+  pullback is not inferred (scalar toy with non-constant arguments: 6.9 μs and 52 allocations with the ternary, 22 ns
+  with `Bool *` or `ifelse`; FluxML/Zygote.jl#1736 typed the stacks of loops but kept `Vector{Any}` for branch-only
+  code on purpose). Benchmark Zygote with interpolated arguments and no splatting: literal arguments constant-fold the
+  whole gradient (2.6 ns), and `@btime gradient($f, $(args)...)` splats at run time (`jl_f__apply_iterate`, boxed
+  Float64s, microseconds that are the harness's). Gradients identical for calls and puts.
+- **Zygote: one uninferred pullback makes the whole gradient dynamic.** Besides branches, two constructs did it in the
+  mixture kernel (#39): `sum(map(closure, w, σ))` over tuples (7.5 μs vs 0.9 μs unrolled, pullback not inferred with the kernel's closure over
+  `F`, `κ` and `blkprice`; a minimal tuple `map` is inferred, so the cause is not pinned down)
+  and `oftype(x, y)` (Base's `oftype` is `y isa typeof(x) ? y : convert(...)`, a branch: FluxML/Zygote.jl#1751, Zygote
+  0.7.18; recheck on new Zygote releases, `oftype` could come back then). The kernel now sums with the `@generated` `mixture_price` (nested `muladd`s, any arity) and ends
+  with `ifelse(positive, promote(mixture, linear)...)`: Zygote gradient 18.2 μs -> 0.55 μs on a copy of the kernel,
+  Mooncake ~0.75 μs and Enzyme ~1.05 μs either way. The real kernel built from the parameters inside the gradient (as
+  `pricer` does), fresh process per arity: value / Zygote gradient 87/120, 179/262, 265/369, 345/462 ns for 1-4
+  components (1.4x). With the kernel struct itself as the argument of `Zygote.gradient`, 2 and 4 components take
+  2.5-3.3 μs (19 allocations, Zygote's accumulation of the tuple fields of a struct argument; odd arities are fast); no
+  calibration differentiates that way.
+  Also not inferred: an `if` on a compile-time constant (`Val`): Zygote transforms the untyped lowered code, so dispatch,
+  not `if`, to choose code. A module-qualified call inside the differentiated function (`FC.mixture_price(...)` in a
+  closure) makes Zygote differentiate `getproperty(::Module, ::Symbol)`, uninferred: 4.4 μs vs 0.36 μs (a benchmark
+  artifact, the package calls its functions unqualified). Indexing a `Vector` (`x[i]`) costs a dense zero array per access in the pullback
+  (~20 μs for 8 accesses): pass scalars, tuples or structs to differentiated kernels. Check with
+  `Base.return_types(Zygote.pullback, Tuple{typeof(f), ...})`: no `Any` inside. Scripts were in the session scratchpad.
 - Commit messages end with the `Co-Authored-By` line configured for the session.
 
 ## Sub-environments

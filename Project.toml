@@ -6,6 +6,7 @@ authors = ["Nicola Scaramuzzino <nicola.scaramuzzino@yandex.com>"]
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
+ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
 Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
@@ -18,14 +19,13 @@ Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 
 [weakdeps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
-ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 EnzymeCore = "f151be2c-9106-41f4-ab19-57ee4f262869"
 Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
 
 [extensions]
 FinancialCalibratorCUDAExt = "CUDA"
 FinancialCalibratorEnzymeExt = "EnzymeCore"
-FinancialCalibratorMooncakeExt = ["Mooncake", "ChainRulesCore"]
+FinancialCalibratorMooncakeExt = "Mooncake"
 
 [compat]
 ADTypes = "1"
@@ -36,7 +36,7 @@ ChainRulesCore = "1"
 Dates = "1"
 DifferentiationInterface = "0.6.1, 0.7"
 Downloads = "1"
-Enzyme = "0.13"
+Enzyme = "0.13.220"
 EnzymeCore = "0.8"
 FinancialFFT = "0.6.1"
 FinancialMonteCarlo = "0.8"

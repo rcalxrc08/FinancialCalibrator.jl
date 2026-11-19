@@ -14,9 +14,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 1.13.3, not '1': Enzyme aborts on Julia 1.13.4 ("unsupported tag julia.gc_alloc_ptr_offsets", UNREACHABLE in
-        # GradientUtils.cpp); back to '1' once an Enzyme release supports it.
-        version: ['1.13.3']
+        # '1': Enzyme >= 0.13.220 runs on Julia 1.13.4 (it aborted there before, "unsupported tag
+        # julia.gc_alloc_ptr_offsets"; the test compat asks for 0.13.220, checked with 0.13.221)
+        version: ['1']
         os: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v4

@@ -22,7 +22,8 @@ end
 
 function analytic_kernel(model::ShiftedProcess{<:LognormalMixtureModel}, S0, r, d, T)
     α = model.α
-    α < 1 || throw(DomainError(α, "the shift must be below 1, A0 = (1 - α) S0 is the spot of the mixture"))
+    # a validation, not a derivative: no AD backend traces its branch (#39)
+    ChainRulesCore.@ignore_derivatives α < 1 || throw(DomainError(α, "the shift must be below 1, A0 = (1 - α) S0 is the spot of the mixture"))
     F = S0 * exp((r - d) * T)
     return LognormalMixtureKernel((1 - α) * F, α * F, mixture_volatilities(model.model), mixture_component_weights(model.model), r, T)
 end
