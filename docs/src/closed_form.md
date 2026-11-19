@@ -30,13 +30,15 @@ S_t = \alpha\, S_0\, e^{(r - d) t} + A_t, \qquad A_0 = (1 - \alpha) S_0,
 ```
 
 with ``Z`` standard normal, volatilities ``\eta_1, \dots, \eta_n > 0`` and weights ``w_j = \lambda_j`` for
-``j < n``, ``w_n = 1 - \sum_{j<n} \lambda_j``. `ShiftedLogNormalMixture(η, λ, α, underlying)` takes the ``n``
-volatilities, the ``n - 1`` free weights and the shift ``\alpha < 1``. Brigo and Mercurio show that a local volatility
-``\sigma(t, A_t)`` exists for which ``A`` has exactly these marginals: the model is a diffusion, and not only a family
-of densities. FinancialMonteCarlo's simulation of `ShiftedLogNormalMixture` is not that diffusion (it sums the
-lognormal processes path by path, a model with other European prices, see
-[FinancialMonteCarlo.jl#56](https://github.com/rcalxrc08/FinancialMonteCarlo.jl/issues/56)): do not price exotics by
-Monte Carlo with a model calibrated by its closed form until that is settled.
+``j < n``, ``w_n = 1 - \sum_{j<n} \lambda_j``. In FinancialMonteCarlo it is
+`ShiftedProcess(LogNormalMixture(η, λ, underlying), α)`: the ``n`` volatilities and the ``n - 1`` free weights as
+tuples, and the shift ``\alpha < 1`` (`LogNormalMixture` alone is the mixture with no shift, and
+`ShiftedProcess(BlackScholesProcess(σ, underlying), α)` the displaced diffusion, a mixture of one component: both have
+the same closed form). Brigo and Mercurio show that a local volatility ``\sigma(t, A_t)`` exists for which ``A`` has
+exactly these marginals: the model is a diffusion, and not only a family of densities. FinancialMonteCarlo (≥ 0.8)
+simulates that diffusion, so its Monte Carlo prices of European options converge to the closed form (the tests check it
+to a few cents with 2¹⁴ Sobol paths and 50 steps), and a model calibrated here prices exotics by Monte Carlo
+consistently.
 
 A European option on ``S`` is an option on ``A`` struck at ``\kappa = K - \alpha S_0 e^{(r - d) T}``, and the mixture
 passes through the expectation: its price is the mixture of Black prices,
@@ -79,7 +81,7 @@ underlying, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IO
 rms(res) = sqrt(2 * res.OptimalValue / count(!isnan, res.ModelVolatility))
 
 bs = calibrate(BlackScholesProcess(0.2, underlying), AnalyticMethod(), mkt)
-slnm = calibrate(ShiftedLogNormalMixture([0.1, 0.2, 0.35], [0.3, 0.4], -0.1, underlying), AnalyticMethod(), mkt)
+slnm = calibrate(ShiftedProcess(LogNormalMixture((0.1, 0.2, 0.35), (0.3, 0.4), underlying), -0.1), AnalyticMethod(), mkt)
 (black_scholes = rms(bs), shifted_lognormal_mixture = rms(slnm))
 ```
 

@@ -97,8 +97,10 @@ function loss(::Type{R}, params, model, method, mktData, cache) where {R}
 end
 
 # The exceptions that mean "these parameters cannot be priced", not a bug: a price that is not positive or has no implied
-# volatility (DomainError), a model constructor rejecting its parameters (AssertionError: FinancialMonteCarlo checks them
-# with @assert). The default parametrizations keep the constructors from ever failing; with Parametrization() they can.
+# volatility, or a model constructor rejecting its parameters: both DomainErrors (FinancialMonteCarlo ≥ 0.8 throws a
+# DomainError for every parameter out of its domain, #31, FinancialMonteCarlo#71; an AssertionError is now a bug, as
+# is the DimensionMismatch of a wrong number of parameters). The default parametrizations keep the constructors from
+# failing (but for the free shift of a ShiftedProcess); with Parametrization() they can.
 # Anything else (a MethodError after an API change, ...) is a bug and propagates (#3). A constant penalty used to stand
 # in for the loss there (#24): a plateau that a line search can stall on, and that looked like a value.
-numerical_failure(e) = e isa Union{DomainError, AssertionError}
+numerical_failure(e) = e isa DomainError

@@ -19,6 +19,19 @@ function smile_prices(model, method, p, K, r, T)
     return vec(pricer(FinancialMonteCarlo.set_parameters!(model, p), ZeroRate(r), FC.calibration_method(method, K), smile))
 end
 
+# The testsets report only at the end, so each part logs when it starts and how long it took: a hung file shows up by
+# name in the log (a local run or CI) instead of a silent process.
+function logged(f, name)
+    @info "Running $name"
+    flush(stderr)
+    elapsed = @elapsed f()
+    @info "Finished $name in $(round(elapsed, digits = 1)) s"
+    flush(stderr)
+end
+logged_include(file) = logged(() -> include(file), file)
+
+@info "Running the core testset"
+flush(stderr)
 @testset "FinancialCalibrator" begin
     @testset "Data retrieval and adaptation" begin
         id = CalibrationID("Dax", "22Aug2016", "EUR")
@@ -44,7 +57,7 @@ end
         S0, r, T = 100.0, 0.01, 1.0
         strikes = [80.0, 100.0, 120.0]
         und = FinancialMonteCarlo.Underlying(S0, 0.03)
-        model = ShiftedLogNormalMixture([0.2, 0.25], [0.5], -0.1, und)
+        model = ShiftedProcess(LogNormalMixture((0.2, 0.25), (0.5,), und), -0.1)
         zr = ZeroRate(r)
         calls = FinancialMonteCarlo.EuropeanOptionSmile(T, strikes, fill(true, 3))
         puts = FinancialMonteCarlo.EuropeanOptionSmile(T, strikes, fill(false, 3))
@@ -63,11 +76,23 @@ end
         @test pc ≈ mixture.(strikes, true) rtol = 1e-12
         @test pp ≈ mixture.(strikes, false) rtol = 1e-12
         # a positive shift and a strike below it: the call is a forward, the put is worthless
-        up = ShiftedLogNormalMixture([0.2, 0.25], [0.5], 0.5, und)
+        up = ShiftedProcess(LogNormalMixture((0.2, 0.25), (0.5,), und), 0.5)
         low = FinancialMonteCarlo.EuropeanOptionSmile(T, [10.0, 10.0], [true, false])
         @test pricer(up, zr, AnalyticMethod(), low) ≈ [S0 * exp(-0.03 * T) - 10.0 * exp(-r * T), 0.0]
         # a shift that leaves no mixture
-        @test_throws DomainError pricer(ShiftedLogNormalMixture([0.2, 0.25], [0.5], 1.0, und), zr, AnalyticMethod(), calls)
+        @test_throws DomainError pricer(ShiftedProcess(LogNormalMixture((0.2, 0.25), (0.5,), und), 1.0), zr, AnalyticMethod(), calls)
+        # the number of components is in the type of the model (tuples): the prices are inferred
+        @test (@inferred pricer(model, zr, AnalyticMethod(), calls)) == pc
+        @test (@inferred pricer(model, zr, AnalyticMethod(), FinancialMonteCarlo.EuropeanOption(T, 100.0))) ≈ pc[2]
+        # no shift: the mixture itself; one component: the displaced diffusion
+        mixture_model = LogNormalMixture((0.2, 0.25), (0.5,), und)
+        @test pricer(mixture_model, zr, AnalyticMethod(), calls) ≈ pricer(ShiftedProcess(mixture_model, 0.0), zr, AnalyticMethod(), calls) rtol = 1e-14
+        displaced = ShiftedProcess(BlackScholesProcess(0.2, und), -0.1)
+        @test pricer(displaced, zr, AnalyticMethod(), calls) ≈ pricer(ShiftedProcess(LogNormalMixture((0.2, 0.2), (0.5,), und), -0.1), zr, AnalyticMethod(), calls) rtol = 1e-12
+        # the Monte Carlo of FinancialMonteCarlo simulates the Brigo–Mercurio local volatility, whose European prices are
+        # these closed forms: a calibrated mixture prices exotics by Monte Carlo consistently (#30)
+        sobol = MonteCarloConfiguration(2^14, 50; sampling = FinancialMonteCarlo.SobolMC())
+        @test pricer(model, zr, sobol, calls) ≈ pc atol = 0.05
     end
 
     @testset "Black and Scholes, closed form" begin
@@ -81,7 +106,7 @@ end
         end
         # a shifted lognormal mixture with no shift and equal volatilities is Black and Scholes
         smile = FinancialMonteCarlo.EuropeanOptionSmile(T, strikes, strikes .>= S0)
-        @test pricer(ShiftedLogNormalMixture([σ, σ], [0.3], 0.0, und), ZeroRate(r), AnalyticMethod(), smile) ≈ pricer(bs, ZeroRate(r), AnalyticMethod(), smile) rtol = 1e-12
+        @test pricer(ShiftedProcess(LogNormalMixture((σ, σ), (0.3,), und), 0.0), ZeroRate(r), AnalyticMethod(), smile) ≈ pricer(bs, ZeroRate(r), AnalyticMethod(), smile) rtol = 1e-12
         # far out of the money, where 1 + erf cancels: the implied volatility is still recovered
         far = FinancialMonteCarlo.EuropeanOptionSmile(T, [20.0, 400.0], [false, true])
         prices = pricer(bs, ZeroRate(r), AnalyticMethod(), far)
@@ -134,7 +159,7 @@ end
             dual = ForwardDiff.Dual{Nothing}.(p0, 1.0)
             @test (@inferred FC.vol_errors(dual, model, CosMethod(256), mkt)) isa Vector{eltype(dual)}
             @test (@inferred FC.vol_errors(p0, model, CosMethod(256), mkt; vols = ForwardDiff.Dual{Nothing}.(mkt.Volatility, 1.0))) isa Vector{eltype(dual)}
-            slnm = ShiftedLogNormalMixture([0.2, 0.25, 0.3], [0.2, 0.3], -0.1, und)
+            slnm = ShiftedProcess(LogNormalMixture((0.2, 0.25, 0.3), (0.2, 0.3), und), -0.1)
             smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, mkt.Strikes, fill(true, length(mkt.Strikes)))
             @test (@inferred pricer(slnm, ZeroRate(0.01), AnalyticMethod(), smile)) isa Vector{Float64}
             @test (@inferred pricer(slnm, ZeroRate(0.01), AnalyticMethod(), FinancialMonteCarlo.EuropeanOption(1.0, 100.0))) isa Float64
@@ -173,7 +198,7 @@ end
             # a price that is not positive is a DomainError: the loss is Inf there
             @test_throws DomainError vol_errors([0.2], model, MonteCarloConfiguration(10, 1), mkt)
             @test FC.loss([0.2], model, MonteCarloConfiguration(10, 1), mkt) == Inf
-            # parameters the model rejects (an AssertionError of its constructor) too; any other exception propagates (#3)
+            # parameters the model rejects (a DomainError of its constructor) too; any other exception propagates (#3)
             @test FC.loss([-0.2], model, method, mkt) == Inf
             @test_throws MethodError FC.loss([0.2], model, NoPricer(), mkt)
         end
@@ -199,7 +224,7 @@ end
         # The default parametrizations: the inverse of each other on valid parameters, and every variable a valid model
         # (the constraints between the parameters of VG, NIG and the mixtures included), so the loss is finite (#24).
         @testset "Default parametrizations" begin
-            models = (BlackScholesProcess(0.2, und), MertonProcess(0.15, 0.3, -0.1, 0.2, und), KouProcess(0.15, 0.5, 0.4, 10.0, 15.0, und), VarianceGammaProcess(0.2, -0.03, 0.16, und), NormalInverseGaussianProcess(0.2, -0.03, 0.16, und), HestonProcess(0.3, 0.2, 0.0, 1.5, -0.6, 0.04, und), ShiftedLogNormalMixture([0.2, 0.25, 0.3], [0.2, 0.3], -0.1, und), FinancialMonteCarlo.LogNormalMixture([0.2, 0.3], [0.4], und))
+            models = (BlackScholesProcess(0.2, und), MertonProcess(0.15, 0.3, -0.1, 0.2, und), KouProcess(0.15, 0.5, 0.4, 10.0, 15.0, und), VarianceGammaProcess(0.2, -0.03, 0.16, und), NormalInverseGaussianProcess(0.2, -0.03, 0.16, und), HestonProcess(0.3, 0.2, 0.0, 1.5, -0.6, 0.04, und), ShiftedProcess(LogNormalMixture((0.2, 0.25, 0.3), (0.2, 0.3), und), -0.1), LogNormalMixture((0.2, 0.3), (0.4,), und))
             for model in models
                 P = default_parametrization(model)
                 p = FinancialMonteCarlo.get_parameters(model)
@@ -241,7 +266,7 @@ end
 
         @testset "Shifted lognormal mixture" begin
             Random.seed!(0)
-            model = ShiftedLogNormalMixture(0.2 * ones(4), rand(3) / 4, -0.22, und)
+            model = ShiftedProcess(LogNormalMixture(ntuple(_ -> 0.2, 4), Tuple(rand(3) / 4), und), -0.22)
             method = AnalyticMethod()
             p0 = FinancialMonteCarlo.get_parameters(model)
             @test length(p0) == 8
@@ -256,7 +281,7 @@ end
         @test mkt isa MarketData{Float32}
         @test eltype(mkt.Volatility) == Float32
 
-        model = ShiftedLogNormalMixture(0.2f0 * ones(Float32, 4), fill(0.1f0, 3), -0.22f0, und)
+        model = ShiftedProcess(LogNormalMixture(ntuple(_ -> 0.2f0, 4), ntuple(_ -> 0.1f0, 3), und), -0.22f0)
         p0 = FinancialMonteCarlo.get_parameters(model)
         @test eltype(p0) == Float32
         prices = smile_prices(model, AnalyticMethod(), p0, mkt.Strikes, mkt.ZeroRates[1], mkt.TimeToMaturity[1])
@@ -274,21 +299,23 @@ end
         @test_throws MethodError smile_prices(model, AnalyticMethod(), [0.2, -0.03, 0.16], [100.0], 0.01, 1.0)
     end
 end
+@info "Finished the core testset"
+flush(stderr)
 
-include("models_methods.jl")
-include("financialfft_example.jl")
-include("cboe.jl")
+logged_include("models_methods.jl")
+logged_include("financialfft_example.jl")
+logged_include("cboe.jl")
 # market data that is not in the repository: run where it is on disk
 if isfile(joinpath(@__DIR__, "..", "data", "json", "cboe", "2026-11-12", "CboeOptions_SPX12Nov2026.json"))
-    include(joinpath("local", "cboe_spx.jl"))
+    logged_include(joinpath("local", "cboe_spx.jl"))
 else
     @info "No SPX option chain in data/json/cboe/2026-11-12: skipping the local tests"
 end
-include("aqua.jl")
+logged_include("aqua.jl")
 
 using CUDA
 if CUDA.functional()
-    include("gpu.jl")
+    logged_include("gpu.jl")
 else
     @info "No functional GPU: skipping the GPU tests"
 end

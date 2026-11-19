@@ -38,8 +38,8 @@ optimizer tries is a valid model, constraints between the parameters included. T
 | `VarianceGammaProcess` | ``\sigma, \theta, \kappa`` | ``e^{x_1}``, ``1/\kappa - \sigma^2/2 - e^{x_2}``, ``e^{x_3}`` |
 | `NormalInverseGaussianProcess` | ``\sigma, \theta, \kappa`` | ``e^{x_1}``, ``(1/\kappa - \sigma^2)/2 - e^{x_2}``, ``e^{x_3}`` |
 | `HestonProcess` | ``\sigma, \sigma_0, \lambda, \kappa, \rho, \theta`` | ``e^{x_1}, e^{x_2}, 0, e^{x_3}, \tanh x_4, e^{x_5}`` |
-| `ShiftedLogNormalMixture` | ``\eta_1 \dots \eta_n, \lambda_1 \dots \lambda_{n-1}, \alpha`` | ``\eta_i = e^{x_i}``, ``\lambda_i = e^{y_i} / (1 + \sum_j e^{y_j})``, ``\alpha`` |
-| `LogNormalMixture` | ``\eta_1 \dots \eta_n, \lambda_1 \dots \lambda_{n-1}`` | as the shifted mixture, without ``\alpha`` |
+| `LogNormalMixture` | ``\eta_1 \dots \eta_n, \lambda_1 \dots \lambda_{n-1}`` | ``\eta_i = e^{x_i}``, ``\lambda_i = e^{y_i} / (1 + \sum_j e^{y_j})`` |
+| `ShiftedProcess(model, α)` | those of `model`, then ``\alpha`` | those of `model`, then ``\alpha = 1 - e^{-x}`` |
 
 The ``\theta`` of Variance Gamma and NIG is bounded above by the other two parameters (the martingale correction must
 exist), and the weights of a mixture sum to less than one. Heston's market price of volatility risk ``\lambda`` is
@@ -64,8 +64,16 @@ default_parametrization(::FinancialMonteCarlo.NormalInverseGaussianProcess) = bo
 default_parametrization(::FinancialMonteCarlo.HestonProcess) = Parametrization(x -> [exp(x[1]), exp(x[2]), zero(x[1]), exp(x[3]), tanh(x[4]), exp(x[5])], p -> [log(p[1]), log(p[2]), log(p[4]), atanh(p[5]), log(p[6])])
 
 # Mixtures: n positive volatilities, then n - 1 weights that are positive and sum to less than one (the last weight is
-# what is left), as a softmax with the remainder as one more class; the shifted mixture ends with its free shift α.
+# what is left), as a softmax with the remainder as one more class.
 mixture_weights(y) = (w = exp.(y); w ./ (1 + sum(w)))
 mixture_variables(λ) = log.(λ ./ (1 - sum(λ)))
 default_parametrization(::FinancialMonteCarlo.LogNormalMixture) = Parametrization(x -> (n = (length(x) + 1) ÷ 2; vcat(exp.(x[1:n]), mixture_weights(x[(n+1):end]))), p -> (n = (length(p) + 1) ÷ 2; vcat(log.(p[1:n]), mixture_variables(p[(n+1):end]))))
-default_parametrization(::FinancialMonteCarlo.ShiftedLogNormalMixture) = Parametrization(x -> (n = length(x) ÷ 2; vcat(exp.(x[1:n]), mixture_weights(x[(n+1):(end-1)]), x[end:end])), p -> (n = length(p) ÷ 2; vcat(log.(p[1:n]), mixture_variables(p[(n+1):(end-1)]), p[end:end])))
+# A shifted model (FinancialMonteCarlo's ShiftedProcess: the parameters of the model, then α): the variables of the
+# model, then α = 1 - e^{-x}, below 1 as the model requires (A0 = (1 - α) S0 is the spot of the shifted model) and
+# unbounded below; x = 0 is no shift, and near it the map is the identity.
+shift_from_variable(x) = -expm1(-x)
+shift_variable(α) = -log1p(-α)
+function default_parametrization(model::FinancialMonteCarlo.ShiftedProcess)
+    inner = default_parametrization(model.model)
+    return Parametrization(x -> vcat(inner.to_params(x[1:(end-1)]), shift_from_variable.(x[end:end])), p -> vcat(inner.from_params(p[1:(end-1)]), shift_variable.(p[end:end])))
+end

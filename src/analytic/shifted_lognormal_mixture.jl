@@ -2,12 +2,27 @@
 # mixture of lognormals with volatilities η, starting from A0 = (1 - α) S0. The model has n volatilities and n - 1
 # weights λ: the weight of the last one is 1 - Σλ, so the mixture is a sum over n components of the same kind, and its
 # arity is a type parameter of the kernel (a tuple), which a GPU thread can unroll.
-analytic_price_type(model::ShiftedLogNormalMixture) = float(promote_type(typeof(model.underlying.S0), eltype(model.η), eltype(model.λ), typeof(model.α)))
+# FinancialMonteCarlo writes it as ShiftedProcess(LogNormalMixture(η, λ, underlying), α) (η and λ tuples), and the
+# displaced diffusion as ShiftedProcess(BlackScholesProcess(σ, underlying), α): a mixture of one component. Its Monte
+# Carlo simulates the Brigo–Mercurio local volatility, whose European prices are these closed forms.
+const LognormalMixtureModel = Union{BlackScholesProcess, LogNormalMixture}
 
-function analytic_kernel(model::ShiftedLogNormalMixture, S0, r, d, T)
+mixture_volatilities(model::BlackScholesProcess) = (model.σ,)
+mixture_volatilities(model::LogNormalMixture) = model.η
+mixture_component_weights(model::BlackScholesProcess) = (one(model.σ),)
+mixture_component_weights(model::LogNormalMixture) = (model.λ..., 1 - sum(model.λ))
+
+analytic_price_type(model::LogNormalMixture) = float(promote_type(typeof(model.underlying.S0), eltype(model.η), eltype(model.λ)))
+analytic_price_type(model::ShiftedProcess{<:LognormalMixtureModel}) = float(promote_type(analytic_price_type(model.model), typeof(model.α)))
+
+function analytic_kernel(model::LogNormalMixture, S0, r, d, T)
+    F = S0 * exp((r - d) * T)
+    return LognormalMixtureKernel(F, zero(F), mixture_volatilities(model), mixture_component_weights(model), r, T)
+end
+
+function analytic_kernel(model::ShiftedProcess{<:LognormalMixtureModel}, S0, r, d, T)
     α = model.α
     α < 1 || throw(DomainError(α, "the shift must be below 1, A0 = (1 - α) S0 is the spot of the mixture"))
     F = S0 * exp((r - d) * T)
-    w = (model.λ..., 1 - sum(model.λ))
-    return LognormalMixtureKernel((1 - α) * F, α * F, Tuple(model.η), w, r, T)
+    return LognormalMixtureKernel((1 - α) * F, α * F, mixture_volatilities(model.model), mixture_component_weights(model.model), r, T)
 end

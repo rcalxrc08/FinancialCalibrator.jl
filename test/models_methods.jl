@@ -127,10 +127,10 @@ end
             @test J[:, i] ≈ (recalibrate(h) - recalibrate(-h)) / 2h rtol = 1e-3
         end
 
-        @testset "ShiftedLogNormalMixture / Analytic" begin
-            true_model = ShiftedLogNormalMixture([0.15, 0.3], [0.5], -0.1, und0)
+        @testset "Shifted LogNormalMixture / Analytic" begin
+            true_model = ShiftedProcess(LogNormalMixture((0.15, 0.3), (0.5,), und0), -0.1)
             smkt = synthetic_market(true_model, AnalyticMethod())
-            start = ShiftedLogNormalMixture([0.2, 0.25], [0.4], -0.05, und0)
+            start = ShiftedProcess(LogNormalMixture((0.2, 0.25), (0.4,), und0), -0.05)
             loss0 = FC.loss(FinancialMonteCarlo.get_parameters(start), start, AnalyticMethod(), smkt)
             res = calibrate(start, AnalyticMethod(), smkt)
             @test res.OptimalValue < loss0 / 10

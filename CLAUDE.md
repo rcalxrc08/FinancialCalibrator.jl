@@ -83,7 +83,7 @@ vol_errors(params, model, pricing_method, mkt, cache = loss_cache(...); vols = m
   in the model's underlying, never in `MarketData` and never as function arguments.**
 - `pricing_method` decides how each smile is priced, through `pricer(model, ZeroRate(r), method, smile)` (four arguments: since FinancialMonteCarlo 0.6 the execution mode is part of the method, `FinancialMonteCarlo.with_mode(method, mode)`): a
   FinancialFFT method (`CarrMadanMethod`, `CarrMadanLewisMethod`, `LewisMethod`, `CosMethod`) is numerical,
-  `AnalyticMethod(; mode)` is closed form (`BlackScholesProcess`, `ShiftedLogNormalMixture`; it has a `mode` field like every method). There are no calibrator structs: add a model/method
+  `AnalyticMethod(; mode)` is closed form (`BlackScholesProcess`, `LogNormalMixture` with tuple parameters, and `ShiftedProcess` of either: the displaced diffusion and the shifted lognormal mixture; it has a `mode` field like every method). There are no calibrator structs: add a model/method
   pair by adding a `pricer` method.
 - `MarketData{T}` holds maturities, zero rates, strikes and volatilities only. `Strikes` and `Volatility` can be GPU
   arrays (`Adapt.adapt(CuArray, mkt)`); `src/pricer.jl` has the `calibration_method(method, strikes)` hook (the method as
@@ -100,13 +100,13 @@ CBOE delayed quotes, #18), `adapter_calibration.jl` (parsing, returns
 linearly in the year fraction, flat outside the nodes, by `interpolate_linear`: no interpolation package, Dierckx was
 dropped; its cubic spline oscillated up to 2.5 bp between the nodes of the DAX rate curve), `calibrated_data.jl` (`CalibratedData`), `analytic/` (`analytic_method.jl`: `AnalyticMethod`, the
 generic closed-form `pricer`, and `LognormalMixtureKernel`, an isbits callable `(K, isCall) -> price` summing `blkprice`
-over a tuple of components; `black_scholes.jl` and `shifted_lognormal_mixture.jl` define `analytic_price_type` and
+over a tuple of components; `black_scholes.jl` and `shifted_lognormal_mixture.jl` (`LogNormalMixture`, and `ShiftedProcess{<:Union{BlackScholesProcess, LogNormalMixture}}` through `mixture_volatilities`/`mixture_component_weights`) define `analytic_price_type` and
 `analytic_kernel` for their model: a new closed form is those two methods), `pricer.jl`, `loss.jl`, `parametrization.jl`, `calibrate.jl`, `sensitivities.jl`.
 
 `Parametrization` is how a calibration searches over unconstrained variables and fixes parameters (`Parametrization()`
 is the identity). The default is `default_parametrization(model)` (#24): exp/tanh/logistic per parameter, θ of VG and
 NIG below the bound σ and κ set (`1/κ - σ²/2 - exp(x)`, `(1/κ - σ²)/2 - exp(x)`), mixture weights as a softmax with the
-remainder as one more class, so no model constructor ever throws; identity for other models. Heston's λ is fixed at 0:
+remainder as one more class, a `ShiftedProcess` the variables of its model then α = 1 - e^{-x} (`shift_from_variable`: FinancialMonteCarlo 0.8 throws a `DomainError` for α ≥ 1, and the default test checks variables ±3 around the start); identity for other models. Heston's λ is fixed at 0:
 `get_parameters` returns every field, and the quotes cannot separate λ from κ (singular Hessian, no implicit
 derivative). The optimizer and the polish work on `x`;
 `CalibratedData.OptimalParam` and `calibrated_parameters` return `to_params(x*)`.
@@ -124,10 +124,10 @@ a stationary point). `ModelVolatility` of `CalibratedData` is `NaN` at the quote
 parameters and of `vols` (a keyword, so the quotes can be dual numbers while `MarketData` stays `AbstractFloat`). It throws
 on invalid parameters and a `DomainError` on a non-positive price. `loss` is half its sum of squares (smooth also at an
 exact fit, unlike the old sum of per-maturity norms) and is `Inf` where the parameters cannot be priced
-(`numerical_failure`: `DomainError`, or the `AssertionError` of a model constructor, possible with `Parametrization()`);
+(`numerical_failure`: a `DomainError`, which is also what every FinancialMonteCarlo ≥ 0.8 constructor throws on invalid parameters, possible with `Parametrization()`; FinancialMonteCarlo#71, #31: an `AssertionError` or a `DimensionMismatch` is a bug and propagates);
 any other exception propagates (#3, #24; the polish rejects the same exceptions and rethrows the rest). The loop over the maturities, `maturity_errors`, sits behind
 `FinancialMonteCarlo.set_parameters!`, which is not inferred; `loss` converts to `promote_type(eltype(params), T)` and is
-`@inferred` in the tests, as the closed-form `pricer` (which writes into an array of the price type computed by `analytic_price_type`, `analytic_prices`: the kernel of a mixture has its arity as a type parameter and is not inferred).
+`@inferred` in the tests, as the closed-form `pricer` (which writes into an array of the price type computed by `analytic_price_type`, `analytic_prices`; the kernel of a mixture has its arity as a type parameter, known from the tuples of the model).
 
 `calibrate` builds the cache and calls `calibrate_cached`, which calls `optimal_variables_and_errors` (`OptimalValue` and
 `ModelVolatility` come from the polish's last residuals, no re-pricing; #22): Optim's `optimize` with the default
@@ -188,7 +188,7 @@ calibration against the chain rule and recalibration with bumps of 1e-6, larger 
 floor since the calibrated Heston violates Feller), `test/cboe.jl` (a synthetic CBOE chain: parsing, filters, parity, the surface, and the adapter with a maturity
 below the threshold, #2), `test/local/cboe_spx.jl` (local only, see above), `test/aqua.jl` (Aqua.test_all), `test/gpu.jl` (run only if
 `CUDA.functional()`, includes `calibrated_parameters` on device quotes). The tests define their own
-`smile_prices` helper on top of `pricer`. Every FinancialFFT method runs on the GPU (FinancialFFT ≥ 0.5). The compat is FinancialFFT 0.6 and FinancialMonteCarlo 0.7: their breaking changes needed no change here (`ImpliedCurve` still takes vectors, smiles have `AbstractVector` strikes).
+`smile_prices` helper on top of `pricer`. The testsets report only at the end, so `runtests.jl` logs `Running`/`Finished … in N s` for the core testset and each included file (`logged_include`): a hung file shows up by name. A full local run with a GPU takes about 20 minutes (`models_methods.jl` 9, `gpu.jl` 6). Every FinancialFFT method runs on the GPU (FinancialFFT ≥ 0.5). The compat is FinancialFFT 0.6.1 and FinancialMonteCarlo 0.8 (#30, #31): `ShiftedLogNormalMixture` became `ShiftedProcess(LogNormalMixture(η, λ, und), α)` with tuples, whose Monte Carlo is the Brigo–Mercurio local volatility (European prices converge to `AnalyticMethod`, tested with Sobol), and constructors throw `DomainError`.
 
 ## Gotchas
 
@@ -230,8 +230,8 @@ below the threshold, #2), `test/local/cboe_spx.jl` (local only, see above), `tes
   re-validating each smile in `to_mode` (`minimum(K)` on the device, 9 syncs per loss, FinancialMonteCarlo#73); the
   host takes ~1.3 s. Zero host checks (invalid prices masked to NaN on the device) gave nothing more. After that the
   GPU loss is launch-bound: 140 launches per `vol_errors` (FinancialFFT#92).
-- Return type assertions: only `analytic_prices(::Type{PT}, kernel, ::EuropeanOption)::PT` is left, needed while the
-  arity of a mixture is a run-time length (#35). `loss`, `calibrate_cached` and the retrievers are inferred without
+- Return type assertions: none. The last one, in `analytic_prices` of a single option, went with FinancialMonteCarlo 0.8,
+  whose mixtures hold tuples (the arity is in the type, #35). `loss`, `calibrate_cached` and the retrievers are inferred without
   one; JET (`@report_opt`) is clean on `vol_errors`, `loss`, `loss_cache`, and reports only the uninferred loop of the
   polish (#36).
 - Time split of a default calibration (Heston/Lewis 4001, DAX, host): Nelder–Mead 60% (142 losses, hands over at

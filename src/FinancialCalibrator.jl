@@ -8,7 +8,7 @@ using ADTypes, Adapt, FinancialMonteCarlo, FinancialToolbox, JSON, Optim
 import DifferentiationInterface as DI
 using ImplicitDifferentiation: ImplicitFunction, MatrixRepresentation, DirectLinearSolver
 import FinancialMonteCarlo: pricer
-using FinancialMonteCarlo: BlackScholesProcess, ShiftedLogNormalMixture
+using FinancialMonteCarlo: BlackScholesProcess, LogNormalMixture, ShiftedProcess
 
 # Directory containing the bundled example market data.
 const DATA_DIR = normpath(joinpath(@__DIR__, "..", "data", "json"))

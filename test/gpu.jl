@@ -43,7 +43,7 @@ const FC = FinancialCalibrator
     end
 
     @testset "smile_prices / closed form" begin
-        slnm = ShiftedLogNormalMixture([0.2, 0.25, 0.3], [0.2, 0.3], -0.1, und)
+        slnm = ShiftedProcess(LogNormalMixture((0.2, 0.25, 0.3), (0.2, 0.3), und), -0.1)
         ps = FinancialMonteCarlo.get_parameters(slnm)
         cpu = smile_prices(slnm, AnalyticMethod(), ps, args(mkt)...)
         gpu = smile_prices(slnm, AnalyticMethod(), ps, args(gmkt)...)

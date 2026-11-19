@@ -25,7 +25,7 @@ model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)  # spot and dividend
 
 # the pricing method decides how each smile is priced
 calibrate(model, LewisMethod(100.0, 4001), mkt)         # any FinancialFFT method
-calibrate(ShiftedLogNormalMixture(...), AnalyticMethod(), mkt)  # closed form
+calibrate(ShiftedProcess(LogNormalMixture(...), α), AnalyticMethod(), mkt)  # closed form
 ```
 
 Spot and dividends are those of the model's `Underlying`. `calibrate(model, method, mkt, opt_method, opt_options;

@@ -2,8 +2,9 @@
     AnalyticMethod(; mode = SerialMode())
 
 Pricing method selecting the closed-form pricer of a model, through the `pricer` interface of FinancialMonteCarlo:
-`pricer(model, zero_rate, AnalyticMethod(), smile)`. Implemented for `BlackScholesProcess` and
-`ShiftedLogNormalMixture`. Numerical pricing methods (`CarrMadanMethod`, `CosMethod`, ...) come from FinancialFFT, so
+`pricer(model, zero_rate, AnalyticMethod(), smile)`. Implemented for `BlackScholesProcess`, `LogNormalMixture` and
+their shifted versions, `ShiftedProcess(model, α)` (the displaced diffusion and the shifted lognormal mixture).
+Numerical pricing methods (`CarrMadanMethod`, `CosMethod`, ...) come from FinancialFFT, so
 the kind of calibration is entirely determined by the pricing method. Like every method of FinancialMonteCarlo it
 carries its execution mode: `FinancialMonteCarlo.CudaMode()` prices the strikes of a smile on the GPU, in one broadcast.
 """
@@ -39,10 +40,9 @@ function pricer(model::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMont
     return analytic_prices(PT, analytic_kernel(model, S0, r, d, T), opt)
 end
 
-# The kernel's type may depend on run time values (the number of components of a mixture): these functions are the
-# barrier, and they return the price type computed by `pricer`. The assertion of the single option is needed while the
-# arity of a mixture is the length of a vector (the kernel, its call and the conversion are then not inferred): #35.
-analytic_prices(::Type{PT}, kernel, opt::FinancialMonteCarlo.EuropeanOption) where {PT} = convert(PT, kernel(opt.K, opt.isCall))::PT
+# The prices have the type computed by `pricer`. The number of components of a mixture is in the type of the model
+# (FinancialMonteCarlo's LogNormalMixture holds tuples), so the kernel and its call are inferred: no assertion (#35).
+analytic_prices(::Type{PT}, kernel, opt::FinancialMonteCarlo.EuropeanOption) where {PT} = convert(PT, kernel(opt.K, opt.isCall))
 function analytic_prices(::Type{PT}, kernel, opt::FinancialMonteCarlo.EuropeanOptionSmile) where {PT}
     prices = similar(opt.K, PT)
     prices .= kernel.(opt.K, opt.isCall)
