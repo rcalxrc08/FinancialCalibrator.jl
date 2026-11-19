@@ -163,17 +163,20 @@ the exception, and that `try`/`catch` is what separates the backends. Gradients 
 | ForwardDiff | ✓ | ✓ |
 | Zygote | ✓ | ✓ |
 | Mooncake | ✓ | ✗: no `try`/`catch` in reverse mode (FinancialCalibrator.jl#40) |
-| Enzyme, reverse | ✓ with `set_runtime_activity` | ✓ with `set_runtime_activity` |
+| Enzyme, reverse | ✓ | ✓ |
 
-Enzyme needs runtime activity whenever the model is rebuilt from active parameters on an underlying with a dividend
-curve, which is what [`adapter`](@ref) returns (FinancialMonteCarlo.jl#79):
-`AutoEnzyme(; mode = Enzyme.set_runtime_activity(Enzyme.Reverse))`. With Mooncake as `autodiff`, use a derivative-free
-optimizer (the default `NelderMead()`); the polish and the implicit derivatives do not need `loss`.
+Enzyme needs no runtime activity with FinancialMonteCarlo 0.9 or later, whose curves are `isbits`
+(FinancialMonteCarlo.jl#79); with 0.8, a model rebuilt from active parameters on the dividend curve that
+[`adapter`](@ref) returns needs `AutoEnzyme(; mode = Enzyme.set_runtime_activity(Enzyme.Reverse))`. When calling
+`Enzyme.autodiff` directly, pass the model, the market data and the cache of `loss_cache` as `Const` arguments: captured in
+a closure annotated `Const`, they make Enzyme ask for runtime activity on any underlying. With Mooncake as `autodiff`,
+use a derivative-free optimizer (the default `NelderMead()`); the polish and the implicit derivatives do not need `loss`.
 
-Zygote is correct but slow here: a gradient of `vol_errors` costs 7.7 ms on the mixture (ForwardDiff 0.13 ms) and 17 ms
-with Lewis (ForwardDiff 3 ms). Most of it is Zygote tracing the model setup of FinancialMonteCarlo (rebuilding the model
-and integrating the dividend curve, element by element), which the other backends differentiate in microseconds
-(FinancialMonteCarlo.jl#80). The
+Zygote is correct but slow here: a gradient of `vol_errors` costs 1.6 ms on the mixture (ForwardDiff 0.11 ms) and 16 ms
+with Lewis (ForwardDiff 2.7 ms), with FinancialMonteCarlo 0.9 (laptop, i7-8550U). With 0.8 the mixture took 7.7 ms, most
+of it Zygote tracing the model setup (rebuilding the model and integrating the dividend curve element by element):
+FinancialMonteCarlo 0.9 gives `set_parameters!` and the `integral` of a curve reverse rules (FinancialMonteCarlo.jl#80).
+The
 inner backends have few parameters to differentiate, which is what ForwardDiff is for; Zygote belongs outside, on
 `calibrated_parameters`, where it meets only the rule of the implicit function.
 

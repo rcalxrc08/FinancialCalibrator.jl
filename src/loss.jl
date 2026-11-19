@@ -82,8 +82,8 @@ Half the sum of the squared volatility errors of [`vol_errors`](@ref): smooth in
 is fitted exactly. `Inf` where the parameters cannot be priced (see `numerical_failure`), which an Optim optimizer ranks
 as the worst point; any other exception propagates.
 
-ForwardDiff, Zygote and Enzyme differentiate it (Enzyme with `set_runtime_activity` when the underlying holds a
-dividend curve, as `adapter` builds it: FinancialMonteCarlo#79). Mooncake does not: it rejects the `try`/`catch` in
+ForwardDiff, Zygote and Enzyme differentiate it (Enzyme without runtime activity since FinancialMonteCarlo 0.9, whose
+dividend curves are isbits, FinancialMonteCarlo#79). Mooncake does not: it rejects the `try`/`catch` in
 reverse mode (#40), so with Mooncake as `autodiff` use a derivative-free optimizer, or differentiate
 [`vol_errors`](@ref), which has no `try`.
 """

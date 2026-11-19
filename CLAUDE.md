@@ -256,13 +256,16 @@ below the threshold, #2), `test/local/cboe_spx.jl` (local only, see above), `tes
   when nothing is thrown; it needed `analytic_prices` without `.=` into `similar`: one allocating broadcast through the
   isbits callable `PriceAs{PT}`, a closure over `PT` is not isbits and a GPU broadcast refuses it), Mooncake
   `vol_errors` only (it rejects the `try`/`catch` of `loss`, #40: no gradient optimizer with `autodiff = AutoMooncake`),
-  Enzyme both with `set_runtime_activity` only (any model built from active parameters on an `UnderlyingVec`, the
-  dividend curve holds `Vector`s: FinancialMonteCarlo#79). Table in `docs/src/backends.md`. Zygote on `vol_errors` is
-  correct but slow (mixture 7.7 ms vs ForwardDiff 0.13 ms, VG/Lewis 17 vs 3 ms): one smile costs ~0.8 ms, of which
-  `set_parameters!` ~0.2 ms and the dividend-curve `integral` ~0.45 ms per maturity (Zygote's dense one-hot `getindex`
-  pullbacks, untyped branchy pullbacks); ForwardDiff/Mooncake/Enzyme do the same in 3-13 μs. FinancialMonteCarlo's simulations are not
-  for Zygote but its structs (models, curves, `set_parameters!`) must be: FinancialMonteCarlo#80 (an `rrule` for
-  `integral` took it 449 -> 9.8 μs as a prototype). The branch stacks on that path (`Core._typeof_captured_variable`,
+  Enzyme both, without runtime activity since FinancialMonteCarlo 0.9 (isbits `SVector` curves, FinancialMonteCarlo#79;
+  with 0.8 any model built from active parameters on the `UnderlyingVec` of `adapter` needed `set_runtime_activity`). A
+  closure annotated `Const` that captures the loss cache still makes Enzyme ask for runtime activity, on any underlying:
+  pass model, market data and cache as `Const` arguments. Table in `docs/src/backends.md`. Zygote on `vol_errors` is
+  correct but slow: with FinancialMonteCarlo 0.9 mixture 1.6 ms vs ForwardDiff 0.11 ms, BS/Lewis 16 vs 2.7 ms (0.8:
+  7.7 ms on the mixture, of which `set_parameters!` ~0.2 ms and the dividend-curve `integral` ~0.45 ms per maturity;
+  0.9 gives both reverse rules, FinancialMonteCarlo#80: 11-19 μs and 4 μs). What remains on the mixture is mostly the
+  constructors' `@ignore_derivatives` closures (~11 μs each under Zygote, FinancialMonteCarlo#80) and this package's
+  pricing; with Lewis it is FinancialFFT's pricer. FinancialMonteCarlo's simulations are not for Zygote but its structs
+  (models, curves, `set_parameters!`) must be. The branch stacks on that path (`Core._typeof_captured_variable`,
   which Zygote has a rule for only in forward mode, FluxML/Zygote.jl#1753, 33-57 of them; `Adapt.adapt_structure`;
   FinancialFFT's `pricer`) cost only 3-16% of it. Zygote upstream, filed 2026-11-19 (Zygote 0.7.18, recheck on new
   releases): #1751 `oftype` pullback not inferred (our `promote`), #1752 `gradient`/`pullback` compiled for
