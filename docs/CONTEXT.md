@@ -11,7 +11,8 @@
 ## Process
 
 Benchmarks are not timed at build time: `benchmarks.jl` is run by hand and writes `src/assets/benchmarks.toml`.
-Measured numbers say on which machine they were taken.
+Measured numbers say on which machine they were taken. The "Which backend" tables of `backends.md` come from
+`bench/` (its own contract).
 
 ## Outputs
 

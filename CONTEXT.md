@@ -12,6 +12,8 @@ Find the task, open the contract it points to, and load only the inputs listed t
 | Rules for Enzyme, Mooncake, CUDA | `ext/CONTEXT.md` |
 | Adding or running tests, CI | `test/CONTEXT.md` |
 | Documentation pages, figures, benchmarks | `docs/CONTEXT.md` |
+| The AD benchmark of every backend combination | `bench/CONTEXT.md` |
+| The logo and the favicon | `etc/CONTEXT.md` |
 | Releases, compat, formatting | `references/workflows.md` |
 
 Shared references (Layer 3), each loaded only when a contract lists it: `public_api.md` (the user-facing functions and

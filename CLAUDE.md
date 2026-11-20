@@ -12,12 +12,12 @@ task needs.
 |:--|:--|:--|
 | 0 | this file | identity, map, rules that hold everywhere |
 | 1 | `CONTEXT.md` | which stage or folder a task belongs to, shared references |
-| 2 | `src/0N_*/CONTEXT.md`, `ext/`, `test/`, `docs/` | a contract per stage: inputs to read, process, outputs and tests |
+| 2 | `src/0N_*/CONTEXT.md`, `ext/`, `test/`, `docs/`, `bench/`, `etc/` | a contract per stage: inputs to read, process, outputs and tests |
 | 3 | `references/*.md` | stable facts and measurements, loaded when a contract lists them |
 
 Map: `src/FinancialCalibrator.jl` includes the stages in order, `01_market_data` → `02_pricing` → `03_loss` →
 `04_calibration` → `05_sensitivities`; `ext/` holds the extensions (CUDA, Enzyme, Mooncake); `test/` the suite;
-`docs/` the Documenter site; `data/json/` the sample market data (DAX 22 Aug 2016); `etc/` the logo and its script.
+`docs/` the Documenter site; `data/json/` the sample market data (DAX 22 Aug 2016); `etc/` the logo and its script; `bench/` the AD benchmark, run by hand.
 
 Rules for every change (details in `references/conventions.md` and `references/autodiff.md`):
 

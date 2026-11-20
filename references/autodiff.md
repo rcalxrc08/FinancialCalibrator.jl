@@ -20,11 +20,18 @@ _Read before touching anything on the differentiated path._ (Layer 3 reference: 
   unprepared `DI.jacobian` picks ForwardDiff's chunk at run time, which made everything `Any`); `@inferred` test of
   `optimal_variables` in `test/runtests.jl`, no type assertion. Tested in `test/models_methods.jl` and `test/gpu.jl`
   (reverse on the device compiles for about 18 minutes, then 2.3 s on BS/Cos DAX).
+- Benchmark of every combination, 2026-11-20 (`bench/`, results in `bench/results_2026-11-20.txt`, tables in
+  `docs/src/backends.md` "Which backend"): inside, Enzyme forward is the fastest (up to a third less than ForwardDiff on
+  Lewis/Cos), reverse modes build the `vol_errors` Jacobian per quote (100-300x slower); outside, Zygote and Enzyme reverse
+  tie with ForwardDiff on 99 quotes, ForwardDiff for the full Jacobian; the device pays from ~1000 quotes, Float32 only on
+  the device (on the host slower than Float64). 43 failing combinations and one silently wrong gradient (Enzyme reverse,
+  Heston loss in Float32, relative error 1) are explained in #41.
 - **No branches on the differentiated path** (#39): no `if`/ternary on a flag or a value in the pricing and loss code. Use
   selects (`ifelse`, `Bool * x`, which has a strong zero, `call_put_sign` weights, `max`/`min`); validations that throw
   go in `ChainRulesCore.@ignore_derivatives` (`α < 1` of the shifted mixture, `check_prices`, the `size(vols)` checks),
   as in FinancialMonteCarlo 0.8. Which backends differentiate `vol_errors` and `loss` (checked 2026-11-19, DAX, mixture with
-  `AnalyticMethod` and VG with Lewis, against ForwardDiff, one process each): every backend both. Zygote and Mooncake
+  `AnalyticMethod` and VG with Lewis, against ForwardDiff, one process each): every backend both. Heston/Cos fails
+  with Enzyme as `autodiff` of `calibrate` (#41, group 1). Zygote and Mooncake
   cannot differentiate a `catch` (Zygote "pop_exception" where it runs, Mooncake rejects the `try` in reverse mode), so
   `loss(::Type{R}, ...)` has rules that run the `try` themselves around the reverse pass of `loss_value` (the loss
   without it), `Inf` with a zero gradient on a `numerical_failure` (#40, fixed 2026-11-20): a ChainRules `rrule` with a

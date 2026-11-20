@@ -1,0 +1,22 @@
+[deps]
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+DifferentiationInterface = "a0c0ee7d-e4b9-4e03-894e-1c5f64a51d63"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
+FinancialCalibrator = "60ce4190-d1b0-11e9-1cf6-9f8fd6ff6838"
+FinancialFFT = "ccc4acef-1676-4a84-946d-4093fe376f06"
+FinancialMonteCarlo = "078f23cc-2637-5a1d-aba6-8a9ba9a6ff83"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
+
+[sources]
+FinancialCalibrator = {path = ".."}
+
+[compat]
+FinancialCalibrator = "0.2"
+FinancialFFT = "0.6.2"
+FinancialMonteCarlo = "0.9"

@@ -173,7 +173,9 @@ Enzyme needs no runtime activity with FinancialMonteCarlo 0.9 or later, whose cu
 [`adapter`](@ref) returns needs `AutoEnzyme(; mode = Enzyme.set_runtime_activity(Enzyme.Reverse))`. When calling
 `Enzyme.autodiff` directly, pass the model, the market data and the cache of `loss_cache` as `Const` arguments: captured in
 a closure annotated `Const`, they make Enzyme ask for runtime activity on any underlying. Every backend works as the
-`autodiff` of a gradient optimizer such as `LBFGS()`, whose line search on DAX reaches parameters that cannot be priced.
+`autodiff` of a gradient optimizer such as `LBFGS()` on the mixture and on Variance Gamma, whose line search on DAX
+reaches parameters that cannot be priced. On Heston with `CosMethod`, Enzyme does not (`EnzymeNoDerivativeError`,
+FinancialCalibrator.jl#41).
 
 Zygote is correct but slow here: a gradient of `vol_errors` costs 1.6 ms on the mixture (ForwardDiff 0.11 ms) and 16 ms
 with Lewis (ForwardDiff 2.7 ms), with FinancialMonteCarlo 0.9 (laptop, i7-8550U). With 0.8 the mixture took 7.7 ms, most
@@ -186,6 +188,77 @@ inner backends have few parameters to differentiate, which is what ForwardDiff i
 Every backend differentiates the pricing code itself, which is written for it: no branches, validations outside the
 derivatives, and for the closed forms a kernel whose Zygote gradient is inferred (see
 [Other closed forms](closed_form.md#Other-closed-forms)).
+
+### Which backend
+
+`bench/` times every combination of backends, each in a fresh Julia process, on three models with 99 quotes of the DAX
+surface (synthetic volatilities of a known model, so the optimum is well conditioned): the shifted lognormal mixture
+with [`AnalyticMethod`](@ref), Variance Gamma with `LewisMethod(100.0, 4001)` and Heston with `CosMethod(1024)`. The
+times are run times once compiled (laptop: i7-8550U, NVIDIA MX150; Enzyme 0.13.221, CUDA 6.5.1, 2026-11-20); the
+first call compiles for 1 to 3 minutes with Enzyme, Zygote and Mooncake, against 10 ms with ForwardDiff. ✗ marks a
+combination that fails; FinancialCalibrator.jl#41 explains each one.
+
+**Inside: ForwardDiff or Enzyme forward.** The derivatives in the parameters (host, `Float64`):
+
+| Backend | `loss` gradient: mixture | VG | Heston | `vol_errors` Jacobian: mixture | VG | Heston |
+|:--|--:|--:|--:|--:|--:|--:|
+| ForwardDiff | 97 μs | 6.5 ms | 9.0 ms | 90 μs | 6.0 ms | 8.5 ms |
+| Enzyme, forward | 85 μs | 4.3 ms | 7.5 ms | 89 μs | 4.6 ms | 6.9 ms |
+| Enzyme, reverse | 128 μs | 9.2 ms | 10 ms | 1.5 ms | 0.74 s | 0.54 s |
+| Zygote | 1.5 ms | 20 ms | 26 ms | 72 ms | 1.1 s | 1.0 s |
+| Mooncake | 0.40 ms | 69 ms | 58 ms | 12 ms | 1.8 s | 2.8 s |
+
+A gradient in 3 to 5 parameters is what forward mode is for. Reverse mode builds the Jacobian of `vol_errors` one quote
+at a time, 100 to 300 times slower. In `calibrate` (`LBFGS()`):
+
+| `autodiff` / `polish_backend` | Mixture | VG | Heston |
+|:--|--:|--:|--:|
+| ForwardDiff / ForwardDiff (the default) | 4.6 ms | 0.34 s | 0.43 s |
+| Enzyme forward / ForwardDiff | 4.8 ms | 0.21 s | ✗ |
+| Enzyme forward / Enzyme forward | 5.0 ms | 0.26 s | ✗ |
+| ForwardDiff / Enzyme forward | 5.1 ms | 0.24 s | 0.38 s |
+| Enzyme reverse / ForwardDiff | 6.2 ms | 0.32 s | ✗ |
+| Zygote / ForwardDiff | 0.16 s | 0.53 s | 0.61 s |
+| Mooncake / ForwardDiff | 33 ms | 2.7 s | 3.0 s |
+| ForwardDiff / Enzyme reverse, Zygote, Mooncake | 19 ms to 0.81 s | 7.6 to 20 s | 4.8 to 13 s |
+| `NelderMead()`, ForwardDiff polish | 6.9 ms | 0.71 s | 0.68 s |
+
+Enzyme forward saves up to a third on the Fourier methods, but the default stays ForwardDiff: it compiles in
+milliseconds and works on every model.
+
+**Outside: any reverse backend, or ForwardDiff.** The gradient of ``w^\top p^*(v)`` with the default inner backends,
+and the full Jacobian ``\partial p^*/\partial v``:
+
+| Outer backend | Gradient: mixture | VG | Heston | Jacobian: mixture | VG | Heston |
+|:--|--:|--:|--:|--:|--:|--:|
+| ForwardDiff | 26 ms | 1.2 s | 1.4 s | 44 ms | 1.4 s | 1.4 s |
+| Zygote | 20 ms | 1.5 s | 1.4 s | 56 ms | 2.6 s | 5.6 s |
+| Enzyme, reverse | 18 ms | 1.5 s | 1.6 s | 68 ms | 3.4 s | 7.4 s |
+| Enzyme, forward | 59 ms | 4.1 s | 5.2 s | 82 ms | 4.3 s | 5.9 s |
+| Mooncake | 44 ms | 2.2 s | 4.7 s | 113 ms | 5.4 s | 11 s |
+| Zygote, inner `x` Mooncake | 10 ms | 1.6 s | ✗ | | | |
+
+The outer backend meets only the rule of the implicit function, so the inner derivatives set the cost, and the reverse
+backends tie with ForwardDiff on 99 quotes. Enzyme as an inner backend of [`calibrated_parameters`](@ref) fails in
+this benchmark (#41). For the full Jacobian, ForwardDiff.
+
+**Arrays: the device from about a thousand quotes, and `Float32` only there.** Heston with `CosMethod(1024)` on 99 DAX
+quotes and on a large surface (4 maturities × 500 strikes, 1929 quotes in the loss):
+
+| | Host `Float64` | Host `Float32` | Device `Float64` | Device `Float32` |
+|:--|--:|--:|--:|--:|
+| `loss` gradient, ForwardDiff, 99 quotes | 9.5 ms | 11 ms | 9.4 ms | 6.8 ms |
+| `calibrate`, `LBFGS()`, 99 quotes | 0.33 s | 0.96 s | 0.42 s | 1.0 s |
+| Gradient of ``w^\top p^*``, Zygote, 99 quotes | 1.3 s | 2.0 s | 3.2 s | 2.5 s |
+| `loss` gradient, ForwardDiff, 1929 quotes | 25 ms | 64 ms | 15 ms | 8.6 ms |
+| `calibrate`, `NelderMead()`, 1929 quotes | 1.4 s | 5.9 s | 1.3 s | 0.75 s |
+| Gradient of ``w^\top p^*``, Zygote, 1929 quotes | 57 s | 157 s | 40 s | 21 s |
+
+On the host, `Float32` is slower than `Float64` and loses digits: the parameters agree to 1e-4 and their derivatives
+to 1e-3. On the device `Float32` halves the times of the large surface. On 1929 quotes the gradient of
+``w^\top p^*`` is dominated by the derivative of the conditions in the quotes (`implicit_backends.x`, forward mode:
+one direction per quote); a reverse backend for `x` needs one pullback per parameter instead, see #41. Its full Jacobian with Zygote takes 5.5 minutes on the host and did not end in 50 minutes
+in host `Float32`.
 
 ## Arrays
 

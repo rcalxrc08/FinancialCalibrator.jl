@@ -1,0 +1,301 @@
+RES | slnm | dax64 | A | nq 99 | FD | loss gradient | first 8.77 ms | run 96.8 μs | err 0e+00 | value 62.6 μs
+RES | slnm | dax64 | A | nq 99 | FD | vol_errors Jacobian | first 14.01 ms | run 90.1 μs | err 0e+00 | value 62.6 μs
+RES | slnm | dax64 | A | nq 99 | EnzymeF | loss gradient | first 79.02 s | run 85.2 μs | err 3e-16 | value 57.8 μs
+RES | slnm | dax64 | A | nq 99 | EnzymeF | vol_errors Jacobian | first 2.06 s | run 89.1 μs | err 8e-16 | value 57.8 μs
+RES | slnm | dax64 | A | nq 99 | EnzymeR | loss gradient | first 104.05 s | run 128.4 μs | err 5e-16 | value 60.6 μs
+RES | slnm | dax64 | A | nq 99 | EnzymeR | vol_errors Jacobian | first 23.86 s | run 1.54 ms | err 7e-16 | value 60.6 μs
+RES | slnm | dax64 | A | nq 99 | Zygote | loss gradient | first 34.63 s | run 1.48 ms | err 5e-16 | value 51.8 μs
+RES | slnm | dax64 | A | nq 99 | Zygote | vol_errors Jacobian | first 1.86 s | run 71.68 ms | err 1e-15 | value 51.8 μs
+RES | slnm | dax64 | A | nq 99 | Mooncake | loss gradient | first 1.10 s | run 403.2 μs | err 4e-16 | value 51.9 μs
+RES | slnm | dax64 | A | nq 99 | Mooncake | vol_errors Jacobian | first 240.64 ms | run 11.91 ms | err 1e-15 | value 51.9 μs
+RES | slnm | dax64 | B | nq 99 | autodiff FD polish FD NM | first 6.19 s | run 6.86 ms | loss 9.3e-31 | param err 4e-15
+RES | slnm | dax64 | B | nq 99 | autodiff FD polish FD LBFGS | first 8.75 s | run 4.63 ms | loss 1.2e-30 | param err 8e-15
+RES | slnm | dax64 | B | nq 99 | autodiff EnzymeF polish FD LBFGS | first 103.93 s | run 4.78 ms | loss 1.3e-30 | param err 3e-15
+RES | slnm | dax64 | B | nq 99 | autodiff EnzymeR polish FD LBFGS | first 116.59 s | run 6.24 ms | loss 1.4e-30 | param err 1e-14
+RES | slnm | dax64 | B | nq 99 | autodiff Zygote polish FD LBFGS | first 60.40 s | run 162.70 ms | loss 1.1e-30 | param err 3e-15
+RES | slnm | dax64 | B | nq 99 | autodiff Mooncake polish FD LBFGS | first 177.15 s | run 32.93 ms | loss 1.1e-30 | param err 6e-16
+RES | slnm | dax64 | B | nq 99 | autodiff FD polish EnzymeF LBFGS | first 121.24 s | run 5.09 ms | loss 1.2e-30 | param err 8e-15
+RES | slnm | dax64 | B | nq 99 | autodiff FD polish EnzymeR LBFGS | first 138.21 s | run 19.20 ms | loss 1.2e-30 | param err 8e-15
+RES | slnm | dax64 | B | nq 99 | autodiff FD polish Zygote LBFGS | first 45.21 s | run 810.40 ms | loss 1.2e-30 | param err 8e-15
+RES | slnm | dax64 | B | nq 99 | autodiff FD polish Mooncake LBFGS | first 136.74 s | run 171.11 ms | loss 1.2e-30 | param err 8e-15
+RES | slnm | dax64 | B | nq 99 | autodiff EnzymeF polish EnzymeF LBFGS | first 134.68 s | run 5.04 ms | loss 1.1e-30 | param err 6e-15
+RES | slnm | dax64 | C | nq 99 | outer FD cond FD x FD y FD | first 3.06 s | run 26.40 ms | err 0e+00
+RES | slnm | dax64 | C | nq 99 | outer Zygote cond FD x FD y FD | first 31.17 s | run 20.01 ms | err 2e-15
+RES | slnm | dax64 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 73.97 s | run 43.51 ms | err 2e-15
+RES | slnm | dax64 | C | nq 99 | outer EnzymeR cond FD x FD y FD | first 101.49 s | run 18.46 ms | err 2e-15
+RES | slnm | dax64 | C | nq 99 | outer EnzymeF cond FD x FD y FD | first 94.51 s | run 59.35 ms | err 8e-17
+RES | slnm | dax64 | C | nq 99 | outer Zygote cond FD x Mooncake y FD | first 137.59 s | run 10.25 ms | err 1e-14
+RES | slnm | dax64 | C | nq 99 | outer Mooncake cond FD x Mooncake y FD | first 126.70 s | run 19.67 ms | err 1e-14
+RES | slnm | dax64 | C | nq 99 | outer Zygote cond FD x EnzymeR y FD | FAIL Conversion of boxed type Vector{Float64} is not allowed
+RES | slnm | dax64 | C | nq 99 | outer Zygote cond FD x FD y EnzymeF | FAIL EnzymeRuntimeActivityError: Detected potential need for runtime activity.
+RES | slnm | dax64 | C | nq 99 | outer EnzymeR cond FD x FD y EnzymeF | FAIL EnzymeRuntimeActivityError: Detected potential need for runtime activity.
+RES | slnm | dax64 | J | nq 99 | jacobian FD | first 3.35 s | run 43.62 ms | err 0e+00
+RES | slnm | dax64 | J | nq 99 | jacobian Zygote | first 29.06 s | run 56.46 ms | err 2e-15
+RES | slnm | dax64 | J | nq 99 | jacobian Mooncake | first 53.15 s | run 113.05 ms | err 2e-15
+RES | slnm | dax64 | J | nq 99 | jacobian EnzymeR | first 114.06 s | run 67.83 ms | err 2e-15
+RES | slnm | dax64 | J | nq 99 | jacobian EnzymeF | first 96.50 s | run 82.35 ms | err 6e-17
+RES | vg | dax64 | A | nq 99 | FD | loss gradient | first 28.26 ms | run 6.53 ms | err 0e+00 | value 2.49 ms
+RES | vg | dax64 | A | nq 99 | FD | vol_errors Jacobian | first 28.25 ms | run 6.03 ms | err 0e+00 | value 2.49 ms
+RES | vg | dax64 | A | nq 99 | EnzymeF | loss gradient | first 76.00 s | run 4.32 ms | err 7e-15 | value 2.60 ms
+RES | vg | dax64 | A | nq 99 | EnzymeF | vol_errors Jacobian | first 2.95 s | run 4.62 ms | err 5e-15 | value 2.60 ms
+RES | vg | dax64 | A | nq 99 | EnzymeR | loss gradient | first 108.90 s | run 9.18 ms | err 2e-14 | value 5.37 ms
+RES | vg | dax64 | A | nq 99 | EnzymeR | vol_errors Jacobian | first 58.86 s | run 741.11 ms | err 3e-14 | value 5.37 ms
+RES | vg | dax64 | A | nq 99 | Zygote | loss gradient | first 48.25 s | run 20.44 ms | err 4e-15 | value 2.62 ms
+RES | vg | dax64 | A | nq 99 | Zygote | vol_errors Jacobian | first 3.33 s | run 1.13 s | err 3e-14 | value 2.62 ms
+RES | vg | dax64 | A | nq 99 | Mooncake | loss gradient | first 1.24 s | run 69.25 ms | err 1e-14 | value 2.51 ms
+RES | vg | dax64 | A | nq 99 | Mooncake | vol_errors Jacobian | first 2.19 s | run 1.75 s | err 3e-14 | value 2.51 ms
+RES | vg | dax64 | B | nq 99 | autodiff FD polish FD NM | first 7.27 s | run 710.41 ms | loss 2.7e-28 | param err 9e-14
+RES | vg | dax64 | B | nq 99 | autodiff FD polish FD LBFGS | first 10.64 s | run 337.85 ms | loss 6.0e-28 | param err 2e-13
+RES | vg | dax64 | B | nq 99 | autodiff EnzymeF polish FD LBFGS | first 109.67 s | run 211.96 ms | loss 1.5e-28 | param err 1e-13
+RES | vg | dax64 | B | nq 99 | autodiff EnzymeR polish FD LBFGS | first 121.04 s | run 323.72 ms | loss 2.3e-28 | param err 9e-14
+RES | vg | dax64 | B | nq 99 | autodiff Zygote polish FD LBFGS | first 56.45 s | run 525.84 ms | loss 6.4e-28 | param err 4e-14
+RES | vg | dax64 | B | nq 99 | autodiff Mooncake polish FD LBFGS | first 128.06 s | run 2.67 s | loss 4.9e-28 | param err 2e-13
+RES | vg | dax64 | B | nq 99 | autodiff FD polish EnzymeF LBFGS | first 100.17 s | run 235.69 ms | loss 6.0e-28 | param err 2e-13
+RES | vg | dax64 | B | nq 99 | autodiff FD polish EnzymeR LBFGS | first 285.34 s | run 7.64 s | loss 6.0e-28 | param err 2e-13
+RES | vg | dax64 | B | nq 99 | autodiff FD polish Zygote LBFGS | first 77.01 s | run 12.42 s | loss 6.0e-28 | param err 2e-13
+RES | vg | dax64 | B | nq 99 | autodiff FD polish Mooncake LBFGS | first 160.65 s | run 19.81 s | loss 6.0e-28 | param err 2e-13
+RES | vg | dax64 | B | nq 99 | autodiff EnzymeF polish EnzymeF LBFGS | first 134.42 s | run 260.03 ms | loss 1.5e-28 | param err 1e-13
+RES | vg | dax64 | C | nq 99 | outer FD cond FD x FD y FD | first 4.23 s | run 1.20 s | err 0e+00
+RES | vg | dax64 | C | nq 99 | outer Zygote cond FD x FD y FD | first 31.66 s | run 1.46 s | err 6e-15
+RES | vg | dax64 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 53.43 s | run 2.23 s | err 6e-15
+RES | vg | dax64 | C | nq 99 | outer EnzymeR cond FD x FD y FD | first 124.66 s | run 1.45 s | err 9e-15
+RES | vg | dax64 | C | nq 99 | outer EnzymeF cond FD x FD y FD | first 121.24 s | run 4.08 s | err 2e-15
+RES | vg | dax64 | C | nq 99 | outer Zygote cond FD x Mooncake y FD | first 194.58 s | run 1.57 s | err 7e-14
+RES | vg | dax64 | C | nq 99 | outer Mooncake cond FD x Mooncake y FD | first 178.05 s | run 3.09 s | err 7e-14
+RES | vg | dax64 | C | nq 99 | outer Zygote cond FD x EnzymeR y FD | FAIL Conversion of boxed type Vector{Float64} is not allowed
+RES | vg | dax64 | C | nq 99 | outer Zygote cond FD x FD y EnzymeF | FAIL EnzymeRuntimeActivityError: Detected potential need for runtime activity.
+RES | vg | dax64 | C | nq 99 | outer EnzymeR cond FD x FD y EnzymeF | FAIL EnzymeRuntimeActivityError: Detected potential need for runtime activity.
+RES | vg | dax64 | J | nq 99 | jacobian FD | first 3.36 s | run 1.35 s | err 0e+00
+RES | vg | dax64 | J | nq 99 | jacobian Zygote | first 35.60 s | run 2.55 s | err 7e-15
+RES | vg | dax64 | J | nq 99 | jacobian Mooncake | first 48.46 s | run 5.42 s | err 7e-15
+RES | vg | dax64 | J | nq 99 | jacobian EnzymeR | first 116.20 s | run 3.38 s | err 7e-15
+RES | vg | dax64 | J | nq 99 | jacobian EnzymeF | first 109.73 s | run 4.25 s | err 3e-15
+RES | heston | dax64 | A | nq 99 | FD | loss gradient | first 19.69 ms | run 8.98 ms | err 0e+00 | value 3.02 ms
+RES | heston | dax64 | A | nq 99 | FD | vol_errors Jacobian | first 38.64 ms | run 8.53 ms | err 0e+00 | value 3.02 ms
+RES | heston | dax64 | A | nq 99 | EnzymeF | loss gradient | first 101.22 s | run 7.53 ms | err 9e-16 | value 2.98 ms
+RES | heston | dax64 | A | nq 99 | EnzymeF | vol_errors Jacobian | first 6.34 s | run 6.85 ms | err 4e-14 | value 2.98 ms
+RES | heston | dax64 | A | nq 99 | EnzymeR | loss gradient | first 131.38 s | run 10.02 ms | err 1e-15 | value 5.57 ms
+RES | heston | dax64 | A | nq 99 | EnzymeR | vol_errors Jacobian | first 71.14 s | run 541.77 ms | err 4e-14 | value 5.57 ms
+RES | heston | dax64 | A | nq 99 | Zygote | loss gradient | first 54.87 s | run 26.44 ms | err 2e-15 | value 3.73 ms
+RES | heston | dax64 | A | nq 99 | Zygote | vol_errors Jacobian | first 4.20 s | run 1.01 s | err 4e-14 | value 3.73 ms
+RES | heston | dax64 | A | nq 99 | Mooncake | loss gradient | first 1.78 s | run 57.72 ms | err 1e-14 | value 2.71 ms
+RES | heston | dax64 | A | nq 99 | Mooncake | vol_errors Jacobian | first 3.49 s | run 2.82 s | err 7e-14 | value 2.71 ms
+RES | heston | dax64 | B | nq 99 | autodiff FD polish FD NM | first 13.10 s | run 684.04 ms | loss 1.7e-26 | param err 4e-13
+RES | heston | dax64 | B | nq 99 | autodiff FD polish FD LBFGS | first 18.05 s | run 429.48 ms | loss 4.4e-27 | param err 3e-13
+RES | heston | dax64 | B | nq 99 | autodiff EnzymeF polish FD LBFGS | FAIL EnzymeNoDerivativeError: Current scope: 
+RES | heston | dax64 | B | nq 99 | autodiff EnzymeR polish FD LBFGS | FAIL EnzymeNoDerivativeError: Current scope: 
+RES | heston | dax64 | B | nq 99 | autodiff Zygote polish FD LBFGS | first 66.73 s | run 605.16 ms | loss 9.9e-27 | param err 5e-13
+RES | heston | dax64 | B | nq 99 | autodiff Mooncake polish FD LBFGS | first 152.25 s | run 2.95 s | loss 3.1e-27 | param err 5e-13
+RES | heston | dax64 | B | nq 99 | autodiff FD polish EnzymeF LBFGS | first 104.19 s | run 375.01 ms | loss 4.4e-27 | param err 3e-13
+RES | heston | dax64 | B | nq 99 | autodiff FD polish EnzymeR LBFGS | first 177.68 s | run 4.80 s | loss 4.4e-27 | param err 3e-13
+RES | heston | dax64 | B | nq 99 | autodiff FD polish Zygote LBFGS | first 70.04 s | run 5.96 s | loss 4.4e-27 | param err 3e-13
+RES | heston | dax64 | B | nq 99 | autodiff FD polish Mooncake LBFGS | first 167.51 s | run 12.69 s | loss 1.3e-26 | param err 1e-13
+RES | heston | dax64 | B | nq 99 | autodiff EnzymeF polish EnzymeF LBFGS | FAIL EnzymeNoDerivativeError: Current scope: 
+RES | heston | dax64 | C | nq 99 | outer FD cond FD x FD y FD | first 4.32 s | run 1.39 s | err 0e+00
+RES | heston | dax64 | C | nq 99 | outer Zygote cond FD x FD y FD | first 28.53 s | run 1.40 s | err 9e-16
+RES | heston | dax64 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 88.91 s | run 4.71 s | err 9e-16
+RES | heston | dax64 | C | nq 99 | outer EnzymeR cond FD x FD y FD | first 119.65 s | run 1.57 s | err 9e-16
+RES | heston | dax64 | C | nq 99 | outer EnzymeF cond FD x FD y FD | first 104.88 s | run 5.19 s | err 2e-17
+RES | heston | dax64 | C | nq 99 | outer Zygote cond FD x Mooncake y FD | FAIL ArgumentError: It is not permissible to bitcast to a differentiable type during AD, as this risks dropping tan
+RES | heston | dax64 | C | nq 99 | outer Mooncake cond FD x Mooncake y FD | FAIL ArgumentError: It is not permissible to bitcast to a differentiable type during AD, as this risks dropping tan
+RES | heston | dax64 | C | nq 99 | outer Zygote cond FD x EnzymeR y FD | FAIL Conversion of boxed type Vector{Float64} is not allowed
+RES | heston | dax64 | C | nq 99 | outer Zygote cond FD x FD y EnzymeF | FAIL EnzymeRuntimeActivityError: Detected potential need for runtime activity.
+RES | heston | dax64 | C | nq 99 | outer EnzymeR cond FD x FD y EnzymeF | FAIL EnzymeRuntimeActivityError: Detected potential need for runtime activity.
+RES | heston | dax64 | J | nq 99 | jacobian FD | first 3.67 s | run 1.44 s | err 0e+00
+RES | heston | dax64 | J | nq 99 | jacobian Zygote | first 33.61 s | run 5.55 s | err 9e-16
+RES | heston | dax64 | J | nq 99 | jacobian Mooncake | first 49.97 s | run 11.41 s | err 9e-16
+RES | heston | dax64 | J | nq 99 | jacobian EnzymeR | first 106.49 s | run 7.39 s | err 9e-16
+RES | heston | dax64 | J | nq 99 | jacobian EnzymeF | first 106.13 s | run 5.92 s | err 9e-18
+RES | slnm | host64 | A | nq 99 | FD | loss gradient | first 7.79 ms | run 85.3 μs | err 0e+00 | value 57.1 μs
+RES | slnm | host64 | A | nq 99 | FD | vol_errors Jacobian | first 13.02 ms | run 83.5 μs | err 0e+00 | value 57.1 μs
+RES | slnm | host64 | A | nq 99 | Zygote | loss gradient | first 35.88 s | run 1.41 ms | err 2e-16 | value 59.8 μs
+RES | slnm | host64 | A | nq 99 | Zygote | vol_errors Jacobian | first 2.03 s | run 71.43 ms | err 1e-15 | value 59.8 μs
+RES | slnm | host64 | A | nq 99 | Mooncake | loss gradient | first 1.11 s | run 341.7 μs | err 2e-16 | value 59.3 μs
+RES | slnm | host64 | A | nq 99 | Mooncake | vol_errors Jacobian | first 266.70 ms | run 11.89 ms | err 1e-15 | value 59.3 μs
+RES | slnm | host64 | A | nq 99 | EnzymeR | loss gradient | first 131.32 s | run 152.3 μs | err 3e-16 | value 57.4 μs
+RES | slnm | host64 | A | nq 99 | EnzymeR | vol_errors Jacobian | first 26.11 s | run 1.74 ms | err 7e-16 | value 57.4 μs
+RES | slnm | host64 | B | nq 99 | autodiff FD polish FD NM | first 9.90 s | run 10.85 ms | loss 1.5e-30 | param err 3e-15
+RES | slnm | host64 | B | nq 99 | autodiff FD polish FD LBFGS | first 19.79 s | run 5.96 ms | loss 8.1e-31 | param err 9e-16
+RES | slnm | host64 | C | nq 99 | outer Zygote cond FD x FD y FD | first 70.88 s | run 42.28 ms | err 2e-15
+RES | slnm | host64 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 73.08 s | run 37.11 ms | err 2e-15
+RES | slnm | host64 | J | nq 99 | jacobian Zygote | first 29.63 s | run 50.03 ms | err 2e-15
+RES | slnm | host32 | A | nq 99 | FD | loss gradient | first 7.23 ms | run 64.2 μs | err 0e+00 | value 42.9 μs
+RES | slnm | host32 | A | nq 99 | FD | vol_errors Jacobian | first 12.41 ms | run 66.0 μs | err 0e+00 | value 42.9 μs
+RES | slnm | host32 | A | nq 99 | Zygote | loss gradient | first 31.34 s | run 1.21 ms | err 8e-08 | value 54.5 μs
+RES | slnm | host32 | A | nq 99 | Zygote | vol_errors Jacobian | first 1.76 s | run 62.86 ms | err 4e-07 | value 54.5 μs
+RES | slnm | host32 | A | nq 99 | Mooncake | loss gradient | first 921.28 ms | run 300.0 μs | err 8e-08 | value 44.9 μs
+RES | slnm | host32 | A | nq 99 | Mooncake | vol_errors Jacobian | first 238.21 ms | run 9.33 ms | err 4e-07 | value 44.9 μs
+RES | slnm | host32 | A | nq 99 | EnzymeR | loss gradient | first 97.88 s | run 95.8 μs | err 8e-08 | value 44.3 μs
+RES | slnm | host32 | A | nq 99 | EnzymeR | vol_errors Jacobian | first 19.77 s | run 1.30 ms | err 4e-07 | value 44.3 μs
+RES | slnm | host32 | B | nq 99 | autodiff FD polish FD NM | first 6.92 s | run 6.97 ms | loss 2.0e-13 | param err 3e-06
+RES | slnm | host32 | B | nq 99 | autodiff FD polish FD LBFGS | first 10.16 s | run 3.80 ms | loss 1.8e-13 | param err 2e-06
+RES | slnm | host32 | C | nq 99 | outer Zygote cond FD x FD y FD | first 37.26 s | run 16.78 ms | err 4e-05
+RES | slnm | host32 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 58.41 s | run 32.01 ms | err 4e-05
+RES | slnm | host32 | J | nq 99 | jacobian Zygote | first 35.62 s | run 41.91 ms | err 3e-05
+RES | slnm | dev64 | A | nq 99 | FD | loss gradient | first 9.53 ms | run 706.5 μs | err 0e+00 | value 573.9 μs
+RES | slnm | dev64 | A | nq 99 | FD | vol_errors Jacobian | first 461.52 ms | run 638.4 μs | err 0e+00 | value 573.9 μs
+RES | slnm | dev64 | A | nq 99 | Zygote | loss gradient | FAIL ArgumentError: Broadcast operation resulting in Union{} is not GPU compatible | value 790.1 μs
+RES | slnm | dev64 | A | nq 99 | Zygote | vol_errors Jacobian | FAIL ArgumentError: Broadcast operation resulting in Union{} is not GPU compatible | value 790.1 μs
+RES | slnm | dev64 | A | nq 99 | Mooncake | loss gradient | FAIL ArgumentError: Mooncake: broadcasting over CuArray does not support a function carrying its own state of type  | value 563.9 μs
+RES | slnm | dev64 | A | nq 99 | Mooncake | vol_errors Jacobian | FAIL ValueAndPullbackReturnTypeError: Found a value of type | value 563.9 μs
+RES | slnm | dev64 | A | nq 99 | EnzymeR | loss gradient | FAIL AssertionError: num_inline_roots == inline_roots_type(arg.typ) | value 597.7 μs
+RES | slnm | dev64 | A | nq 99 | EnzymeR | vol_errors Jacobian | FAIL AssertionError: n_shadow_roots == n_primal_roots + 1 | value 597.7 μs
+RES | slnm | dev64 | B | nq 99 | autodiff FD polish FD NM | first 22.53 s | run 95.03 ms | loss 1.7e-30 | param err 4e-15
+RES | slnm | dev64 | B | nq 99 | autodiff FD polish FD LBFGS | first 38.08 s | run 68.74 ms | loss 1.1e-30 | param err 2e-15
+RES | slnm | dev64 | C | nq 99 | outer Zygote cond FD x FD y FD | first 72.49 s | run 260.92 ms | err 1e-13
+RES | slnm | dev64 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 82.50 s | run 473.69 ms | err 1e-13
+RES | slnm | dev64 | J | nq 99 | jacobian Zygote | first 69.99 s | run 517.12 ms | err 1e-13
+RES | slnm | dev32 | A | nq 99 | FD | loss gradient | first 9.74 ms | run 675.7 μs | err 0e+00 | value 534.1 μs
+RES | slnm | dev32 | A | nq 99 | FD | vol_errors Jacobian | first 463.48 ms | run 544.7 μs | err 0e+00 | value 534.1 μs
+RES | slnm | dev32 | A | nq 99 | Zygote | loss gradient | FAIL ArgumentError: Broadcast operation resulting in Union{} is not GPU compatible | value 498.1 μs
+RES | slnm | dev32 | A | nq 99 | Zygote | vol_errors Jacobian | FAIL ArgumentError: Broadcast operation resulting in Union{} is not GPU compatible | value 498.1 μs
+RES | slnm | dev32 | A | nq 99 | Mooncake | loss gradient | FAIL ArgumentError: Mooncake: broadcasting over CuArray does not support a function carrying its own state of type  | value 594.0 μs
+RES | slnm | dev32 | A | nq 99 | Mooncake | vol_errors Jacobian | FAIL ValueAndPullbackReturnTypeError: Found a value of type | value 594.0 μs
+RES | slnm | dev32 | A | nq 99 | EnzymeR | loss gradient | FAIL AssertionError: num_inline_roots == inline_roots_type(arg.typ) | value 784.7 μs
+RES | slnm | dev32 | A | nq 99 | EnzymeR | vol_errors Jacobian | FAIL AssertionError: n_shadow_roots == n_primal_roots + 1 | value 784.7 μs
+RES | slnm | dev32 | B | nq 99 | autodiff FD polish FD NM | first 19.57 s | run 97.03 ms | loss 4.5e-13 | param err 3e-06
+RES | slnm | dev32 | B | nq 99 | autodiff FD polish FD LBFGS | first 29.11 s | run 51.64 ms | loss 3.7e-13 | param err 4e-06
+RES | slnm | dev32 | C | nq 99 | outer Zygote cond FD x FD y FD | first 69.36 s | run 183.08 ms | err 2e-05
+RES | slnm | dev32 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 82.95 s | run 489.81 ms | err 2e-05
+RES | slnm | dev32 | J | nq 99 | jacobian Zygote | first 80.12 s | run 899.65 ms | err 2e-05
+RES | slnm | host64 | C | nq 99 | outer FD cond FD x FD y FD | first 3.22 s | run 25.17 ms | err 0e+00
+RES | slnm | host32 | C | nq 99 | outer FD cond FD x FD y FD | first 13.91 s | run 17.44 ms | err 4e-05
+RES | slnm | dev32 | C | nq 99 | outer EnzymeR cond FD x FD y FD | first 158.36 s | run 196.92 ms | err 2e-05
+RES | vg | host64 | A | nq 99 | FD | loss gradient | first 14.39 ms | run 7.26 ms | err 0e+00 | value 2.62 ms
+RES | vg | host64 | A | nq 99 | FD | vol_errors Jacobian | first 31.73 ms | run 6.79 ms | err 0e+00 | value 2.62 ms
+RES | vg | host64 | A | nq 99 | Zygote | loss gradient | first 46.17 s | run 18.87 ms | err 4e-15 | value 2.38 ms
+RES | vg | host64 | A | nq 99 | Zygote | vol_errors Jacobian | first 3.06 s | run 1.16 s | err 3e-14 | value 2.38 ms
+RES | vg | host64 | A | nq 99 | Mooncake | loss gradient | first 851.99 ms | run 81.52 ms | err 6e-15 | value 2.81 ms
+RES | vg | host64 | A | nq 99 | Mooncake | vol_errors Jacobian | first 2.57 s | run 1.63 s | err 4e-14 | value 2.81 ms
+RES | vg | host64 | A | nq 99 | EnzymeR | loss gradient | first 106.34 s | run 8.88 ms | err 8e-15 | value 2.26 ms
+RES | vg | host64 | A | nq 99 | EnzymeR | vol_errors Jacobian | first 55.87 s | run 615.83 ms | err 4e-14 | value 2.26 ms
+RES | vg | host64 | B | nq 99 | autodiff FD polish FD NM | first 6.77 s | run 363.43 ms | loss 1.7e-28 | param err 2e-14
+RES | vg | host64 | B | nq 99 | autodiff FD polish FD LBFGS | first 10.58 s | run 304.14 ms | loss 2.9e-28 | param err 7e-14
+RES | vg | host64 | C | nq 99 | outer Zygote cond FD x FD y FD | first 27.83 s | run 1.11 s | err 7e-15
+RES | vg | host64 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 44.77 s | run 1.88 s | err 7e-15
+RES | vg | host64 | J | nq 99 | jacobian Zygote | first 27.89 s | run 2.27 s | err 9e-15
+RES | vg | host32 | A | nq 99 | FD | loss gradient | first 13.54 ms | run 5.46 ms | err 0e+00 | value 2.27 ms
+RES | vg | host32 | A | nq 99 | FD | vol_errors Jacobian | first 11.54 ms | run 5.68 ms | err 0e+00 | value 2.27 ms
+RES | vg | host32 | A | nq 99 | Zygote | loss gradient | first 47.23 s | run 12.40 ms | err 1e-05 | value 2.08 ms
+RES | vg | host32 | A | nq 99 | Zygote | vol_errors Jacobian | first 3.08 s | run 954.04 ms | err 3e-05 | value 2.08 ms
+RES | vg | host32 | A | nq 99 | Mooncake | loss gradient | first 1.44 s | run 64.80 ms | err 7e-06 | value 2.15 ms
+RES | vg | host32 | A | nq 99 | Mooncake | vol_errors Jacobian | first 2.40 s | run 1.54 s | err 3e-05 | value 2.15 ms
+RES | vg | host32 | A | nq 99 | EnzymeR | loss gradient | first 107.99 s | run 7.02 ms | err 1e-05 | value 2.11 ms
+RES | vg | host32 | A | nq 99 | EnzymeR | vol_errors Jacobian | first 59.83 s | run 504.69 ms | err 3e-05 | value 2.11 ms
+RES | vg | host32 | B | nq 99 | autodiff FD polish FD NM | first 9.67 s | run 396.37 ms | loss 1.6e-10 | param err 9e-05
+RES | vg | host32 | B | nq 99 | autodiff FD polish FD LBFGS | first 12.13 s | run 334.09 ms | loss 1.1e-10 | param err 1e-04
+RES | vg | host32 | C | nq 99 | outer Zygote cond FD x FD y FD | first 51.84 s | run 928.71 ms | err 9e-04
+RES | vg | host32 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 62.84 s | run 2.01 s | err 9e-04
+RES | vg | host32 | J | nq 99 | jacobian Zygote | first 42.95 s | run 2.34 s | err 9e-04
+RES | vg | dev64 | A | nq 99 | FD | loss gradient | first 25.93 ms | run 6.29 ms | err 0e+00 | value 4.92 ms
+RES | vg | dev64 | A | nq 99 | FD | vol_errors Jacobian | first 642.33 ms | run 4.71 ms | err 0e+00 | value 4.92 ms
+RES | vg | dev64 | A | nq 99 | Zygote | loss gradient | first 94.47 s | run 30.64 ms | err 4e-15 | value 3.04 ms
+RES | vg | dev64 | A | nq 99 | Zygote | vol_errors Jacobian | first 7.67 s | run 2.94 s | err 1e-14 | value 3.04 ms
+RES | vg | dev64 | A | nq 99 | Mooncake | loss gradient | FAIL ArgumentError: It is not permissible to bitcast to a differentiable type during AD, as this risks dropping tan | value 9.25 ms
+RES | vg | dev64 | A | nq 99 | Mooncake | vol_errors Jacobian | FAIL ValueAndPullbackReturnTypeError: Found a value of type | value 9.25 ms
+RES | vg | dev64 | A | nq 99 | EnzymeR | loss gradient | FAIL AssertionError: num_inline_roots == inline_roots_type(arg.typ) | value 9.03 ms
+RES | vg | dev64 | A | nq 99 | EnzymeR | vol_errors Jacobian | FAIL AssertionError: n_shadow_roots == n_primal_roots + 1 | value 9.03 ms
+RES | vg | dev64 | B | nq 99 | autodiff FD polish FD NM | first 31.03 s | run 483.97 ms | loss 1.5e-28 | param err 4e-14
+RES | vg | dev64 | B | nq 99 | autodiff FD polish FD LBFGS | first 58.10 s | run 263.55 ms | loss 2.2e-28 | param err 7e-14
+RES | vg | dev64 | C | nq 99 | outer Zygote cond FD x FD y FD | first 195.47 s | run 4.02 s | err 9e-13
+RES | vg | dev64 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 139.28 s | run 2.50 s | err 9e-13
+RES | vg | dev64 | J | nq 99 | jacobian Zygote | first 100.15 s | run 3.01 s | err 9e-13
+RES | vg | dev32 | A | nq 99 | FD | loss gradient | first 32.61 ms | run 3.53 ms | err 0e+00 | value 2.50 ms
+RES | vg | dev32 | A | nq 99 | FD | vol_errors Jacobian | first 470.38 ms | run 3.30 ms | err 0e+00 | value 2.50 ms
+RES | vg | dev32 | A | nq 99 | Zygote | loss gradient | first 79.34 s | run 29.58 ms | err 4e-06 | value 2.72 ms
+RES | vg | dev32 | A | nq 99 | Zygote | vol_errors Jacobian | first 5.02 s | run 2.49 s | err 9e-06 | value 2.72 ms
+RES | vg | dev32 | A | nq 99 | Mooncake | loss gradient | FAIL ArgumentError: It is not permissible to bitcast to a differentiable type during AD, as this risks dropping tan | value 2.60 ms
+RES | vg | dev32 | A | nq 99 | Mooncake | vol_errors Jacobian | FAIL ValueAndPullbackReturnTypeError: Found a value of type | value 2.60 ms
+RES | vg | dev32 | A | nq 99 | EnzymeR | loss gradient | FAIL AssertionError: num_inline_roots == inline_roots_type(arg.typ) | value 2.56 ms
+RES | vg | dev32 | A | nq 99 | EnzymeR | vol_errors Jacobian | FAIL AssertionError: n_shadow_roots == n_primal_roots + 1 | value 2.56 ms
+RES | vg | dev32 | B | nq 99 | autodiff FD polish FD NM | first 31.37 s | run 761.44 ms | loss 1.8e-10 | param err 3e-05
+RES | vg | dev32 | B | nq 99 | autodiff FD polish FD LBFGS | first 52.15 s | run 464.18 ms | loss 1.6e-10 | param err 7e-05
+RES | vg | dev32 | C | nq 99 | outer Zygote cond FD x FD y FD | first 83.98 s | run 1.59 s | err 4e-04
+RES | vg | dev32 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 89.18 s | run 3.40 s | err 4e-04
+RES | vg | dev32 | J | nq 99 | jacobian Zygote | first 86.34 s | run 2.99 s | err 5e-04
+RES | vg | host64 | C | nq 99 | outer FD cond FD x FD y FD | first 3.44 s | run 1.02 s | err 0e+00
+RES | vg | host32 | C | nq 99 | outer FD cond FD x FD y FD | first 15.45 s | run 878.53 ms | err 9e-04
+RES | vg | dev32 | C | nq 99 | outer EnzymeR cond FD x FD y FD | first 178.11 s | run 1.42 s | err 4e-04
+RES | heston | host64 | A | nq 99 | FD | loss gradient | first 18.02 ms | run 9.51 ms | err 0e+00 | value 3.49 ms
+RES | heston | host64 | A | nq 99 | FD | vol_errors Jacobian | first 16.28 ms | run 8.98 ms | err 0e+00 | value 3.49 ms
+RES | heston | host64 | A | nq 99 | Zygote | loss gradient | first 48.15 s | run 20.09 ms | err 4e-15 | value 2.85 ms
+RES | heston | host64 | A | nq 99 | Zygote | vol_errors Jacobian | first 4.54 s | run 1.09 s | err 5e-14 | value 2.85 ms
+RES | heston | host64 | A | nq 99 | Mooncake | loss gradient | first 909.69 ms | run 63.18 ms | err 1e-14 | value 2.53 ms
+RES | heston | host64 | A | nq 99 | Mooncake | vol_errors Jacobian | first 2.78 s | run 1.96 s | err 8e-14 | value 2.53 ms
+RES | heston | host64 | A | nq 99 | EnzymeR | loss gradient | first 114.02 s | run 9.90 ms | err 3e-15 | value 2.34 ms
+RES | heston | host64 | A | nq 99 | EnzymeR | vol_errors Jacobian | first 59.58 s | run 460.57 ms | err 5e-14 | value 2.34 ms
+RES | heston | host64 | B | nq 99 | autodiff FD polish FD NM | first 8.81 s | run 577.12 ms | loss 5.5e-27 | param err 2e-13
+RES | heston | host64 | B | nq 99 | autodiff FD polish FD LBFGS | first 13.44 s | run 325.93 ms | loss 2.5e-26 | param err 7e-13
+RES | heston | host64 | C | nq 99 | outer Zygote cond FD x FD y FD | first 29.48 s | run 1.34 s | err 7e-16
+RES | heston | host64 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 52.33 s | run 2.85 s | err 7e-16
+RES | heston | host64 | J | nq 99 | jacobian Zygote | first 47.13 s | run 5.90 s | err 7e-16
+RES | heston | host32 | A | nq 99 | FD | loss gradient | first 40.81 ms | run 10.60 ms | err 0e+00 | value 3.47 ms
+RES | heston | host32 | A | nq 99 | FD | vol_errors Jacobian | first 18.35 ms | run 10.66 ms | err 0e+00 | value 3.47 ms
+RES | heston | host32 | A | nq 99 | Zygote | loss gradient | first 55.08 s | run 16.68 ms | err 6e-07 | value 3.08 ms
+RES | heston | host32 | A | nq 99 | Zygote | vol_errors Jacobian | first 3.63 s | run 1.18 s | err 2e-05 | value 3.08 ms
+RES | heston | host32 | A | nq 99 | Mooncake | loss gradient | first 1.02 s | run 56.34 ms | err 4e-06 | value 4.24 ms
+RES | heston | host32 | A | nq 99 | Mooncake | vol_errors Jacobian | first 2.63 s | run 1.81 s | err 3e-05 | value 4.24 ms
+RES | heston | host32 | A | nq 99 | EnzymeR | loss gradient | first 117.60 s | run 9.22 ms | err 1e+00 | value 3.98 ms
+RES | heston | host32 | A | nq 99 | EnzymeR | vol_errors Jacobian | FAIL ArgumentError: Cannot insert a value of type LLVM.PointerType(ptr addrspace(10)) into an element of type LLVM. | value 3.98 ms
+RES | heston | host32 | B | nq 99 | autodiff FD polish FD NM | first 10.50 s | run 884.41 ms | loss 5.8e-11 | param err 1e-04
+RES | heston | host32 | B | nq 99 | autodiff FD polish FD LBFGS | first 16.11 s | run 955.87 ms | loss 3.6e-10 | param err 2e-04
+RES | heston | host32 | C | nq 99 | outer Zygote cond FD x FD y FD | first 48.68 s | run 1.96 s | err 1e-03
+RES | heston | host32 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 63.49 s | run 3.79 s | err 1e-03
+RES | heston | host32 | J | nq 99 | jacobian Zygote | first 53.74 s | run 7.44 s | err 1e-03
+RES | heston | dev64 | A | nq 99 | FD | loss gradient | first 23.61 ms | run 9.50 ms | err 0e+00 | value 6.85 ms
+RES | heston | dev64 | A | nq 99 | FD | vol_errors Jacobian | first 651.44 ms | run 9.41 ms | err 0e+00 | value 6.85 ms
+RES | heston | dev64 | A | nq 99 | Zygote | loss gradient | first 85.23 s | run 44.66 ms | err 3e-15 | value 4.69 ms
+RES | heston | dev64 | A | nq 99 | Zygote | vol_errors Jacobian | first 7.20 s | run 3.22 s | err 5e-14 | value 4.69 ms
+RES | heston | dev64 | A | nq 99 | Mooncake | loss gradient | FAIL ArgumentError: It is not permissible to bitcast to a differentiable type during AD, as this risks dropping tan | value 4.72 ms
+RES | heston | dev64 | A | nq 99 | Mooncake | vol_errors Jacobian | FAIL ValueAndPullbackReturnTypeError: Found a value of type | value 4.72 ms
+RES | heston | dev64 | A | nq 99 | EnzymeR | loss gradient | FAIL AssertionError: num_inline_roots == inline_roots_type(arg.typ) | value 4.55 ms
+RES | heston | dev64 | A | nq 99 | EnzymeR | vol_errors Jacobian | FAIL AssertionError: n_shadow_roots == n_primal_roots + 1 | value 4.55 ms
+RES | heston | dev64 | B | nq 99 | autodiff FD polish FD NM | first 48.76 s | run 1.49 s | loss 5.4e-27 | param err 3e-13
+RES | heston | dev64 | B | nq 99 | autodiff FD polish FD LBFGS | first 65.36 s | run 422.00 ms | loss 1.0e-26 | param err 2e-13
+RES | heston | dev64 | C | nq 99 | outer Zygote cond FD x FD y FD | first 143.56 s | run 3.23 s | err 2e-12
+RES | heston | dev64 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 124.43 s | run 4.61 s | err 2e-12
+RES | heston | dev64 | J | nq 99 | jacobian Zygote | first 115.39 s | run 7.11 s | err 2e-12
+RES | heston | dev32 | A | nq 99 | FD | loss gradient | first 16.46 ms | run 6.76 ms | err 0e+00 | value 5.12 ms
+RES | heston | dev32 | A | nq 99 | FD | vol_errors Jacobian | first 497.42 ms | run 6.16 ms | err 0e+00 | value 5.12 ms
+RES | heston | dev32 | A | nq 99 | Zygote | loss gradient | first 77.17 s | run 40.85 ms | err 5e-07 | value 4.84 ms
+RES | heston | dev32 | A | nq 99 | Zygote | vol_errors Jacobian | first 6.32 s | run 2.99 s | err 2e-05 | value 4.84 ms
+RES | heston | dev32 | A | nq 99 | Mooncake | loss gradient | FAIL ArgumentError: It is not permissible to bitcast to a differentiable type during AD, as this risks dropping tan | value 5.85 ms
+RES | heston | dev32 | A | nq 99 | Mooncake | vol_errors Jacobian | FAIL ValueAndPullbackReturnTypeError: Found a value of type | value 5.85 ms
+RES | heston | dev32 | A | nq 99 | EnzymeR | loss gradient | FAIL AssertionError: num_inline_roots == inline_roots_type(arg.typ) | value 5.92 ms
+RES | heston | dev32 | A | nq 99 | EnzymeR | vol_errors Jacobian | FAIL AssertionError: n_shadow_roots == n_primal_roots + 1 | value 5.92 ms
+RES | heston | dev32 | B | nq 99 | autodiff FD polish FD NM | first 38.42 s | run 1.42 s | loss 4.6e-10 | param err 6e-05
+RES | heston | dev32 | B | nq 99 | autodiff FD polish FD LBFGS | first 53.57 s | run 1.01 s | loss 3.5e-10 | param err 2e-05
+RES | heston | dev32 | C | nq 99 | outer Zygote cond FD x FD y FD | first 110.78 s | run 2.51 s | err 6e-04
+RES | heston | dev32 | C | nq 99 | outer Mooncake cond FD x FD y FD | first 118.22 s | run 5.22 s | err 6e-04
+RES | heston | dev32 | J | nq 99 | jacobian Zygote | first 115.25 s | run 7.47 s | err 6e-04
+RES | heston | host64 | C | nq 99 | outer FD cond FD x FD y FD | first 3.46 s | run 1.46 s | err 0e+00
+RES | heston | host32 | C | nq 99 | outer FD cond FD x FD y FD | first 25.87 s | run 2.00 s | err 1e-03
+RES | heston | dev32 | C | nq 99 | outer EnzymeR cond FD x FD y FD | first 212.00 s | run 2.79 s | err 6e-04
+RES | big | host64 | A | nq 1929 | FD | loss gradient | first 35.41 ms | run 25.47 ms | err 0e+00 | value 6.09 ms
+RES | big | host64 | A | nq 1929 | FD | vol_errors Jacobian | first 32.58 ms | run 25.98 ms | err 0e+00 | value 6.09 ms
+RES | big | host64 | A | nq 1929 | Zygote | loss gradient | first 52.16 s | run 42.10 ms | err 4e-15 | value 6.47 ms
+RES | big | host64 | A | nq 1929 | Zygote | vol_errors Jacobian | first 59.21 s | run 56.16 s | err 2e-14 | value 6.47 ms
+RES | big | host64 | B | nq 1929 | autodiff FD polish FD NM | first 13.07 s | run 1.42 s | loss 6.8e-25 | param err 1e-12
+RES | big | host64 | C | nq 1929 | outer Zygote cond FD x FD y FD | first 60.99 s | run 56.75 s | err 0e+00
+RES | big | host64 | J | nq 1929 | jacobian Zygote | first 336.23 s | run 331.19 s | err 0e+00
+RES | big | host32 | A | nq 1929 | FD | loss gradient | first 75.95 ms | run 63.89 ms | err 0e+00 | value 21.38 ms
+RES | big | host32 | A | nq 1929 | FD | vol_errors Jacobian | first 73.42 ms | run 56.59 ms | err 0e+00 | value 21.38 ms
+RES | big | host32 | A | nq 1929 | Zygote | loss gradient | first 53.05 s | run 74.18 ms | err 2e-06 | value 18.88 ms
+RES | big | host32 | A | nq 1929 | Zygote | vol_errors Jacobian | first 119.31 s | run 114.65 s | err 4e-05 | value 18.88 ms
+RES | big | host32 | B | nq 1929 | autodiff FD polish FD NM | first 18.04 s | run 5.91 s | loss 4.2e-08 | param err 2e-05
+RES | big | host32 | C | nq 1929 | outer Zygote cond FD x FD y FD | first 192.76 s | run 157.23 s | err 1e-03
+RES | big host32 J Zygote | CRASH rc=124 
+RES | big | dev64 | A | nq 1929 | FD | loss gradient | first 33.40 ms | run 15.29 ms | err 0e+00 | value 6.28 ms
+RES | big | dev64 | A | nq 1929 | FD | vol_errors Jacobian | first 568.48 ms | run 15.08 ms | err 0e+00 | value 6.28 ms
+RES | big | dev64 | A | nq 1929 | Zygote | loss gradient | first 98.05 s | run 53.69 ms | err 3e-15 | value 6.12 ms
+RES | big | dev64 | A | nq 1929 | Zygote | vol_errors Jacobian | first 104.89 s | run 107.05 s | err 6e-14 | value 6.12 ms
+RES | big | dev64 | B | nq 1929 | autodiff FD polish FD NM | first 40.23 s | run 1.29 s | loss 4.9e-25 | param err 8e-13
+RES | big | dev64 | C | nq 1929 | outer Zygote cond FD x FD y FD | first 137.84 s | run 39.90 s | err 4e-12
+RES | big | dev64 | J | nq 1929 | jacobian Zygote | first 336.77 s | run 255.95 s | err 4e-12
+RES | big | dev32 | A | nq 1929 | FD | loss gradient | first 22.40 ms | run 8.63 ms | err 0e+00 | value 2.85 ms
+RES | big | dev32 | A | nq 1929 | FD | vol_errors Jacobian | first 512.28 ms | run 7.91 ms | err 0e+00 | value 2.85 ms
+RES | big | dev32 | A | nq 1929 | Zygote | loss gradient | first 78.07 s | run 40.19 ms | err 2e-06 | value 2.54 ms
+RES | big | dev32 | A | nq 1929 | Zygote | vol_errors Jacobian | first 47.64 s | run 46.38 s | err 5e-05 | value 2.54 ms
+RES | big | dev32 | B | nq 1929 | autodiff FD polish FD NM | first 37.98 s | run 752.26 ms | loss 4.7e-08 | param err 6e-05
+RES | big | dev32 | C | nq 1929 | outer Zygote cond FD x FD y FD | first 115.35 s | run 20.93 s | err 1e-03
+RES | big | dev32 | J | nq 1929 | jacobian Zygote | first 230.45 s | run 137.86 s | err 1e-03
