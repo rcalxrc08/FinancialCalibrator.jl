@@ -24,12 +24,16 @@ _Read before touching anything on the differentiated path._ (Layer 3 reference: 
   selects (`ifelse`, `Bool * x`, which has a strong zero, `call_put_sign` weights, `max`/`min`); validations that throw
   go in `ChainRulesCore.@ignore_derivatives` (`α < 1` of the shifted mixture, `check_prices`, the `size(vols)` checks),
   as in FinancialMonteCarlo 0.8. Which backends differentiate `vol_errors` and `loss` (checked 2026-11-19, DAX, mixture with
-  `AnalyticMethod` and VG with Lewis, against ForwardDiff, one process each): Zygote both (it handles the `try` of `loss`
-  when nothing is thrown, and fails where the `catch` runs: as `autodiff` of `calibrate` with `LBFGS()` it fails on the first
-  line-search point that cannot be priced, #40; it needed `analytic_prices` without `.=` into `similar`: one allocating broadcast through the
-  isbits callable `PriceAs{PT}`, a closure over `PT` is not isbits and a GPU broadcast refuses it), Mooncake
-  `vol_errors` only (it rejects the `try`/`catch` of `loss`, #40: no gradient optimizer with `autodiff = AutoMooncake`),
-  Enzyme both, without runtime activity since FinancialMonteCarlo 0.9 (isbits `SVector` curves, FinancialMonteCarlo#79;
+  `AnalyticMethod` and VG with Lewis, against ForwardDiff, one process each): every backend both. Zygote and Mooncake
+  cannot differentiate a `catch` (Zygote "pop_exception" where it runs, Mooncake rejects the `try` in reverse mode), so
+  `loss(::Type{R}, ...)` has rules that run the `try` themselves around the reverse pass of `loss_value` (the loss
+  without it), `Inf` with a zero gradient on a `numerical_failure` (#40, fixed 2026-11-20): a ChainRules `rrule` with a
+  `RuleConfig` (`rrule_via_ad`) for Zygote, and a Mooncake `rrule!!` in the extension (`@from_rrule` passes no config)
+  around `build_rrule(loss_value, ...)`, which Mooncake caches per signature. The zero gradient is `zero(params)`: a
+  `ZeroTangent` reaches DifferentiationInterface as `nothing`. Tested as `autodiff` of `calibrate` with `LBFGS()` on
+  DAX in `test/models_methods.jl`. Zygote on `vol_errors` needed `analytic_prices` without `.=` into `similar`: one allocating broadcast through the
+  isbits callable `PriceAs{PT}`, a closure over `PT` is not isbits and a GPU broadcast refuses it. ForwardDiff and
+  Enzyme go through the `try` itself, Enzyme without runtime activity since FinancialMonteCarlo 0.9 (isbits `SVector` curves, FinancialMonteCarlo#79;
   with 0.8 any model built from active parameters on the `UnderlyingVec` of `adapter` needed `set_runtime_activity`). A
   closure annotated `Const` that captures the loss cache still makes Enzyme ask for runtime activity, on any underlying:
   pass model, market data and cache as `Const` arguments. Table in `docs/src/backends.md`. Zygote on `vol_errors` is

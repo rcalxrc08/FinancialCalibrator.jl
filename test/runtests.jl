@@ -212,7 +212,7 @@ flush(stderr)
             # parameters the model rejects (a DomainError of its constructor) too; any other exception propagates (#3)
             @test FC.loss([-0.2], model, method, mkt) == Inf
             @test_throws MethodError FC.loss([0.2], model, NoPricer(), mkt)
-            # Zygote differentiates the volatility errors and the loss (its try included) of a closed form: the prices
+            # Zygote differentiates the volatility errors and the loss (its try through a rule, #40) of a closed form: the prices
             # are one allocating broadcast, not a write into an array (#39)
             slnm = ShiftedProcess(LogNormalMixture((0.1, 0.2, 0.35), (0.3, 0.4), und), -0.1)
             p = [0.1, 0.2, 0.35, 0.3, 0.4, -0.1]

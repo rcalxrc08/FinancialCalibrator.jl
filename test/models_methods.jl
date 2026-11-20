@@ -10,7 +10,7 @@ using LinearAlgebra
 using Zygote
 using Mooncake
 using Enzyme
-using ADTypes: AutoForwardDiff, AutoMooncake, AutoEnzyme
+using ADTypes: AutoForwardDiff, AutoMooncake, AutoEnzyme, AutoZygote
 import DifferentiationInterface as DI
 
 const FC = FinancialCalibrator
@@ -134,6 +134,27 @@ end
             loss0 = FC.loss(FinancialMonteCarlo.get_parameters(start), start, AnalyticMethod(), smkt)
             res = calibrate(start, AnalyticMethod(), smkt)
             @test res.OptimalValue < loss0 / 10
+        end
+    end
+
+    # Zygote and Mooncake differentiate the loss through rules that run its try themselves (#40): a zero gradient where
+    # it is Inf, and as autodiff of calibrate, whose LBFGS line search reaches parameters that cannot be priced on DAX.
+    # The degenerate DAX optimum of the mixture (the Bachelier limit) leaves each backend at its own local minimum, so the
+    # calibrations are compared by their loss: Zygote's is lower than ForwardDiff's.
+    @testset "Reverse backends through the try of the loss (#40)" begin
+        bs = BlackScholesProcess(0.2, und)
+        model = ShiftedProcess(LogNormalMixture((0.2, 0.35), (0.5,), und), 0.05)
+        cache = FC.loss_cache(model, AnalyticMethod(), mkt)
+        p = FinancialMonteCarlo.get_parameters(model)
+        mixture_loss(x) = FC.loss(x, model, AnalyticMethod(), mkt, cache)
+        bs_loss(x) = FC.loss(x, bs, AnalyticMethod(), mkt)
+        reference = ForwardDiff.gradient(mixture_loss, p)
+        forward = calibrate(model, AnalyticMethod(), mkt, LBFGS(); autodiff = AutoForwardDiff())
+        @testset "$(nameof(typeof(backend)))" for backend in (AutoZygote(), AutoMooncake(; config = nothing))
+            @test DI.gradient(mixture_loss, backend, p) ≈ reference rtol = 1e-12
+            @test DI.value_and_gradient(bs_loss, backend, [-0.2]) == (Inf, [0.0])
+            @test_throws MethodError DI.gradient(x -> FC.loss(x, bs, NoPricer(), mkt), backend, [0.2])
+            @test calibrate(model, AnalyticMethod(), mkt, LBFGS(); autodiff = backend).OptimalValue <= forward.OptimalValue * (1 + 1e-6)
         end
     end
 end

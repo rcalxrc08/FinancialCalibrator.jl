@@ -17,7 +17,7 @@ task needs.
 
 Map: `src/FinancialCalibrator.jl` includes the stages in order, `01_market_data` → `02_pricing` → `03_loss` →
 `04_calibration` → `05_sensitivities`; `ext/` holds the extensions (CUDA, Enzyme, Mooncake); `test/` the suite;
-`docs/` the Documenter site; `data/json/` the sample market data (DAX 22 Aug 2016); `examples/`, `etc/` scripts.
+`docs/` the Documenter site; `data/json/` the sample market data (DAX 22 Aug 2016); `etc/` the logo and its script.
 
 Rules for every change (details in `references/conventions.md` and `references/autodiff.md`):
 

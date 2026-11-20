@@ -82,11 +82,10 @@ Half the sum of the squared volatility errors of [`vol_errors`](@ref): smooth in
 is fitted exactly. `Inf` where the parameters cannot be priced (see `numerical_failure`), which an Optim optimizer ranks
 as the worst point; any other exception propagates.
 
-ForwardDiff and Enzyme differentiate it (Enzyme without runtime activity since FinancialMonteCarlo 0.9, whose
-dividend curves are isbits, FinancialMonteCarlo#79). Mooncake does not: it rejects the `try`/`catch` in
-reverse mode (#40); Zygote only where nothing is thrown (where the `catch` runs it fails, #40). So with Mooncake or
-Zygote as `autodiff` use a derivative-free optimizer, or differentiate
-[`vol_errors`](@ref), which has no `try`.
+Every backend differentiates it, with a zero gradient where it is `Inf`: ForwardDiff and Enzyme through the `try`
+(Enzyme without runtime activity since FinancialMonteCarlo 0.9, whose dividend curves are isbits,
+FinancialMonteCarlo#79), Zygote through a ChainRules `rrule` and Mooncake through a rule of its extension, both of which
+run the `try` themselves around the reverse pass of the loss without it (#40: neither differentiates a `catch`).
 """
 loss(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}, cache = loss_cache(model, method, mktData)) where {T} = loss(promote_type(eltype(params), T), params, model, method, mktData, cache)
 
@@ -94,13 +93,40 @@ loss(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, met
 # assertion: vol_errors is inferred (Float64 and dual numbers, host and device), so the conversion is too.
 function loss(::Type{R}, params, model, method, mktData, cache) where {R}
     try
-        return R(sum(abs2, vol_errors(params, model, method, mktData, cache)) / 2)
+        return loss_value(R, params, model, method, mktData, cache)
     catch e
-        numerical_failure(e) || rethrow()
-        # enable with JULIA_DEBUG=FinancialCalibrator to see why
-        @debug "loss: parameters that cannot be priced, Inf" params exception = e
-        return R(Inf)
+        return failed_loss(R, params, e)
     end
+end
+
+# The loss without the try, which is what the reverse rules differentiate.
+loss_value(::Type{R}, params, model, method, mktData, cache) where {R} = R(sum(abs2, vol_errors(params, model, method, mktData, cache)) / 2)
+
+# The loss where the parameters cannot be priced: Inf, or the exception again if it is not a numerical failure (called
+# inside a catch, so rethrow() keeps its backtrace).
+function failed_loss(::Type{R}, params, e) where {R}
+    numerical_failure(e) || rethrow()
+    # enable with JULIA_DEBUG=FinancialCalibrator to see why
+    @debug "loss: parameters that cannot be priced, Inf" params exception = e
+    return R(Inf)
+end
+
+# Zygote cannot differentiate a catch (pop_exception, #40), so its rule runs the try itself, around the forward pass of
+# the loss without it; where that throws a numerical failure the loss is Inf with a zero gradient, as ForwardDiff and
+# Enzyme give through the try. The Mooncake extension has the same rule (Mooncake.@from_rrule passes no RuleConfig).
+function ChainRulesCore.rrule(config::ChainRulesCore.RuleConfig{>:ChainRulesCore.HasReverseMode}, ::typeof(loss), ::Type{R}, params, model, method, mktData, cache) where {R}
+    value, value_pullback = try
+        ChainRulesCore.rrule_via_ad(config, loss_value, R, params, model, method, mktData, cache)
+    catch e
+        failed_loss(R, params, e), nothing
+    end
+    no_tangents = ntuple(_ -> ChainRulesCore.NoTangent(), 4)
+    function loss_pullback(Δ)
+        # zero(params), not ZeroTangent(): Zygote turns that into `nothing`, which DifferentiationInterface returns as is
+        isnothing(value_pullback) && return (ChainRulesCore.NoTangent(), ChainRulesCore.NoTangent(), zero(params), no_tangents...)
+        return (ChainRulesCore.NoTangent(), Base.tail(value_pullback(Δ))...)
+    end
+    return value, loss_pullback
 end
 
 # The exceptions that mean "these parameters cannot be priced", not a bug: a price that is not positive or has no implied

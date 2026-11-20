@@ -14,7 +14,7 @@ using FinancialCalibrator, FinancialMonteCarlo
 und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
 ```
 
-See `examples/` for a calibration script (it plots with PyPlot, which is not a dependency) and `data/json/` for the sample market data.
+See `data/json/` for the sample market data.
 
 ## Calibration
 

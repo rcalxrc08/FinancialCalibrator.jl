@@ -17,5 +17,5 @@ closure or non-const globals change what Enzyme and Zygote see).
 
 ## Outputs
 
-`julia --project=. -e 'using Pkg; Pkg.test()'`: about an hour (Enzyme compiles for minutes per model), 25 more minutes
-on a GPU.
+`julia --project=. -e 'using Pkg; Pkg.test()'`: about 27 minutes with a GPU, 18 without (measured 2026-11-20, i7-8550U and
+MX150; durations per file in `references/testing.md`).

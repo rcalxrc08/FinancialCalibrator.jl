@@ -11,7 +11,7 @@ path are in `ChainRulesCore.@ignore_derivatives`. ForwardDiff, Zygote, Enzyme, M
 loaded (i.e. the user loaded ForwardDiff) and `AutoFiniteDiff()` otherwise (FiniteDiff comes with NLSolversBase); every
 backend keyword defaults to it (`DI.check_available`, not `Base.get_extension`: the latter takes a lock that Zygote
 cannot differentiate through the keyword defaults). `ext/FinancialCalibratorMooncakeExt.jl` (triggered by Mooncake) gives Mooncake a
-rule for `implicit_variables`: ImplicitDifferentiation's ChainRules rrule needs a `RuleConfig`, which Mooncake's
+rule for `implicit_variables` and one for `loss` (its `try`, #40): ImplicitDifferentiation's ChainRules rrule needs a `RuleConfig`, which Mooncake's
 `@from_rrule` does not pass, so the extension calls it with a config without modes (the backends are always explicit in
 `calibrated_parameters`, the config is never used) and moves the cotangent of the quotes itself. The setup of the implicit function is `implicit_calibration`, marked
 `@zero_derivative` there: otherwise Mooncake traces it and fails on the device-to-host copies of the cache on the GPU.
