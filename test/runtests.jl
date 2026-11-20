@@ -331,6 +331,7 @@ if isfile(joinpath(@__DIR__, "..", "data", "json", "cboe", "2026-11-12", "CboeOp
 else
     @info "No SPX option chain in data/json/cboe/2026-11-12: skipping the local tests"
 end
+logged_include("context.jl")
 logged_include("aqua.jl")
 
 using CUDA
