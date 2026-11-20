@@ -161,7 +161,7 @@ the exception, and that `try`/`catch` is what separates the backends. Gradients 
 | Backend | `vol_errors` | `loss` |
 |:--|:--|:--|
 | ForwardDiff | ✓ | ✓ |
-| Zygote | ✓ | ✓ |
+| Zygote | ✓ | ✓ where the loss is finite; fails where it catches (FinancialCalibrator.jl#40) |
 | Mooncake | ✓ | ✗: no `try`/`catch` in reverse mode (FinancialCalibrator.jl#40) |
 | Enzyme, reverse | ✓ | ✓ |
 
@@ -169,8 +169,9 @@ Enzyme needs no runtime activity with FinancialMonteCarlo 0.9 or later, whose cu
 (FinancialMonteCarlo.jl#79); with 0.8, a model rebuilt from active parameters on the dividend curve that
 [`adapter`](@ref) returns needs `AutoEnzyme(; mode = Enzyme.set_runtime_activity(Enzyme.Reverse))`. When calling
 `Enzyme.autodiff` directly, pass the model, the market data and the cache of `loss_cache` as `Const` arguments: captured in
-a closure annotated `Const`, they make Enzyme ask for runtime activity on any underlying. With Mooncake as `autodiff`,
-use a derivative-free optimizer (the default `NelderMead()`); the polish and the implicit derivatives do not need `loss`.
+a closure annotated `Const`, they make Enzyme ask for runtime activity on any underlying. With Mooncake or Zygote as `autodiff`,
+use a derivative-free optimizer (the default `NelderMead()`); the polish and the implicit derivatives do not need `loss`. Zygote fails as soon as a line search tries parameters that
+cannot be priced ("Can't differentiate pop_exception expression"), which `LBFGS()` does on DAX.
 
 Zygote is correct but slow here: a gradient of `vol_errors` costs 1.6 ms on the mixture (ForwardDiff 0.11 ms) and 16 ms
 with Lewis (ForwardDiff 2.7 ms), with FinancialMonteCarlo 0.9 (laptop, i7-8550U). With 0.8 the mixture took 7.7 ms, most

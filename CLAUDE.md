@@ -253,7 +253,8 @@ below the threshold, #2), `test/local/cboe_spx.jl` (local only, see above), `tes
   go in `ChainRulesCore.@ignore_derivatives` (`α < 1` of the shifted mixture, `check_prices`, the `size(vols)` checks),
   as in FinancialMonteCarlo 0.8. Which backends differentiate `vol_errors` and `loss` (checked 2026-11-19, DAX, mixture with
   `AnalyticMethod` and VG with Lewis, against ForwardDiff, one process each): Zygote both (it handles the `try` of `loss`
-  when nothing is thrown; it needed `analytic_prices` without `.=` into `similar`: one allocating broadcast through the
+  when nothing is thrown, and fails where the `catch` runs: as `autodiff` of `calibrate` with `LBFGS()` it fails on the first
+  line-search point that cannot be priced, #40; it needed `analytic_prices` without `.=` into `similar`: one allocating broadcast through the
   isbits callable `PriceAs{PT}`, a closure over `PT` is not isbits and a GPU broadcast refuses it), Mooncake
   `vol_errors` only (it rejects the `try`/`catch` of `loss`, #40: no gradient optimizer with `autodiff = AutoMooncake`),
   Enzyme both, without runtime activity since FinancialMonteCarlo 0.9 (isbits `SVector` curves, FinancialMonteCarlo#79;

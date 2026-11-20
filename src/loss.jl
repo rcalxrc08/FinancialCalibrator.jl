@@ -82,9 +82,10 @@ Half the sum of the squared volatility errors of [`vol_errors`](@ref): smooth in
 is fitted exactly. `Inf` where the parameters cannot be priced (see `numerical_failure`), which an Optim optimizer ranks
 as the worst point; any other exception propagates.
 
-ForwardDiff, Zygote and Enzyme differentiate it (Enzyme without runtime activity since FinancialMonteCarlo 0.9, whose
+ForwardDiff and Enzyme differentiate it (Enzyme without runtime activity since FinancialMonteCarlo 0.9, whose
 dividend curves are isbits, FinancialMonteCarlo#79). Mooncake does not: it rejects the `try`/`catch` in
-reverse mode (#40), so with Mooncake as `autodiff` use a derivative-free optimizer, or differentiate
+reverse mode (#40); Zygote only where nothing is thrown (where the `catch` runs it fails, #40). So with Mooncake or
+Zygote as `autodiff` use a derivative-free optimizer, or differentiate
 [`vol_errors`](@ref), which has no `try`.
 """
 loss(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}, cache = loss_cache(model, method, mktData)) where {T} = loss(promote_type(eltype(params), T), params, model, method, mktData, cache)
