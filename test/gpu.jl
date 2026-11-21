@@ -56,6 +56,18 @@ const FC = FinancialCalibrator
         @test isapprox(Array(on_device), cpu; rtol = 1e-8)
     end
 
+    # Zygote on the device differentiates the fields of the closed-form kernel by dual numbers, which its fields typed by
+    # type parameters can hold (it returned nothing, #41)
+    @testset "Zygote gradient of the closed form on the GPU" begin
+        slnm = ShiftedProcess(LogNormalMixture((0.2, 0.25, 0.3), (0.2, 0.3), und), -0.1)
+        ps = FinancialMonteCarlo.get_parameters(slnm)
+        host = ForwardDiff.gradient(q -> FC.loss(q, slnm, AnalyticMethod(), mkt), ps)
+        device = Zygote.gradient(q -> FC.loss(q, slnm, AnalyticMethod(), gmkt), ps)[1]
+        @test device ≈ host rtol = 1e-8
+        J = Zygote.jacobian(q -> FC.vol_errors(q, slnm, AnalyticMethod(), gmkt), ps)[1]
+        @test Array(J) ≈ ForwardDiff.jacobian(q -> FC.vol_errors(q, slnm, AnalyticMethod(), mkt), ps) rtol = 1e-8
+    end
+
     @testset "smile_prices / Black and Scholes closed form" begin
         bs = BlackScholesProcess(0.2, und)
         cpu = smile_prices(bs, AnalyticMethod(), [0.2], args(mkt)...)

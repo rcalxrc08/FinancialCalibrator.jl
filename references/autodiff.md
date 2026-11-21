@@ -39,7 +39,11 @@ _Read before touching anything on the differentiated path._ (Layer 3 reference: 
   around `build_rrule(loss_value, ...)`, which Mooncake caches per signature. The zero gradient is `zero(params)`: a
   `ZeroTangent` reaches DifferentiationInterface as `nothing`. Tested as `autodiff` of `calibrate` with `LBFGS()` on
   DAX in `test/models_methods.jl`. Zygote on `vol_errors` needed `analytic_prices` without `.=` into `similar`: one allocating broadcast through the
-  isbits callable `PriceAs{PT}`, a closure over `PT` is not isbits and a GPU broadcast refuses it. ForwardDiff and
+  isbits callable `PriceAs{PT}`, a closure over `PT` is not isbits and a GPU broadcast refuses it. On the device Zygote (0.7.18) differentiates the
+  fields of a broadcast callable by rebuilding it with dual numbers: only fields typed by a bare, unbounded type parameter
+  can hold them (`LognormalMixtureKernel` has one per field, its tuples included, and an outer constructor sets `N`), and
+  `PriceAs` converts to `promote_type(PT, typeof(price))`, since `convert(PT, dual)` made the broadcast `Union{}` (#41
+  group 4; before, the gradient was `nothing` with a warning). Mooncake still refuses a callable with state on the device. ForwardDiff and
   Enzyme go through the `try` itself, Enzyme without runtime activity since FinancialMonteCarlo 0.9 (isbits `SVector` curves, FinancialMonteCarlo#79;
   with 0.8 any model built from active parameters on the `UnderlyingVec` of `adapter` needed `set_runtime_activity`). A
   closure annotated `Const` that captures the loss cache still makes Enzyme ask for runtime activity, on any underlying:
