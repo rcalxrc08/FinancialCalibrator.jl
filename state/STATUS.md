@@ -14,11 +14,10 @@ The status table is #41 comment 7059648077 (edited in place); open points and ne
 |:--|:--|:--|:--|
 | Mooncake with a stateful callable on the device (closed form) | `master` | #41 group 3c | device-only stateless broadcast |
 | Mooncake Jacobian on the device | `master` | #41 group 3d | toy reproducer CuArray → CuArray |
-| Enzyme reverse on the device | `master` | #41 group 5 | waits for Enzyme#4094 |
+| Enzyme reverse on the device | `master` | #41 group 5 | compare the stack with Enzyme#4094: comment there if the same family, else a toy reproducer and a new issue |
 | Enzyme `parmsRemoved` | `master` | #41 group 2 | toy reproducer for Enzyme |
-| Groups 6 and 7 | `master` | #41, #42 | wait for Enzyme#4108 |
+| Groups 6 and 7 | `master` | #41, #42 | 7 waits for Enzyme#4108; 6: recheck once #4108 is fixed, meanwhile reduce it (batched reverse over a `ComplexF32` Cos sum) |
 | Docs and Mooncake as inner `x` timing | `master` | #41 group 8 | re-time the Heston Enzyme `calibrate` cells (still ✗ in `docs/src/backends.md`), add a test, full bench rerun |
-| Context layer 4, mission, decisions, Verify tables | `context-state` | — | review, then merge |
 
 ## Known issues
 
