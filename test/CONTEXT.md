@@ -11,7 +11,7 @@
 
 ## Process
 
-Add a test to the file of the stage it checks; a new file goes into `runtests.jl` through `logged_include`. Compare AD
+Add a test to the file of the stage it checks; a new file goes into `runtests.jl` through `logged_include`, and a new testset of `runtests.jl`, `models_methods.jl` or `gpu.jl` starts with `progress(name)`. Compare AD
 backends and benchmark one fresh process per case, with the data in `const` bindings or passed as arguments (a
 closure or non-const globals change what Enzyme and Zygote see).
 

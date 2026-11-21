@@ -1,3 +1,13 @@
+# Progress of a long run (~45 minutes): testsets report only when they end, so every file and testset logs its start
+# with the time since the run began, and the log (a local run, Kaimon or CI) shows where a run is and what is slow.
+# Loading the packages is timed too: on a fresh environment it precompiles for ~15 minutes before the first test.
+const RUN_START = time()
+function progress(name)
+    @info "[$(round(Int, time() - RUN_START)) s] $name"
+    flush(stderr)
+end
+progress("Loading the packages")
+
 using Test
 using FinancialCalibrator
 using Dates
@@ -10,6 +20,7 @@ using Zygote
 using LinearAlgebra
 
 const FC = FinancialCalibrator
+progress("Packages loaded")
 
 # Prices of the call smile of `model` re-parametrized with `p`, through the `pricer` interface.
 # a method without a pricer: the loss must not hide the MethodError
@@ -20,21 +31,19 @@ function smile_prices(model, method, p, K, r, T)
     return vec(pricer(FinancialMonteCarlo.set_parameters!(model, p), ZeroRate(r), FC.calibration_method(method, K), smile))
 end
 
-# The testsets report only at the end, so each part logs when it starts and how long it took: a hung file shows up by
-# name in the log (a local run or CI) instead of a silent process.
+# Each file logs when it starts and how long it took: a hung file shows up by name instead of a silent process.
 function logged(f, name)
-    @info "Running $name"
-    flush(stderr)
+    progress("Running $name")
     elapsed = @elapsed f()
-    @info "Finished $name in $(round(elapsed, digits = 1)) s"
-    flush(stderr)
+    progress("Finished $name in $(round(elapsed, digits = 1)) s")
 end
 logged_include(file) = logged(() -> include(file), file)
 
-@info "Running the core testset"
-flush(stderr)
+progress("Running the core testset")
 @testset "FinancialCalibrator" begin
+    progress("FinancialCalibrator")
     @testset "Data retrieval and adaptation" begin
+        progress("Data retrieval and adaptation")
         id = CalibrationID("Dax", "22Aug2016", "EUR")
         raw = retriever(id, IOFileInputStrategy())
         @test raw isa RawMarketData
@@ -55,6 +64,7 @@ flush(stderr)
     end
 
     @testset "Shifted lognormal mixture pricer" begin
+        progress("Shifted lognormal mixture pricer")
         S0, r, T = 100.0, 0.01, 1.0
         strikes = [80.0, 100.0, 120.0]
         und = FinancialMonteCarlo.Underlying(S0, 0.03)
@@ -107,6 +117,7 @@ flush(stderr)
     end
 
     @testset "Black and Scholes, closed form" begin
+        progress("Black and Scholes, closed form")
         S0, r, d, T, σ = 100.0, 0.01, 0.03, 1.0, 0.2
         und = FinancialMonteCarlo.Underlying(S0, d)
         bs = BlackScholesProcess(σ, und)
@@ -129,9 +140,11 @@ flush(stderr)
     end
 
     @testset "Calibration" begin
+        progress("Calibration")
         und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
 
         @testset "Carr-Madan / NIG" begin
+            progress("Carr-Madan / NIG")
             model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
             method = CarrMadanMethod(400.0, 14)
             p0 = FinancialMonteCarlo.get_parameters(model)
@@ -150,6 +163,7 @@ flush(stderr)
         # every evaluation of the loss. On the strikes near the money and the longer maturities: far out of the money a few
         # thousand paths price zero, which the loss penalises.
         @testset "Monte Carlo / Black Scholes" begin
+            progress("Monte Carlo / Black Scholes")
             m, k = 4:length(mkt.TimeToMaturity), 4:9
             near = MarketData(mkt.TimeToMaturity[m], mkt.MaturityDates[m], mkt.ZeroRates[m], mkt.Strikes[k], mkt.Volatility[m, k])
             model = BlackScholesProcess(0.25, und)
@@ -163,6 +177,7 @@ flush(stderr)
 
         # The loss and the closed-form pricer are inferred: set_parameters! is not, hence the function barrier in loss.
         @testset "Inferred" begin
+            progress("Inferred")
             model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
             p0 = FinancialMonteCarlo.get_parameters(model)
             @test (@inferred FC.loss(p0, model, CosMethod(256), mkt)) isa Float64
@@ -185,6 +200,7 @@ flush(stderr)
 
         # The volatility errors: one per quote, maturity by maturity, out of the money options only, generic in the quotes.
         @testset "vol_errors" begin
+            progress("vol_errors")
             model = BlackScholesProcess(0.2, und)
             method = CosMethod(1024)
             nT, nK = size(mkt.Volatility)
@@ -225,6 +241,7 @@ flush(stderr)
 
         # The Levenberg–Marquardt polish ends where the gradient of the loss vanishes, on the market surface too.
         @testset "Stationary on the market" begin
+            progress("Stationary on the market")
             model = BlackScholesProcess(0.3, und)
             method = CosMethod(1024)
             res = calibrate(model, method, mkt)
@@ -244,6 +261,7 @@ flush(stderr)
         # The default parametrizations: the inverse of each other on valid parameters, and every variable a valid model
         # (the constraints between the parameters of VG, NIG and the mixtures included), so the loss is finite (#24).
         @testset "Default parametrizations" begin
+            progress("Default parametrizations")
             models = (BlackScholesProcess(0.2, und), MertonProcess(0.15, 0.3, -0.1, 0.2, und), KouProcess(0.15, 0.5, 0.4, 10.0, 15.0, und), VarianceGammaProcess(0.2, -0.03, 0.16, und), NormalInverseGaussianProcess(0.2, -0.03, 0.16, und), HestonProcess(0.3, 0.2, 0.0, 1.5, -0.6, 0.04, und), ShiftedProcess(LogNormalMixture((0.2, 0.25, 0.3), (0.2, 0.3), und), -0.1), LogNormalMixture((0.2, 0.3), (0.4,), und))
             for model in models
                 P = default_parametrization(model)
@@ -261,6 +279,7 @@ flush(stderr)
         # The calibrated parameters as a function of the quotes, through the implicit function theorem. On Black-Scholes
         # every quote in the loss weighs the same: ∂σ*/∂vᵢ = 1/n.
         @testset "calibrated_parameters" begin
+            progress("calibrated_parameters")
             model = BlackScholesProcess(0.3, und)
             method = CosMethod(1024)
             n = sum(length, FC.loss_cache(model, method, mkt).quoted)
@@ -275,6 +294,7 @@ flush(stderr)
         end
 
         @testset "Numerical methods agree" begin
+            progress("Numerical methods agree")
             p0 = [0.2, -0.03, 0.16]
             model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
             args = (mkt.Strikes, mkt.ZeroRates[1], mkt.TimeToMaturity[1])
@@ -285,6 +305,7 @@ flush(stderr)
         end
 
         @testset "Shifted lognormal mixture" begin
+            progress("Shifted lognormal mixture")
             Random.seed!(0)
             model = ShiftedProcess(LogNormalMixture(ntuple(_ -> 0.2, 4), Tuple(rand(3) / 4), und), -0.22)
             method = AnalyticMethod()
@@ -295,6 +316,7 @@ flush(stderr)
     end
 
     @testset "Float32" begin
+        progress("Float32")
         raw = retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy())
         und, mkt = adapter(raw, Float32)
         @test und.S0 isa Float32
@@ -314,13 +336,13 @@ flush(stderr)
     end
 
     @testset "AnalyticMethod on a model without closed form" begin
+        progress("AnalyticMethod on a model without closed form")
         und = FinancialMonteCarlo.Underlying(100.0)
         model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
         @test_throws MethodError smile_prices(model, AnalyticMethod(), [0.2, -0.03, 0.16], [100.0], 0.01, 1.0)
     end
 end
-@info "Finished the core testset"
-flush(stderr)
+progress("Finished the core testset")
 
 logged_include("models_methods.jl")
 logged_include("financialfft_example.jl")

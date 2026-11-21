@@ -15,10 +15,12 @@ import DifferentiationInterface as DI
 const FC = FinancialCalibrator
 
 @testset "GPU" begin
+    progress("GPU")
     CUDA.allowscalar(false)
     dax_und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
     gmkt = adapt(CuArray, mkt)
     @testset "MarketData on the device" begin
+        progress("MarketData on the device")
         @test gmkt.Strikes isa CuVector{Float64}
         @test gmkt.Volatility isa CuMatrix{Float64}
         @test gmkt.TimeToMaturity isa Vector{Float64}
@@ -33,6 +35,7 @@ const FC = FinancialCalibrator
     nig = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)
     p0 = FinancialMonteCarlo.get_parameters(nig)
     @testset "smile_prices / $name" for (name, method) in ("CarrMadan" => CarrMadanMethod(400.0, 14), "CarrMadanLewis" => CarrMadanLewisMethod(400.0, 14), "Lewis" => LewisMethod(100.0, 4001), "Cos" => CosMethod(1024))
+        progress("smile_prices / $name")
         cpu = smile_prices(nig, method, p0, args(mkt)...)
         gpu = smile_prices(nig, method, p0, args(gmkt)...)
         @test gpu isa CuVector
@@ -43,6 +46,7 @@ const FC = FinancialCalibrator
     end
 
     @testset "smile_prices / closed form" begin
+        progress("smile_prices / closed form")
         slnm = ShiftedProcess(LogNormalMixture((0.2, 0.25, 0.3), (0.2, 0.3), und), -0.1)
         ps = FinancialMonteCarlo.get_parameters(slnm)
         cpu = smile_prices(slnm, AnalyticMethod(), ps, args(mkt)...)
@@ -59,6 +63,7 @@ const FC = FinancialCalibrator
     # Zygote on the device differentiates the fields of the closed-form kernel by dual numbers, which its fields typed by
     # type parameters can hold (it returned nothing, #41)
     @testset "Zygote gradient of the closed form on the GPU" begin
+        progress("Zygote gradient of the closed form on the GPU")
         slnm = ShiftedProcess(LogNormalMixture((0.2, 0.25, 0.3), (0.2, 0.3), und), -0.1)
         ps = FinancialMonteCarlo.get_parameters(slnm)
         host = ForwardDiff.gradient(q -> FC.loss(q, slnm, AnalyticMethod(), mkt), ps)
@@ -71,6 +76,7 @@ const FC = FinancialCalibrator
     # Mooncake on the device: the prices of the maturities are concatenated by reduce(vcat), whose GPU kernel Mooncake
     # cannot differentiate (a bitcast); the extension gives it a rule (#41). The maturities keep different numbers of quotes.
     @testset "Mooncake gradient on the GPU" begin
+        progress("Mooncake gradient on the GPU")
         mooncake = AutoMooncake(; config = nothing)
         x = CuArray([1.0, 2.0, 3.0])
         g = DI.gradient(x -> sum(abs2, reduce(vcat, [x .* 2, x[1:2] .* 3])), mooncake, x)
@@ -81,6 +87,7 @@ const FC = FinancialCalibrator
     end
 
     @testset "smile_prices / Black and Scholes closed form" begin
+        progress("smile_prices / Black and Scholes closed form")
         bs = BlackScholesProcess(0.2, und)
         cpu = smile_prices(bs, AnalyticMethod(), [0.2], args(mkt)...)
         gpu = smile_prices(bs, AnalyticMethod(), [0.2], args(gmkt)...)
@@ -89,6 +96,7 @@ const FC = FinancialCalibrator
     end
 
     @testset "calibrate on the GPU" begin
+        progress("calibrate on the GPU")
         method = CosMethod(1024)
         opts = Optim.Options(iterations = 5)
         cpu = calibrate(nig, method, mkt, NelderMead(), opts)
@@ -101,6 +109,7 @@ const FC = FinancialCalibrator
     # The calibrated parameters as a function of quotes on the device: the solve, the ForwardDiff derivative and the
     # Zygote gradient (a CuArray, like the quotes) against the host. Black-Scholes: ∂σ*/∂vᵢ is 1/n on the quotes in the loss.
     @testset "calibrated_parameters on the GPU" begin
+        progress("calibrated_parameters on the GPU")
         bs = BlackScholesProcess(0.3, dax_und)
         method = CosMethod(1024)
         @test calibrated_parameters(bs, method, gmkt) ≈ calibrated_parameters(bs, method, mkt) rtol = 1e-10
