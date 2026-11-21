@@ -56,6 +56,10 @@ end
 end
 analytic_prices(::Type{PT}, kernel, opt::FinancialMonteCarlo.EuropeanOptionSmile) where {PT} = PriceAs{PT, typeof(kernel)}(kernel).(opt.K, opt.isCall)
 
+# Every field is typed by a type parameter of its own (the tuples too, not NTuple{N, V}): on the device Zygote
+# differentiates the fields of a broadcast callable by rebuilding it with dual numbers, which a field of a composite
+# type such as NTuple{N, V} cannot hold (it returned `nothing`, #41), nor a parameter bounded by another one: N is set by
+# the outer constructor.
 """
     LognormalMixtureKernel(F, shift, σ, w, r, T)
 
@@ -63,10 +67,6 @@ The price of a European option on ``S_T = A_T + s`` (`s` the shift) where ``A_T`
 `F`: with weight `w[j]` its volatility is `σ[j]`, each priced by Black's formula (`blkprice` of FinancialToolbox). The
 strike of ``A`` is ``κ = K - s``; when ``κ ≤ 0`` the call is a forward (always exercised) and the put is worthless.
 """
-# Every field is typed by a type parameter of its own (the tuples too, not NTuple{N, V}): on the device Zygote
-# differentiates the fields of a broadcast callable by rebuilding it with dual numbers, which a field of a composite
-# type such as NTuple{N, V} cannot hold (it returned `nothing`, #41), nor a parameter bounded by another one: N is set by
-# the outer constructor.
 struct LognormalMixtureKernel{N, F_, S, Σ, W, R, T_}
     F::F_
     shift::S

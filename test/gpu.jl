@@ -68,6 +68,18 @@ const FC = FinancialCalibrator
         @test Array(J) ≈ ForwardDiff.jacobian(q -> FC.vol_errors(q, slnm, AnalyticMethod(), mkt), ps) rtol = 1e-8
     end
 
+    # Mooncake on the device: the prices of the maturities are concatenated by reduce(vcat), whose GPU kernel Mooncake
+    # cannot differentiate (a bitcast); the extension gives it a rule (#41). The maturities keep different numbers of quotes.
+    @testset "Mooncake gradient on the GPU" begin
+        mooncake = AutoMooncake(; config = nothing)
+        x = CuArray([1.0, 2.0, 3.0])
+        g = DI.gradient(x -> sum(abs2, reduce(vcat, [x .* 2, x[1:2] .* 3])), mooncake, x)
+        @test Array(g) ≈ [26.0, 52.0, 24.0]
+        method = LewisMethod(100.0, 4001)
+        host = ForwardDiff.gradient(q -> FC.loss(q, nig, method, mkt), p0)
+        @test DI.gradient(q -> FC.loss(q, nig, method, gmkt), mooncake, p0) ≈ host rtol = 1e-8
+    end
+
     @testset "smile_prices / Black and Scholes closed form" begin
         bs = BlackScholesProcess(0.2, und)
         cpu = smile_prices(bs, AnalyticMethod(), [0.2], args(mkt)...)

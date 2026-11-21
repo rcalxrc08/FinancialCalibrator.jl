@@ -15,6 +15,10 @@ using Mooncake: Mooncake, CoDual, NoRData, primal, tangent, zero_rdata, zero_fco
 # of the quotes from the GPU. Its result holds the arguments (the model, the market data), but no tangent flows into it:
 # the rule of implicit_variables gives the implicit function no cotangent.
 @zero_derivative DefaultCtx Tuple{typeof(FinancialCalibrator.implicit_calibration), Vararg}
+# The loss cache depends neither on the parameters nor on the quotes being differentiated (which quotes enter is a
+# selection), so it has no derivative either; the loss and vol_errors build it when it is not passed. On the device it
+# copies the vega mask to the host, whose CUDA copy has a try/finally that Mooncake rejects (#41).
+@zero_derivative DefaultCtx Tuple{typeof(FinancialCalibrator.loss_cache), Vararg}
 
 struct NoModesConfig <: RuleConfig{Union{NoForwardsMode, NoReverseMode}} end
 
@@ -52,6 +56,29 @@ function Mooncake.rrule!!(::CoDual{typeof(FinancialCalibrator.loss)}, R::CoDual,
         failure_pullback(_) = (NoRData(), NoRData(), map(a -> zero_rdata(primal(a)), args)...)
         return zero_fcodual(value), failure_pullback
     end
+end
+
+# reduce(vcat, prices) in maturity_errors: on CuArrays Base concatenates through a KernelAbstractions kernel
+# (_typed_vcat!), whose launch Mooncake 0.5.72 cannot differentiate (it bitcasts a CuPtr, #41; a vcat of a fixed number
+# of arrays has a rule, reduce over a vector does not). The cotangent of each array is a view of the cotangent of the
+# concatenation: a broadcast per array, on the host and on the device. Remove when Mooncake has the rule
+# (chalk-lab/Mooncake.jl#1484).
+@is_primitive DefaultCtx ReverseMode Tuple{typeof(reduce), typeof(vcat), Vector{<:DenseVector{<:Base.IEEEFloat}}}
+
+function Mooncake.rrule!!(::CoDual{typeof(reduce)}, ::CoDual{typeof(vcat)}, xs::CoDual{<:Vector{<:DenseVector{<:Base.IEEEFloat}}})
+    arrays, tangents = primal(xs), tangent(xs)
+    y = reduce(vcat, arrays)
+    ȳ = zero(y)
+    function reduce_vcat_pullback(::NoRData)
+        stop = 0
+        for (x, x̄) in zip(arrays, tangents)
+            start = stop + 1
+            stop += length(x)
+            x̄ .+= view(ȳ, start:stop)
+        end
+        return NoRData(), NoRData(), NoRData()
+    end
+    return CoDual(y, ȳ), reduce_vcat_pullback
 end
 
 end # module

@@ -43,7 +43,12 @@ _Read before touching anything on the differentiated path._ (Layer 3 reference: 
   fields of a broadcast callable by rebuilding it with dual numbers: only fields typed by a bare, unbounded type parameter
   can hold them (`LognormalMixtureKernel` has one per field, its tuples included, and an outer constructor sets `N`), and
   `PriceAs` converts to `promote_type(PT, typeof(price))`, since `convert(PT, dual)` made the broadcast `Union{}` (#41
-  group 4; before, the gradient was `nothing` with a warning). Mooncake still refuses a callable with state on the device. ForwardDiff and
+  group 4; before, the gradient was `nothing` with a warning). Mooncake still refuses a callable with state on the device
+  (the closed form, #41 group 3c). Mooncake 0.5.72 cannot differentiate `reduce(vcat, ...)` of `CuArray`s (the kernel
+  launch of `_typed_vcat!` bitcasts a `CuPtr`, chalk-lab/Mooncake.jl#1484): the extension has a rule for it, with which
+  the Fourier methods on the device match ForwardDiff (vg, heston: 4e-15, 3e-15, #41 group 3b). `loss_cache` is a
+  zero-derivative function there (it depends on neither the parameters nor the differentiated quotes): built inside the
+  differentiated loss on the device, it copies the vega mask to the host, whose CUDA copy has a `try` Mooncake rejects. ForwardDiff and
   Enzyme go through the `try` itself, Enzyme without runtime activity since FinancialMonteCarlo 0.9 (isbits `SVector` curves, FinancialMonteCarlo#79;
   with 0.8 any model built from active parameters on the `UnderlyingVec` of `adapter` needed `set_runtime_activity`). A
   closure annotated `Const` that captures the loss cache still makes Enzyme ask for runtime activity, on any underlying:

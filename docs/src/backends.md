@@ -236,7 +236,10 @@ and the full Jacobian ``\partial p^*/\partial v``:
 | Enzyme, reverse | 18 ms | 1.5 s | 1.6 s | 68 ms | 3.4 s | 7.4 s |
 | Enzyme, forward | 59 ms | 4.1 s | 5.2 s | 82 ms | 4.3 s | 5.9 s |
 | Mooncake | 44 ms | 2.2 s | 4.7 s | 113 ms | 5.4 s | 11 s |
-| Zygote, inner `x` Mooncake | 10 ms | 1.6 s | ✗ | | | |
+| Zygote, inner `x` Mooncake | 10 ms | 1.6 s | 2.4 s⁵ | | | |
+
+⁵ With FinancialFFT ≥ 0.6.3 (its Mooncake overlay of the complex square root covers the dual numbers of the inner
+ForwardDiff gradient, #41); measured 2026-11-21 on the same laptop, outer Mooncake 3.3 s.
 
 The outer backend meets only the rule of the implicit function, so the inner derivatives set the cost, and the reverse
 backends tie with ForwardDiff on 99 quotes. Enzyme as an inner backend of [`calibrated_parameters`](@ref) fails in
@@ -253,6 +256,11 @@ quotes and on a large surface (4 maturities × 500 strikes, 1929 quotes in the l
 | `loss` gradient, ForwardDiff, 1929 quotes | 25 ms | 64 ms | 15 ms | 8.6 ms |
 | `calibrate`, `NelderMead()`, 1929 quotes | 1.4 s | 5.9 s | 1.3 s | 0.75 s |
 | Gradient of ``w^\top p^*``, Zygote, 1929 quotes | 57 s | 157 s | 40 s | 21 s |
+
+Mooncake differentiates the Fourier methods on the device too (Variance Gamma and Heston, the `loss` gradient matches
+ForwardDiff to 4e-15), through a rule of the extension for the concatenation of the maturities
+(chalk-lab/Mooncake.jl#1484); the closed form of the mixture is a callable with state, which its device broadcasts
+refuse.
 
 On the host, `Float32` is slower than `Float64` and loses digits: the parameters agree to 1e-4 and their derivatives
 to 1e-3. On the device `Float32` halves the times of the large surface. On 1929 quotes the gradient of
