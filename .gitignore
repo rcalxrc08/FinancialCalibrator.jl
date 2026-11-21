@@ -12,3 +12,4 @@ data/json/real/
 data/json/cboe/
 bench/logs/
 bench/results.txt
+Manifest-v*.toml
