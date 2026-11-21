@@ -43,8 +43,15 @@ _Read before touching anything on the differentiated path._ (Layer 3 reference: 
   fields of a broadcast callable by rebuilding it with dual numbers: only fields typed by a bare, unbounded type parameter
   can hold them (`LognormalMixtureKernel` has one per field, its tuples included, and an outer constructor sets `N`), and
   `PriceAs` converts to `promote_type(PT, typeof(price))`, since `convert(PT, dual)` made the broadcast `Union{}` (#41
-  group 4; before, the gradient was `nothing` with a warning). Mooncake still refuses a callable with state on the device
-  (the closed form, #41 group 3c). Mooncake 0.5.72 cannot differentiate `reduce(vcat, ...)` of `CuArray`s (the kernel
+  group 4; before, the gradient was `nothing` with a warning). Mooncake refuses a callable with state on the device: the
+  closed form there goes through a rule (`FinancialCalibratorCUDAMooncakeExt`) that differentiates `stateless_prices`,
+  the same prices with a field-less `MixturePrice{PT, N}` and the numbers of the kernel as broadcast arguments; device
+  gradients match ForwardDiff on the host to 1e-14 (#41 group 3c). Not the default for every backend: Zygote's device
+  broadcast infers its duals for at most 10 arguments (`Zygote.dualize`, 0.7.18), and a mixture of N components takes
+  2N + 6. Mooncake 0.5.72 also refuses a `CuArray` as the output of a pullback (`ValueAndPullbackReturnTypeError`, a
+  `Ptr{CUstream_st}` inside the array), so the Mooncake Jacobian of `vol_errors` on the device fails (#41 group 3d): its output check has no method for
+  `CuArray` and walks into the stream pointer of the array's memory (chalk-lab/Mooncake.jl#1485, with a fix verified
+  to 3e-14; recheck on each Mooncake release). Mooncake 0.5.72 cannot differentiate `reduce(vcat, ...)` of `CuArray`s (the kernel
   launch of `_typed_vcat!` bitcasts a `CuPtr`, chalk-lab/Mooncake.jl#1484): the extension has a rule for it, with which
   the Fourier methods on the device match ForwardDiff (vg, heston: 4e-15, 3e-15, #41 group 3b). `loss_cache` is a
   zero-derivative function there (it depends on neither the parameters nor the differentiated quotes): built inside the
