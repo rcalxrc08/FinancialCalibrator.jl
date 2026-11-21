@@ -1,6 +1,7 @@
 module FinancialCalibrator
 
 using Dates, LinearAlgebra, Downloads
+using Statistics: median
 using ADTypes, Adapt, ChainRulesCore, FinancialMonteCarlo, FinancialToolbox, JSON, Optim
 # ADTypes and DifferentiationInterface are interfaces, and dependencies of Optim (through NLSolversBase) anyway, and
 # ImplicitDifferentiation builds the rules of calibrated_parameters on them: the packages that differentiate are weak

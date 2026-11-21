@@ -129,9 +129,7 @@ function parity_forward(quotes, S0, r, T; strikes = 6)
     common = sort(collect(intersect(keys(calls), keys(puts))), by = K -> abs(K - S0))
     length(common) < 2 && return nothing
     forwards = [K + exp(r * T) * (calls[K] - puts[K]) for K in common[1:min(strikes, end)]]
-    sort!(forwards)
-    n = length(forwards)
-    return isodd(n) ? forwards[(n+1)÷2] : (forwards[n÷2] + forwards[n÷2+1]) / 2
+    return median(forwards)
 end
 
 # Linear interpolation of (x, y), x increasing, at the points of grid, or nothing if grid is not within the range of x.

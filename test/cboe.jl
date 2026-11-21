@@ -34,6 +34,13 @@ end
     @test FC.parse_occ("SPXW261124P07125500").strike == 7125.5
     @test_throws ArgumentError FC.parse_occ("SPX 261218C05000000")
 
+    # the parity forward is the median over the strikes nearest to the spot (#29): an odd and an even number of them, and
+    # nothing with fewer than two strikes quoted on both sides
+    parity_quotes(K, F) = vcat([(strike = k, mid = max(f - k, 0) + 1, isCall = true) for (k, f) in zip(K, F)], [(strike = k, mid = max(k - f, 0) + 1, isCall = false) for (k, f) in zip(K, F)])
+    @test FC.parity_forward(parity_quotes([90.0, 100.0, 110.0], [101.0, 99.0, 104.0]), 100.0, 0.0, 1.0) == 101.0
+    @test FC.parity_forward(parity_quotes([90.0, 100.0, 110.0, 120.0], [101.0, 99.0, 104.0, 98.0]), 100.0, 0.0, 1.0) == 100.0
+    @test FC.parity_forward(parity_quotes([100.0], [101.0]), 100.0, 0.0, 1.0) === nothing
+
     dir = mktempdir()
     write(FC.cboe_file("SPX", "12Nov2026", dir), JSON.json(synthetic_chain()))
     id = CalibrationID("SPX", "12Nov2026", "USD")

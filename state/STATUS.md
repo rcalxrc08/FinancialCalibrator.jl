@@ -33,7 +33,7 @@ The status table is #41 comment 7059648077 (edited in place); open points and ne
 
 - #36 the polish loop is not inferred (23 runtime dispatches); #37 linear convergence of the polish; #32 Halley steps.
 - #33 derivative-based first stage instead of Nelder–Mead; #34 avoid the p×n matrix for one direction.
-- #29 `Statistics.median` in `parity_forward`; #25 a strike grid per maturity; #19 move `AnalyticMethod` out;
+- #25 a strike grid per maturity; #19 move `AnalyticMethod` out;
   #10 cheaper default method settings; #9 maturities in parallel.
 
 ## Working notes
