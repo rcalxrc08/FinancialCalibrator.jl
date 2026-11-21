@@ -23,3 +23,11 @@ A model and a method price the smiles of one maturity.
 
 `pricer(model, ZeroRate(r), method, smile)` returns one price per strike, on the device of the strikes. Checked by
 `test/runtests.jl` (closed form against Black–Scholes), `test/models_methods.jl` (models × methods), `test/gpu.jl`.
+
+## Verify (Kaimon)
+
+Run in a session of this project after a change here (`ex(q = false, ...)`; setup: `using FinancialCalibrator, FinancialMonteCarlo, FinancialToolbox, Test, Dates; const FC = FinancialCalibrator`). Observed 2026-11-21, Julia 1.13.4, FinancialMonteCarlo 0.9.0.
+
+| Check | Expect |
+|:--|:--|
+| `bs = BlackScholesProcess(0.2, FinancialMonteCarlo.Underlying(100.0, 0.03))`; `smile = FinancialMonteCarlo.EuropeanOptionSmile(1.0, strikes, strikes .>= 100)` with `strikes = 40.0:10.0:250.0`; `@inferred pricer(bs, ZeroRate(0.01), AnalyticMethod(), smile)` | `Vector{Float64}`, equal to `blsprice.(...)` (max relative difference 0.0) |

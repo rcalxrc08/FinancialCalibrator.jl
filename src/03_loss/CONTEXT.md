@@ -28,3 +28,13 @@ The volatility errors of the quotes that enter the loss, for the parameters of a
 
 `vol_errors(params, model, method, mkt, cache; vols)` and `loss(params, ...)`, inferred (`@inferred` in the tests, JET
 clean). Checked by `test/runtests.jl` (`vol_errors`, the quotes left out, Float32, inference) and the AD tests.
+
+## Verify (Kaimon)
+
+Run in a session of this project after a change here (`ex(q = false, ...)`; setup: `using FinancialCalibrator, FinancialMonteCarlo, FinancialToolbox, Test, Dates; const FC = FinancialCalibrator`). Observed 2026-11-21, Julia 1.13.4, FinancialMonteCarlo 0.9.0.
+
+| Check | Expect |
+|:--|:--|
+| `cache = FC.loss_cache(BlackScholesProcess(0.2, und), AnalyticMethod(), mkt)` on DAX; `sum(length, cache.quoted)` | 99 of 108 quotes (9 left out for low vega) |
+| `@inferred FC.loss([0.2], model, AnalyticMethod(), mkt)`, `@inferred vol_errors([0.2], model, AnalyticMethod(), mkt, cache)` | `Float64`, `Vector{Float64}` |
+| `JET.@report_opt target_modules = (FC,)` on `vol_errors`, `FC.loss(..., cache)`, `FC.loss_cache` | 0 reports each (without `target_modules`, `loss` reports ~40 runtime dispatches in Base's exception and `show` paths of its `catch`: not ours) |

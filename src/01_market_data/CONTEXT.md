@@ -25,3 +25,11 @@ Quotes in, `(underlying, mkt::MarketData)` out.
 `adapter(raw, T)` returns the `Underlying` (spot, implied dividend curve: a FinancialMonteCarlo `Curve` of `SVector`s,
 isbits since FinancialMonteCarlo 0.9) and `MarketData{T}`. Checked by the core testset of `test/runtests.jl` and
 `test/cboe.jl`.
+
+## Verify (Kaimon)
+
+Run in a session of this project after a change here (`ex(q = false, ...)`; setup: `using FinancialCalibrator, FinancialMonteCarlo, FinancialToolbox, Test, Dates; const FC = FinancialCalibrator`). Observed 2026-11-21, Julia 1.13.4, FinancialMonteCarlo 0.9.0.
+
+| Check | Expect |
+|:--|:--|
+| `und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))` | `mkt isa MarketData{Float64}`, `size(mkt.Volatility) == (9, 12)`, `isbits(und)` |

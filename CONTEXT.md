@@ -15,6 +15,8 @@ Find the task, open the contract it points to, and load only the inputs listed t
 | The AD benchmark of every backend combination | `bench/CONTEXT.md` |
 | The logo and the favicon | `etc/CONTEXT.md` |
 | Releases, compat, formatting | `references/workflows.md` |
+| What is being worked on, open issues by priority, known problems | `state/STATUS.md` |
+| Whether a change fits the package's goals; why a rule or structure exists | `references/mission.md`, `references/decisions.md` |
 
 Shared references (Layer 3), each loaded only when a contract lists it: `public_api.md` (the user-facing functions and
 data flow), `conventions.md`, `autodiff.md`, `dependencies.md`, `workflows.md`, `testing.md`, and one per stage:

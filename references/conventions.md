@@ -7,5 +7,5 @@ _Rules for every change._ (Layer 3 reference: stable facts, loaded only when a s
   sensitivities look wrong).
 - Return type assertions: none. The last one, in `analytic_prices` of a single option, went with FinancialMonteCarlo 0.8,
   whose mixtures hold tuples (the arity is in the type, #35). `loss`, `calibrate_cached` and the retrievers are inferred without
-  one; JET (`@report_opt`) is clean on `vol_errors`, `loss`, `loss_cache`, and reports only the uninferred loop of the
+  one; JET (`@report_opt target_modules = (FinancialCalibrator,)`) is clean on `vol_errors`, `loss`, `loss_cache`, and reports only the uninferred loop of the
   polish (#36).
