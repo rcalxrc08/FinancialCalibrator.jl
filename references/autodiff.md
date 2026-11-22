@@ -67,13 +67,17 @@ _Read before touching anything on the differentiated path._ (Layer 3 reference: 
   correct but slow: with FinancialMonteCarlo 0.9 mixture 1.6 ms vs ForwardDiff 0.11 ms, BS/Lewis 16 vs 2.7 ms (0.8:
   7.7 ms on the mixture, of which `set_parameters!` ~0.2 ms and the dividend-curve `integral` ~0.45 ms per maturity;
   0.9 gives both reverse rules, FinancialMonteCarlo#80: 11-19 μs and 4 μs). What remains on the mixture is mostly the
-  constructors' `@ignore_derivatives` closures (~11 μs each under Zygote, FinancialMonteCarlo#80) and this package's
+  constructors' `@ignore_derivatives` closures (~11 μs each under Zygote 0.7.18, ~2.5 μs under 0.7.19, FinancialMonteCarlo#80,
+  #85) and this package's
   pricing; with Lewis it is FinancialFFT's pricer. FinancialMonteCarlo's simulations are not for Zygote but its structs
   (models, curves, `set_parameters!`) must be. The branch stacks on that path (`Core._typeof_captured_variable`,
   which Zygote has a rule for only in forward mode, FluxML/Zygote.jl#1753, 33-57 of them; `Adapt.adapt_structure`;
-  FinancialFFT's `pricer`) cost only 3-16% of it. Zygote upstream, filed 2026-11-19 (Zygote 0.7.18, recheck on new
-  releases): #1751 `oftype` pullback not inferred (our `promote`), #1752 `gradient`/`pullback` compiled for
-  `f::Function` (4.4 μs -> 57 ns specialized, the size-dependent slowdowns), #1753, #1754 branch-only stacks. Measured 2026-11-19 (i7-8550U, Julia 1.13.4, DifferentiationInterface 0.7.22, one
+  FinancialFFT's `pricer`) cost only 3-16% of it. Zygote upstream, filed 2026-11-19 (Zygote 0.7.18): #1751 `oftype`
+  pullback not inferred (our `promote`; still open), #1752 `gradient`/`pullback` compiled for `f::Function` (4.4 μs ->
+  57 ns specialized, the size-dependent slowdowns), #1753, #1754 branch-only stacks: #1752-#1754 fixed in Zygote 0.7.19
+  (2026-11-22). Re-measured on 0.7.19 (fresh processes, the same toy kernel): ternary 18-21 → 2.8-2.9 μs, `Bool *`
+  4.5-4.6 → 3.2-3.4 μs, `ifelse` on the flag 13.5-13.8 → 12.6 μs; two nested branches 30-43 → 5.4-5.7 μs against
+  5.1-5.2 μs for nested `ifelse`. The Zygote penalty of branches is gone from 0.7.19 on (D-003). Measured 2026-11-19 (i7-8550U, Julia 1.13.4, DifferentiationInterface 0.7.22, one
   process per case, gradient in ns, ternary on `isCall` vs `Bool *`): toy kernel `exp(-rT) (F - κ)` Zygote 48100 vs
   6675 (7x), Mooncake 0.5.71 110 vs 106, Enzyme 0.13.221 (reverse) 66 vs 62; the mixture kernel (3 components, one
   option, from a vector) Zygote 43000 vs 42200, Mooncake 432 vs 421, Enzyme 797 vs 750. Mooncake and Enzyme compile the
@@ -87,7 +91,7 @@ _Read before touching anything on the differentiated path._ (Layer 3 reference: 
   mixture kernel (#39): `sum(map(closure, w, σ))` over tuples (7.5 μs vs 0.9 μs unrolled, pullback not inferred with the kernel's closure over
   `F`, `κ` and `blkprice`; a minimal tuple `map` is inferred, so the cause is not pinned down)
   and `oftype(x, y)` (Base's `oftype` is `y isa typeof(x) ? y : convert(...)`, a branch: FluxML/Zygote.jl#1751, Zygote
-  0.7.18; recheck on new Zygote releases, `oftype` could come back then). The kernel now sums with the `@generated` `mixture_price` (nested `muladd`s, any arity) and ends
+  0.7.18, still open in 0.7.19; recheck on new Zygote releases, `oftype` could come back then). The kernel now sums with the `@generated` `mixture_price` (nested `muladd`s, any arity) and ends
   with `ifelse(positive, promote(mixture, linear)...)`: Zygote gradient 18.2 μs -> 0.55 μs on a copy of the kernel,
   Mooncake ~0.75 μs and Enzyme ~1.05 μs either way. The real kernel built from the parameters inside the gradient (as
   `pricer` does), fresh process per arity: value / Zygote gradient 87/120, 179/262, 265/369, 345/462 ns for 1-4

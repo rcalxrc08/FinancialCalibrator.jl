@@ -27,7 +27,9 @@ the details stay in the reference each entry points to.
 - **Decision:** no `if`/ternary on a flag or a value in pricing and loss code: `ifelse`, `Bool * x`, `call_put_sign`
   weights, `max`/`min`; validations in `@non_differentiable` functions called directly (#43, which superseded the
   `ChainRulesCore.@ignore_derivatives` blocks of #39: their closures cost Zygote ~11 μs each).
-- **Why:** Zygote is about 20x slower through branches, and cannot differentiate some of them at all.
+- **Why:** Zygote is about 20x slower through branches, and cannot differentiate some of them at all. Zygote 0.7.19
+  (2026-11-22) fixed the branch stacks (FluxML/Zygote.jl#1754): re-measured, a branch costs Zygote no more than a select
+  (`autodiff.md`), so this reason holds only for older Zygote; whether the rule stays is to decide.
 - **Consequences:** rule in `CLAUDE.md`; details in `autodiff.md`.
 - **Status:** active
 
