@@ -259,8 +259,10 @@ quotes and on a large surface (4 maturities × 500 strikes, 1929 quotes in the l
 
 Mooncake differentiates the Fourier methods on the device too (Variance Gamma and Heston, the `loss` gradient matches
 ForwardDiff to 4e-15), through a rule of the extension for the concatenation of the maturities
-(chalk-lab/Mooncake.jl#1484); the closed form of the mixture is a callable with state, which its device broadcasts
-refuse.
+(chalk-lab/Mooncake.jl#1484), and the closed forms (Black–Scholes and the mixtures, 1e-14): their device broadcasts
+refuse a callable with state, so a rule of the CUDA and Mooncake extension differentiates the same prices with the
+numbers of the kernel passed as broadcast arguments (#41 group 3c). The Mooncake Jacobian of `vol_errors` on the device
+fails in Mooncake itself, which refuses a `CuArray` output (#41 group 3d, chalk-lab/Mooncake.jl#1485).
 
 On the host, `Float32` is slower than `Float64` and loses digits: the parameters agree to 1e-4 and their derivatives
 to 1e-3. On the device `Float32` halves the times of the large surface. On 1929 quotes the gradient of

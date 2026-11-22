@@ -101,3 +101,18 @@ end
     # branch (FluxML/Zygote.jl#1751, Zygote 0.7.18; #39)
     return ifelse(positive, promote(mixture, linear)...)
 end
+
+# The same prices with a stateless callable: the numbers of the kernel are broadcast arguments, not fields. Mooncake's
+# CUDA broadcast refuses a callable with differentiable fields (#41 group 3c), so its rule for `analytic_prices` on the
+# device (FinancialCalibratorCUDAMooncakeExt) differentiates this function instead. Not the default: Zygote's device
+# broadcast infers its dual numbers for at most 10 arguments, a mixture of N components has 2N + 6.
+struct MixturePrice{PT, N} end
+@generated function (::MixturePrice{PT, N})(K, isCall::Bool, F, shift, r, T, σw::Vararg{Any, M}) where {PT, N, M}
+    σ = Expr(:tuple, (:(σw[$j]) for j = 1:N)...)
+    w = Expr(:tuple, (:(σw[$(N+j)]) for j = 1:N)...)
+    return quote
+        kernel = LognormalMixtureKernel(F, shift, $σ, $w, r, T)
+        return PriceAs{PT, typeof(kernel)}(kernel)(K, isCall)
+    end
+end
+stateless_prices(::Type{PT}, k::LognormalMixtureKernel{N}, opt::FinancialMonteCarlo.EuropeanOptionSmile) where {PT, N} = MixturePrice{PT, N}().(opt.K, opt.isCall, k.F, k.shift, k.r, k.T, k.σ..., k.w...)

@@ -5,16 +5,16 @@ an agent reads first._ Updated: 2026-11-21
 
 ## Current focus
 
-AD backend combinations that fail in the benchmark (#41). Fixed: groups 1, 3a, 3b, 4 (FinancialFFT 0.6.3, c1e256c).
+AD backend combinations that fail in the benchmark (#41). Fixed: groups 1, 3a, 3b, 4 (FinancialFFT 0.6.3, c1e256c); 3c on branch `issue-41-3c`.
 The status table is #41 comment 7059648077 (edited in place); open points and next steps are comment 7061673022.
 
 ## Active work
 
 | Item | Branch | Issue | Next step |
 |:--|:--|:--|:--|
-| Mooncake with a stateful callable on the device (closed form) | `master` | #41 group 3c | device-only stateless broadcast |
-| Mooncake Jacobian on the device | `master` | #41 group 3d | toy reproducer CuArray → CuArray |
-| Enzyme reverse on the device | `master` | #41 group 5 | compare the stack with Enzyme#4094: comment there if the same family, else a toy reproducer and a new issue |
+| Mooncake on the device, closed form: rule through `stateless_prices` (CUDA+Mooncake extension) | `issue-41-3c` | #41 group 3c | review; full suite, then merge; update the #41 comments |
+| Mooncake Jacobian on the device | `master` | #41 group 3d | upstream: chalk-lab/Mooncake.jl#1485 (no `CuArray` method in its output check, fix verified); recheck on each Mooncake release |
+| Enzyme on the device (forward and reverse) | `master` | #41 group 5 | same assertion and warnings as Enzyme#4094 in both modes: comment there with the reverse case |
 | Enzyme `parmsRemoved` | `master` | #41 group 2 | toy reproducer for Enzyme |
 | Groups 6 and 7 | `master` | #41, #42 | 7 waits for Enzyme#4108; 6: recheck once #4108 is fixed, meanwhile reduce it (batched reverse over a `ComplexF32` Cos sum) |
 | Docs and Mooncake as inner `x` timing | `master` | #41 group 8 | re-time the Heston Enzyme `calibrate` cells (still ✗ in `docs/src/backends.md`), add a test, full bench rerun |

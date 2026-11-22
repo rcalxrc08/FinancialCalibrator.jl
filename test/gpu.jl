@@ -86,6 +86,16 @@ const FC = FinancialCalibrator
         @test DI.gradient(q -> FC.loss(q, nig, method, gmkt), mooncake, p0) ≈ host rtol = 1e-8
     end
 
+    # The closed form broadcasts a callable with state, which Mooncake's device broadcast refuses: the extension's rule
+    # differentiates the same prices with the numbers of the kernel as broadcast arguments (#41 group 3c). A mixture of
+    # three components (12 broadcast arguments) with the dividend curve of the DAX, and Black–Scholes.
+    @testset "Mooncake gradient of the closed form on the GPU / $name" for (name, model) in ("slnm" => ShiftedProcess(LogNormalMixture((0.2, 0.25, 0.3), (0.2, 0.3), dax_und), -0.1), "bs" => BlackScholesProcess(0.2, dax_und))
+        progress("Mooncake gradient of the closed form on the GPU / $name")
+        ps = FinancialMonteCarlo.get_parameters(model)
+        host = ForwardDiff.gradient(q -> FC.loss(q, model, AnalyticMethod(), mkt), ps)
+        @test DI.gradient(q -> FC.loss(q, model, AnalyticMethod(), gmkt), AutoMooncake(; config = nothing), ps) ≈ host rtol = 1e-10
+    end
+
     @testset "smile_prices / Black and Scholes closed form" begin
         progress("smile_prices / Black and Scholes closed form")
         bs = BlackScholesProcess(0.2, und)
