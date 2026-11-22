@@ -25,3 +25,10 @@ end point stationary (|∇L| ~ 1e-8 on DAX instead of NelderMead's ~1e-3).
 - Default arguments of `calibrate`/`calibrated_parameters` are the constants `DEFAULT_OPTIMIZER`/`DEFAULT_OPTIONS`, not
   `NelderMead()`: a default argument is evaluated in the method Mooncake traces, and `NelderMead()` builds `Dict(kwargs)`,
   whose constructor has a try/catch on Julia 1.10 (Mooncake fails). Do not construct anything with keywords there.
+
+## Where the optimizer stops at an unpriceable point (#38)
+
+`optimal_variables_and_errors` prices the optimizer's end point once (`numerical_or_nothing`): if it cannot be priced
+(a numerical failure such as a negative model price), the polish is skipped and `calibrate` returns the `Inf` result,
+with or without the polish; otherwise the polish starts from those residuals, so the surface is not priced twice. Before,
+the polish priced the point itself, outside its failure guard, and the `DomainError` of the loss came out.

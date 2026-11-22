@@ -71,7 +71,10 @@ function optimal_variables_and_errors(model, pricing_method, mktData::MarketData
     options = !polish && opt_options === DEFAULT_OPTIONS ? FULL_OPTIONS : opt_options
     result = optimize(loss_function, x0, opt_method, options; autodiff = autodiff)
     x = result.minimizer
-    x, e = polish ? levenberg_marquardt_and_errors(errors, x; backend = polish_backend) : (x, numerical_or_nothing(errors, x))
+    # the errors where the optimizer stopped, or nothing if they cannot be priced there (#38): then the polish is skipped,
+    # as without it, and calibrate returns the Inf result in both cases; otherwise the polish starts from them
+    e = numerical_or_nothing(errors, x)
+    x, e = polish && e !== nothing ? levenberg_marquardt_and_errors(errors, x, e; backend = polish_backend) : (x, e)
     if verbose
         println(result)
         println("loss after the polish: ", e === nothing ? Inf : sum(abs2, e) / 2)
@@ -145,8 +148,9 @@ end
 levenberg_marquardt(errors, x::AbstractVector{<:Real}; kwargs...) = first(levenberg_marquardt_and_errors(errors, x; kwargs...))
 
 # The polish and the residuals at its end point.
-function levenberg_marquardt_and_errors(errors, x::AbstractVector{T}; backend::ADTypes.AbstractADType = default_backend(), iterations::Integer = 100, μ::Real = 1e-2, xtol::Real = 1e-12) where {T <: Real}
-    e = errors(x)
+levenberg_marquardt_and_errors(errors, x::AbstractVector{<:Real}; kwargs...) = levenberg_marquardt_and_errors(errors, x, errors(x); kwargs...)
+# e: the residuals at x, already computed by the caller
+function levenberg_marquardt_and_errors(errors, x::AbstractVector{T}, e; backend::ADTypes.AbstractADType = default_backend(), iterations::Integer = 100, μ::Real = 1e-2, xtol::Real = 1e-12) where {T <: Real}
     # The Jacobian is prepared once (not at every step), but its type is still not inferred, since the chunk depends
     # on length(x). So the trial point is written into an array of the type of x: the variables keep their type
     # whatever the type of the step. x and x_trial swap at each accepted step, hence the copy: the caller's array is

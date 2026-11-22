@@ -255,6 +255,10 @@ progress("Running the core testset")
             @test norm(g) < 1e-9
             # without it, NelderMead stops at its own tolerances
             @test calibrate(model, method, mkt; polish = false).OptimalValue >= res.OptimalValue
+            # a start point that cannot be priced (a too coarse Lewis gives a negative price): the Inf result, with and
+            # without the polish (#38; with it, calibrate used to throw the DomainError of the loss)
+            unpriceable(polish) = calibrate(HestonProcess(0.3, 0.2, 0.0, 1.0, -0.5, 0.04, und), LewisMethod(100.0, 501), mkt; polish = polish).OptimalValue
+            @test unpriceable(false) == unpriceable(true) == Inf
             # no model volatility at the quotes left out of the loss
             @test count(isnan, res.ModelVolatility) == 9
             # the model volatilities come from the errors of the polish: the same as pricing the surface again
