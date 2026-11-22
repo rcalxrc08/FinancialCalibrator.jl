@@ -12,7 +12,6 @@ The status table is #41 comment 7059648077 (edited in place); open points and ne
 
 | Item | Branch | Issue | Next step |
 |:--|:--|:--|:--|
-| Validations as `@non_differentiable` functions; `CalibrationID`; CBOE day count | `calibrator-fixes` | #43 #6 #28 | review, merge, push |
 | Mooncake on the device, closed form: rule through `stateless_prices` (CUDA+Mooncake extension) | `issue-41-3c` | #41 group 3c | review; full suite, then merge; update the #41 comments |
 | Mooncake Jacobian on the device | `master` | #41 group 3d | upstream: chalk-lab/Mooncake.jl#1485 (no `CuArray` method in its output check, fix verified); recheck on each Mooncake release |
 | Enzyme on the device (forward and reverse) | `master` | #41 group 5 | same assertion and warnings as Enzyme#4094 in both modes: comment there with the reverse case |
