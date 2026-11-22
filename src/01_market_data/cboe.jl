@@ -142,13 +142,17 @@ function interpolate_on(x, y, grid)
     end
 end
 
+# The CBOE quotes implied volatilities on ACT/365 year fractions: the times of the parity forwards and of the dividend
+# yields too, and the adapter reads them back with the same basis (#28).
+const CBOE_BASIS = 3
+
 function cboe_raw_market_data(chain, root, r, grid)
     refDate = cboe_reference_date(chain)
     S0 = Float64(chain["data"]["current_price"])
     ref = string(refDate)
     rates, dividends, vols = Dict{String, Any}[], Dict{String, Any}[], Dict{String, Any}[]
     for (expiry, quotes) in sort(collect(cboe_quotes(chain["data"]["options"], root)), by = first)
-        T = Dates.value(expiry - refDate) / 365
+        T = yearfrac(refDate, expiry, CBOE_BASIS)
         T > 0 || continue
         F = parity_forward(quotes, S0, r, T)
         (F === nothing || F <= 0) && continue
@@ -163,5 +167,5 @@ function cboe_raw_market_data(chain, root, r, grid)
     end
     isempty(rates) && throw(ArgumentError("no expiry of root $root covers the moneyness grid $(first(grid)) to $(last(grid))"))
     spot = [Dict("referenceDate" => ref, "value" => S0)]
-    return RawMarketData(refDate, JSON.json(spot), JSON.json(rates), JSON.json(dividends), JSON.json(vols))
+    return RawMarketData(refDate, JSON.json(spot), JSON.json(rates), JSON.json(dividends), JSON.json(vols), CBOE_BASIS)
 end

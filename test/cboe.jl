@@ -55,6 +55,12 @@ end
     @test all(mkt.ZeroRates .≈ RATE)
     # put–call parity on the mid prices recovers the forward, and the dividend yield
     @test all(FC.implied_dividend(und, t) ≈ DIVIDEND for t in mkt.TimeToMaturity)
+    # the times are ACT/365, as the quotes (#28): the forward rebuilt from the adapted rate and dividend curves is the
+    # parity forward of the chain
+    @test raw.basis == 3
+    @test mkt.TimeToMaturity ≈ [yearfrac(Date(2026, 11, 12), d, 3) for d in mkt.MaturityDates]
+    rebuilt = [S0 * exp((r - FC.implied_dividend(und, t)) * t) for (r, t) in zip(mkt.ZeroRates, mkt.TimeToMaturity)]
+    @test rebuilt ≈ [S0 * exp((RATE - DIVIDEND) * Dates.value(d - Date(2026, 11, 12)) / 365) for d in mkt.MaturityDates] rtol = 1e-12
     # the strikes of the grid are listed: the surface is the skew itself, out of the money puts below the forward and
     # calls above it giving the same volatility
     @test mkt.Volatility ≈ [skew_vol(K, T) for T in mkt.TimeToMaturity, K in mkt.Strikes] rtol = 1e-4

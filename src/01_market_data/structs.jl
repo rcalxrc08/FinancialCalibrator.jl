@@ -25,13 +25,17 @@ end
 CalibrationID(underlying::AbstractString, refDate::Date, currency::AbstractString) = CalibrationID(underlying, Dates.format(refDate, REF_DATE_FORMAT), currency)
 CalibrationID(; underlying::AbstractString, refDate::Union{AbstractString, Date}, currency::AbstractString) = CalibrationID(underlying, refDate, currency)
 
+# The raw data and the day count `basis` (FinancialToolbox's `yearfrac`) its times are measured in: the adapter reads the
+# curves and the surface with the same basis that built them (#28). 1 (30/360 SIA) for the files of data/json, 3
+# (ACT/365) for the CBOE chains.
 struct RawMarketData
     refDate::Date
     SpotString::String
     RfString::String
     ImplDivString::String
     VolatString::String
-    RawMarketData(refDate, SpotStringIn, RfStringIn, ImplDivStringIn, VolatStringIn) = new(refDate, SpotStringIn, RfStringIn, ImplDivStringIn, VolatStringIn)
+    basis::Int
+    RawMarketData(refDate, SpotStringIn, RfStringIn, ImplDivStringIn, VolatStringIn, basis::Integer = 1) = new(refDate, SpotStringIn, RfStringIn, ImplDivStringIn, VolatStringIn, basis)
 end
 
 """

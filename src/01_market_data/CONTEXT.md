@@ -8,7 +8,7 @@ Quotes in, `(underlying, mkt::MarketData)` out.
 |:--|:--|
 | `structs.jl` | `CalibrationID` (checked date and currency; positional, keyword or `Date`, #6), input strategies, `RawMarketData`, `MarketData{T}` (maturities, rates, strikes, vols only), `implied_dividend` |
 | `retriever_calibration.jl` | reads `data/json/`; `REF_DATE_FORMAT` and `parse_ref_date` |
-| `cboe.jl` | CBOE chains: `CboeInputStrategy`, `CboeWebInputStrategy`, `cboe_snapshot` |
+| `cboe.jl` | CBOE chains: `CboeInputStrategy`, `CboeWebInputStrategy`, `cboe_snapshot`; ACT/365 times (`CBOE_BASIS`, #28) |
 | `adapter_calibration.jl` | JSON → surface, `interpolate_linear`, the `ImpliedCurve` of the dividends |
 | `references/market_data.md` | formats, filters, parity, the sample data, the snapshots folder |
 | `references/public_api.md` | where spot and dividends live |

@@ -23,5 +23,10 @@ recalibration) runs only when `data/json/cboe/2026-11-12/CboeOptions_SPX12Nov202
 chain is 14 MB): CBOE chain and spot and FRED Treasury curve in `data/json/cboe/<yyyy-mm-dd>/`, ECB and Yahoo in
 `data/json/real/`, whose README describes all the sources. The adapter now selects the volatility rows with the same mask as the maturities (#2).
 
+- Day counts (#28): `RawMarketData` carries the `basis` (FinancialToolbox's `yearfrac`) its times were built with, and
+  the adapter reads the curves and the surface with it: 1 (30/360 SIA) for the files of `data/json`, 3 (ACT/365,
+  `CBOE_BASIS`) for the CBOE chains, whose implied volatilities, parity forwards and dividend yields are on ACT/365.
+  Before, the loader used `/365` and the adapter 30/360, so the forward rebuilt from the adapted curves missed the
+  parity forward (5053.20 against 5052.47 on a 4-month SPX expiry of the test chain).
 - The sample data is `data/json/*Dax22Aug2016.json`.
 - `ImpliedCurve` prepends the point `0 => 0` so the integrated dividend over a maturity is not the spot value at that maturity.

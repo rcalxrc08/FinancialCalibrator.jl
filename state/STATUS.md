@@ -27,7 +27,6 @@ The status table is #41 comment 7059648077 (edited in place); open points and ne
 | #42 | the `try` of `loss` turns a failing derivative into a zero gradient | compare with ForwardDiff when a backend gives a zero gradient |
 | #38 | an unpriceable start point: `Inf` without the polish, `DomainError` with it | start from a priceable point |
 | #27 | shifted lognormal mixture on DAX converges to a degenerate corner (α ≈ −234) | — (optimum is degenerate, cond ≈ 5e9) |
-| #28 | CBOE loader uses `/365` instead of `yearfrac` | — |
 
 ## Technical debt and enhancements
 

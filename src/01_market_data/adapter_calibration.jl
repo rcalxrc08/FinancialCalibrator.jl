@@ -53,7 +53,7 @@ Parse the raw market data. Returns the `Underlying` (spot and implied dividend c
 """
 function adapter(jsonMktDataIN::RawMarketData, ::Type{T} = Float64) where {T <: AbstractFloat}
     ####Input Adapter
-    adaptedData=general_adapter_strategy(jsonMktDataIN.SpotString, jsonMktDataIN.RfString, jsonMktDataIN.ImplDivString, jsonMktDataIN.VolatString)
+    adaptedData=general_adapter_strategy(jsonMktDataIN.SpotString, jsonMktDataIN.RfString, jsonMktDataIN.ImplDivString, jsonMktDataIN.VolatString, (0.1, 5.0), (0.7, 2.0), jsonMktDataIN.basis)
     S0, TimeToMaturity, maturityDates, ZeroRates, ImpliedDividend, Strikes, Volatility = adaptedData
 
     dividend_curve = FinancialMonteCarlo.ImpliedCurve(Vector{T}(ImpliedDividend), Vector{T}(TimeToMaturity))
