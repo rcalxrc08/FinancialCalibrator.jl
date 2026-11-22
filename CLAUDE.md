@@ -28,8 +28,9 @@ Rules for every change (details in `references/conventions.md` and `references/a
 
 - Spot and dividends live in the model's `Underlying`, never in `MarketData` nor as arguments.
 - Generic floating point type: no `::Float64` nor Float64 literals on the pricing path; `Float32` must work.
-- No branches on the differentiated path: `ifelse`, `Bool *`, weights; validations are named functions marked
-  `ChainRulesCore.@non_differentiable`, called directly (no `@ignore_derivatives` closure, #43).
+- Branches on the differentiated path are allowed (Zygote ≥ 0.7.19, D-006); as a select, `Bool *` or weights rather than
+  `ifelse` on a scalar flag; validations are named functions marked `ChainRulesCore.@non_differentiable`, called
+  directly (no `@ignore_derivatives` closure, #43).
 - No package that differentiates is a hard dependency (`references/dependencies.md`).
 - Reuse the author's packages (FinancialMonteCarlo, FinancialToolbox's `blsprice`/`blsimpv`, FinancialFFT,
   PatternVectors for quadrature weights) and established libraries; `@muladd` for every `a * b + c`.

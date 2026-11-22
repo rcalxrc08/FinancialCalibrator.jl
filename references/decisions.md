@@ -26,10 +26,11 @@ the details stay in the reference each entry points to.
 
 - **Decision:** no `if`/ternary on a flag or a value in pricing and loss code: `ifelse`, `Bool * x`, `call_put_sign`
   weights, `max`/`min`; validations in `@non_differentiable` functions called directly (#43, which superseded the
-  `ChainRulesCore.@ignore_derivatives` blocks of #39: their closures cost Zygote ~11 μs each).
+  `ChainRulesCore.@ignore_derivatives` blocks of #39: their closures cost Zygote ~11 μs each). Branch-free part
+  superseded by D-006.
 - **Why:** Zygote is about 20x slower through branches, and cannot differentiate some of them at all. Zygote 0.7.19
   (2026-11-22) fixed the branch stacks (FluxML/Zygote.jl#1754): re-measured, a branch costs Zygote no more than a select
-  (`autodiff.md`), so this reason holds only for older Zygote; whether the rule stays is to decide.
+  (`autodiff.md`), so this reason holds only for older Zygote; the rule is relaxed in D-006.
 - **Consequences:** rule in `CLAUDE.md`; details in `autodiff.md`.
 - **Status:** active
 
@@ -49,4 +50,14 @@ the details stay in the reference each entry points to.
   (L2), `references/` (L3), `state/` (L4, added 2026-11-21); `test/context.jl` keeps the map in sync with the code.
 - **Why:** the previous single CLAUDE.md had grown to ~4700 words, loaded whole for every task.
 - **Consequences:** a change updates the contracts, references and `state/STATUS.md` it touches in the same commit.
+- **Status:** active
+
+## D-006 (2026-11-22) Branches allowed on the differentiated path (supersedes the branch-free part of D-003)
+
+- **Decision:** `if` and ternaries on flags or values are allowed in pricing and loss code; where a select is used,
+  `Bool *` or weights rather than `ifelse` on a scalar flag; validations stay `@non_differentiable` functions (#43).
+- **Why:** Zygote 0.7.19 fixed the branch stacks (FluxML/Zygote.jl#1754): on the toy kernel of #39 a ternary 18-21 →
+  2.8-2.9 μs against 3.2-3.4 μs for `Bool *`, nested branches as fast as nested `ifelse` (`autodiff.md`); `ifelse` on a
+  scalar flag stays ~4x `Bool *`. Mooncake and Enzyme never cared.
+- **Consequences:** the test extras require Zygote 0.7.19; rule in `CLAUDE.md`; `autodiff.md`.
 - **Status:** active

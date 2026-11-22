@@ -26,7 +26,9 @@ _Read before touching anything on the differentiated path._ (Layer 3 reference: 
   tie with ForwardDiff on 99 quotes, ForwardDiff for the full Jacobian; the device pays from ~1000 quotes, Float32 only on
   the device (on the host slower than Float64). 43 failing combinations and one silently wrong gradient (Enzyme reverse,
   Heston loss in Float32, relative error 1) are explained in #41.
-- **No branches on the differentiated path** (#39): no `if`/ternary on a flag or a value in the pricing and loss code. Use
+- **Branches on the differentiated path** (#39, relaxed by D-006): allowed since Zygote 0.7.19, which fixed their
+  penalty (below); what follows is the history and the select forms that remain the better choice where a select is used.
+  Before: no `if`/ternary on a flag or a value in the pricing and loss code. Use
   selects (`ifelse`, `Bool * x`, which has a strong zero, `call_put_sign` weights, `max`/`min`); validations that throw
   are named functions marked `ChainRulesCore.@non_differentiable` and called directly (`check_shift`, `α < 1` of the
   shifted mixture; `check_prices`; `check_surface_size`, the `size(vols)` checks), with the throw out of line (#43): an
