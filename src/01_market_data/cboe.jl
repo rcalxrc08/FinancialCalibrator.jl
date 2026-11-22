@@ -41,7 +41,7 @@ different one gets a warning. With `dir`, the chain is also saved there, as [`cb
 `CboeInputStrategy(dir = dir)` reads it again later:
 
 ```julia
-id = CalibrationID("SPX", Dates.format(today(), "dduyyyy"), "USD")
+id = CalibrationID("SPX", today(), "USD")
 und, mkt = adapter(retriever(id, CboeWebInputStrategy(dir = "market_data")))
 ```
 """

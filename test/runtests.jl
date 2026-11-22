@@ -48,6 +48,12 @@ progress("Running the core testset")
         raw = retriever(id, IOFileInputStrategy())
         @test raw isa RawMarketData
         @test raw.refDate == Date(2016, 8, 22)
+        # the same id by keywords or with a Date; swapped or malformed arguments fail at once (#6)
+        @test CalibrationID(currency = "EUR", underlying = "Dax", refDate = "22Aug2016") == id
+        @test CalibrationID("Dax", Date(2016, 8, 22), "EUR") == id
+        @test_throws ArgumentError CalibrationID("22Aug2016", "Dax", "EUR")
+        @test_throws ArgumentError CalibrationID("Dax", "2016-08-22", "EUR")
+        @test_throws ArgumentError CalibrationID("EUR", "22Aug2016", "Dax")
 
         und, mkt = adapter(raw)
         @test und isa FinancialMonteCarlo.AbstractUnderlying

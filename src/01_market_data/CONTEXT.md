@@ -6,7 +6,7 @@ Quotes in, `(underlying, mkt::MarketData)` out.
 
 | Load | Why |
 |:--|:--|
-| `structs.jl` | `CalibrationID`, input strategies, `RawMarketData`, `MarketData{T}` (maturities, rates, strikes, vols only), `implied_dividend` |
+| `structs.jl` | `CalibrationID` (checked date and currency; positional, keyword or `Date`, #6), input strategies, `RawMarketData`, `MarketData{T}` (maturities, rates, strikes, vols only), `implied_dividend` |
 | `retriever_calibration.jl` | reads `data/json/`; `REF_DATE_FORMAT` and `parse_ref_date` |
 | `cboe.jl` | CBOE chains: `CboeInputStrategy`, `CboeWebInputStrategy`, `cboe_snapshot` |
 | `adapter_calibration.jl` | JSON → surface, `interpolate_linear`, the `ImpliedCurve` of the dividends |
@@ -33,3 +33,4 @@ Run in a session of this project after a change here (`ex(q = false, ...)`; setu
 | Check | Expect |
 |:--|:--|
 | `und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))` | `mkt isa MarketData{Float64}`, `size(mkt.Volatility) == (9, 12)`, `isbits(und)` |
+| `CalibrationID("22Aug2016", "Dax", "EUR")`, `CalibrationID(refDate = Date(2016, 8, 22), underlying = "Dax", currency = "EUR").refDate` | `ArgumentError`; `"22Aug2016"` |

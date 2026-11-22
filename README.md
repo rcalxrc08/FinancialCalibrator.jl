@@ -36,7 +36,7 @@ the out of the money quotes whose vega is at least `min_vega * S0`.
 ## Market data from the CBOE
 
 ```julia
-id = CalibrationID("SPX", Dates.format(today(), "dduyyyy"), "USD")
+id = CalibrationID("SPX", today(), "USD")
 und, mkt = adapter(retriever(id, CboeWebInputStrategy(rate = 0.04, dir = "market_data")))  # downloaded (and saved)
 und, mkt = adapter(retriever(id, CboeInputStrategy(rate = 0.04, dir = "market_data")))     # the saved chain, offline
 ```

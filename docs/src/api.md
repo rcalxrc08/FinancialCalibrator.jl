@@ -43,12 +43,13 @@ option chain, implies the forward and the dividends from put–call parity, and 
 volatilities on a moneyness grid; [`CboeWebInputStrategy`](@ref) downloads the current chain and can save it:
 
 ```julia
-id = CalibrationID("SPX", Dates.format(today(), "dduyyyy"), "USD")
+id = CalibrationID("SPX", today(), "USD")
 und, mkt = adapter(retriever(id, CboeWebInputStrategy(dir = "market_data")))   # downloaded, and saved in market_data/
 und, mkt = adapter(retriever(id, CboeInputStrategy(dir = "market_data")))      # read again from the saved chain
 ```
 
 ```@docs
+CalibrationID
 MarketData
 retriever
 adapter

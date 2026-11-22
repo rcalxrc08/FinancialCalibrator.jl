@@ -3,12 +3,27 @@ abstract type InputType end
 
 struct IOFileInputStrategy <: InputType end
 
+"""
+    CalibrationID(underlying, refDate, currency)
+    CalibrationID(; underlying, refDate, currency)
+
+The market data of a calibration: the `underlying` (`"Dax"`, `"SPX"`), the reference date `refDate`, a `Date` or a
+string with day, month and year as in `"22Aug2016"` (the names of the data files), and the ISO 4217 code of the
+`currency` (`"EUR"`). The three are checked here (#6): a date that does not parse or a currency that is not three capital
+letters throws an `ArgumentError`, so that swapped arguments fail at once rather than as a missing file later.
+"""
 struct CalibrationID
     underlying::String
     refDate::String
     currency::String
-    CalibrationID(underlyingIn, refDateIn, currencyIn) = new(underlyingIn, refDateIn, currencyIn)
+    function CalibrationID(underlying::AbstractString, refDate::AbstractString, currency::AbstractString)
+        parse_ref_date(refDate)   # throws an ArgumentError with the expected format
+        occursin(r"^[A-Z]{3}$", currency) || throw(ArgumentError("the currency of a CalibrationID is an ISO 4217 code such as \"EUR\", not \"$currency\""))
+        return new(String(underlying), String(refDate), String(currency))
+    end
 end
+CalibrationID(underlying::AbstractString, refDate::Date, currency::AbstractString) = CalibrationID(underlying, Dates.format(refDate, REF_DATE_FORMAT), currency)
+CalibrationID(; underlying::AbstractString, refDate::Union{AbstractString, Date}, currency::AbstractString) = CalibrationID(underlying, refDate, currency)
 
 struct RawMarketData
     refDate::Date
