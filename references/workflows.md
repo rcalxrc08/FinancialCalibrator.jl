@@ -28,3 +28,10 @@ Run the formatter before committing. `FinancialFFT` lives in the public LocalReg
 ## Sub-environments
 
 - **Compat of the package itself in the sub-environments** (`docs/`, which load it through `[sources]` with a path): each has a `[compat]` entry for the package, so CompatHelper does not open PRs to add one (it has no option to skip a dependency). Bump these entries in the same commit as a breaking version bump, otherwise the local package no longer satisfies them and the environment fails to resolve.
+
+## Releases
+
+FinancialCalibrator is not registered: it is used from its repository (`Pkg.add(url = …)` or `Pkg.develop`). When its
+dependencies release, widen their compat here and in `docs/` and `bench/`, and let CI resolve the new versions.
+FinancialFFT and VibratoMonteCarlo come from the private registry `localregistry` (`rcalxrc08/LocalRegistry`), which CI
+adds with the `localregistry` input of `julia-buildpkg`; FinancialMonteCarlo and FinancialToolbox from General.
