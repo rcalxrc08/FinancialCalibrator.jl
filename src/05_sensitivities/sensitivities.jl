@@ -73,7 +73,7 @@ ForwardDiff everywhere suits a model with few parameters. With a reverse mode ou
 one to change: the pullback needs ``(\\partial_v \\nabla_x L)^\\top w``, which forward mode gets one direction per quote.
 """
 function calibrated_parameters(model::FinancialMonteCarlo.BaseProcess, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData, vols::AbstractMatrix{<:Real} = mktData.Volatility, opt_method::Optim.AbstractOptimizer = DEFAULT_OPTIMIZER, opt_options::Optim.Options = DEFAULT_OPTIONS; parametrization::Parametrization = default_parametrization(model), autodiff::ADTypes.AbstractADType = default_backend(), polish_backend::ADTypes.AbstractADType = default_backend(), conditions_backend::ADTypes.AbstractADType = default_backend(), implicit_backends::NamedTuple{(:x, :y)} = (x = default_backend(), y = default_backend()), min_vega::Real = 1e-3)
-    ChainRulesCore.@ignore_derivatives size(vols) == size(mktData.Volatility) || throw(DimensionMismatch("vols is $(size(vols)), the surface of mktData $(size(mktData.Volatility))"))
+    check_surface_size(vols, mktData)
     # the variables at the solution, with the rules of ImplicitDifferentiation; the parameters follow by the chain rule
     return parametrization.to_params(calibrated_variables(vols, model, pricing_method, mktData, opt_method, opt_options, parametrization, autodiff, polish_backend, conditions_backend, implicit_backends, min_vega))
 end

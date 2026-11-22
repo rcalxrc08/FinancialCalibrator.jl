@@ -20,10 +20,13 @@ function analytic_kernel(model::LogNormalMixture, S0, r, d, T)
     return LognormalMixtureKernel(F, zero(F), mixture_volatilities(model), mixture_component_weights(model), r, T)
 end
 
+# a validation, not a derivative (#39): @non_differentiable, called without an @ignore_derivatives closure (#43)
+check_shift(α) = α < 1 ? nothing : throw_domain_error(α, "the shift must be below 1, A0 = (1 - α) S0 is the spot of the mixture")
+ChainRulesCore.@non_differentiable check_shift(::Any)
+
 function analytic_kernel(model::ShiftedProcess{<:LognormalMixtureModel}, S0, r, d, T)
     α = model.α
-    # a validation, not a derivative: no AD backend traces its branch (#39)
-    ChainRulesCore.@ignore_derivatives α < 1 || throw(DomainError(α, "the shift must be below 1, A0 = (1 - α) S0 is the spot of the mixture"))
+    check_shift(α)
     F = S0 * exp((r - d) * T)
     return LognormalMixtureKernel((1 - α) * F, α * F, mixture_volatilities(model.model), mixture_component_weights(model.model), r, T)
 end

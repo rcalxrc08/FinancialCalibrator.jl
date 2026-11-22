@@ -28,8 +28,12 @@ _Read before touching anything on the differentiated path._ (Layer 3 reference: 
   Heston loss in Float32, relative error 1) are explained in #41.
 - **No branches on the differentiated path** (#39): no `if`/ternary on a flag or a value in the pricing and loss code. Use
   selects (`ifelse`, `Bool * x`, which has a strong zero, `call_put_sign` weights, `max`/`min`); validations that throw
-  go in `ChainRulesCore.@ignore_derivatives` (`α < 1` of the shifted mixture, `check_prices`, the `size(vols)` checks),
-  as in FinancialMonteCarlo 0.8. Which backends differentiate `vol_errors` and `loss` (checked 2026-11-19, DAX, mixture with
+  are named functions marked `ChainRulesCore.@non_differentiable` and called directly (`check_shift`, `α < 1` of the
+  shifted mixture; `check_prices`; `check_surface_size`, the `size(vols)` checks), with the throw out of line (#43): an
+  `@ignore_derivatives` block is a closure whose captures Zygote traces, ~11 μs each (FinancialMonteCarlo#80, #85).
+  Measured 2026-11-22 (DAX, shifted mixture of 3, `AnalyticMethod`, Zygote gradient of `sum(abs2, vol_errors)`,
+  minimum, fresh processes interleaved): 1838 / 2211 μs with the blocks, 1504 / 1616 μs without; value and
+  ForwardDiff unchanged. Enzyme and Mooncake are indifferent to the pattern (FinancialMonteCarlo#85). Which backends differentiate `vol_errors` and `loss` (checked 2026-11-19, DAX, mixture with
   `AnalyticMethod` and VG with Lewis, against ForwardDiff, one process each): every backend both. Heston/Cos fails
   with Enzyme as `autodiff` of `calibrate` (#41, group 1). Zygote and Mooncake
   cannot differentiate a `catch` (Zygote "pop_exception" where it runs, Mooncake rejects the `try` in reverse mode), so

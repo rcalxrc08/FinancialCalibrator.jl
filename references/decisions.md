@@ -25,7 +25,8 @@ the details stay in the reference each entry points to.
 ## D-003 (2026-11-19, 966e245; #39) No branches on the differentiated path
 
 - **Decision:** no `if`/ternary on a flag or a value in pricing and loss code: `ifelse`, `Bool * x`, `call_put_sign`
-  weights, `max`/`min`; validations in `ChainRulesCore.@ignore_derivatives`.
+  weights, `max`/`min`; validations in `@non_differentiable` functions called directly (#43, which superseded the
+  `ChainRulesCore.@ignore_derivatives` blocks of #39: their closures cost Zygote ~11 μs each).
 - **Why:** Zygote is about 20x slower through branches, and cannot differentiate some of them at all.
 - **Consequences:** rule in `CLAUDE.md`; details in `autodiff.md`.
 - **Status:** active

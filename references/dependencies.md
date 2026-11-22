@@ -6,7 +6,7 @@ Dependencies, by design: **no package that differentiates is a hard dependency**
 are interfaces (and hard dependencies of Optim through NLSolversBase anyway); ImplicitDifferentiation (the rules of
 `calibrated_parameters`) is a hard dependency by the author's choice. ChainRulesCore is a hard dependency since #39 (an
 interface, already loaded by FinancialMonteCarlo and ImplicitDifferentiation): the validations on the differentiated
-path are in `ChainRulesCore.@ignore_derivatives`. Statistics (a standard library) gives `median` to the parity forward of
+path are `ChainRulesCore.@non_differentiable` functions (#43). Statistics (a standard library) gives `median` to the parity forward of
 the CBOE loader (#29). ForwardDiff, Zygote, Enzyme, Mooncake are not:
 `default_backend()` (`src/03_loss/backends.jl`) is `AutoForwardDiff()` when DifferentiationInterface's ForwardDiff extension is
 loaded (i.e. the user loaded ForwardDiff) and `AutoFiniteDiff()` otherwise (FiniteDiff comes with NLSolversBase); every

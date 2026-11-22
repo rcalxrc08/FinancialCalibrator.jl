@@ -43,7 +43,7 @@ function vol_errors(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.B
     new_model = FinancialMonteCarlo.set_parameters!(model, params)
     # the positions of the quotes in the cache index the surface of mktData: checked here on the sizes, on the host, so that
     # maturity_errors reads them without a bounds check, which on the GPU is a reduction read back to the host (a sync)
-    ChainRulesCore.@ignore_derivatives size(vols) == size(mktData.Volatility) || throw(DimensionMismatch("vols is $(size(vols)), the surface of mktData $(size(mktData.Volatility))"))
+    check_surface_size(vols, mktData)
     return maturity_errors(new_model, model.underlying.S0, cache, vols)
 end
 
@@ -63,8 +63,18 @@ end
 # The model prices of the quotes of maturity i that enter the loss.
 model_prices(new_model, cache, i::Integer) = vec(pricer(new_model, cache.zero_rates[i], cache.method, cache.smiles[i]))
 
-# the checks on the differentiated path are validations, ignored by the AD backends (their branches are not traced, #39)
-check_prices(prices) = ChainRulesCore.@ignore_derivatives minimum(prices) > 0 || throw(DomainError(minimum(prices), "a model price is not positive"))
+# The checks on the differentiated path are validations (their branches are not traced, #39): named functions marked
+# @non_differentiable and called directly, not ChainRulesCore.@ignore_derivatives blocks, whose closures Zygote traces
+# (~11 μs each, FinancialMonteCarlo#80, #85; #43). The throws are out of line (Enzyme, EnzymeAD/Enzyme.jl#4053).
+@noinline throw_dimension_mismatch(vols, mktData) = throw(DimensionMismatch("vols is $(size(vols)), the surface of mktData $(size(mktData.Volatility))"))
+@noinline throw_domain_error(value, msg) = throw(DomainError(value, msg))
+check_surface_size(vols, mktData) = size(vols) == size(mktData.Volatility) ? nothing : throw_dimension_mismatch(vols, mktData)
+function check_prices(prices)
+    lowest = minimum(prices)
+    return lowest > 0 ? nothing : throw_domain_error(lowest, "a model price is not positive")
+end
+ChainRulesCore.@non_differentiable check_surface_size(::Any, ::Any)
+ChainRulesCore.@non_differentiable check_prices(::Any)
 
 implied_volatilities(S0, mktData::MarketData, cache, prices, i::Integer) = blsimpv.(S0, cache.strikes[i], mktData.ZeroRates[i], mktData.TimeToMaturity[i], prices, cache.dividends[i], cache.is_call[i])
 
