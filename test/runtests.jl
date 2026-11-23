@@ -196,12 +196,23 @@ progress("Running the core testset")
             @test (@inferred pricer(slnm, ZeroRate(0.01), AnalyticMethod(), smile)) isa Vector{Float64}
             @test (@inferred pricer(slnm, ZeroRate(0.01), AnalyticMethod(), FinancialMonteCarlo.EuropeanOption(1.0, 100.0))) isa Float64
             @test (@inferred FC.loss(FinancialMonteCarlo.get_parameters(slnm), slnm, AnalyticMethod(), mkt)) isa Float64
-            # the solver of calibrated_parameters (Optim, then the polish, whose Jacobian is not inferred): Enzyme's rules
-            # for the implicit function need it inferred
+            # the solver of calibrated_parameters (Optim, then the polish): Enzyme's rules for the implicit function need it
+            # inferred
             bs = BlackScholesProcess(0.2, und)
             cache = FC.loss_cache(bs, CosMethod(256), mkt)
             options = FC.Optim.Options(iterations = 5)
             @test (@inferred FC.optimal_variables(bs, CosMethod(256), mkt, cache, FC.DEFAULT_OPTIMIZER, options, Parametrization())) isa Vector{Float64}
+            # the polish (#36): the ForwardDiff chunk from the number of parameters of the model, so the prepared Jacobian,
+            # and the loop computed from it, are inferred; a parametrization that changes the number of variables keeps
+            # the backend as given
+            x0 = FinancialMonteCarlo.get_parameters(slnm)
+            # (a Union of the two backends, split at the call of the polish: the length of x is a run-time value)
+            backend = FC.polish_backend_for(FC.default_backend(), slnm, x0)
+            @test backend isa FC.ADTypes.AutoForwardDiff{6}
+            @test FC.polish_backend_for(FC.default_backend(), slnm, x0[1:5]) === FC.default_backend()
+            @test FC.polish_backend_for(FC.ADTypes.AutoFiniteDiff(), slnm, x0) === FC.ADTypes.AutoFiniteDiff()
+            errors(x) = FC.vol_errors(x, slnm, AnalyticMethod(), mkt)
+            @test isconcretetype(only(Base.return_types(FC.DI.prepare_jacobian, (typeof(errors), typeof(backend), typeof(x0)))))
         end
 
         # The volatility errors: one per quote, maturity by maturity, out of the money options only, generic in the quotes.

@@ -32,3 +32,25 @@ end point stationary (|∇L| ~ 1e-8 on DAX instead of NelderMead's ~1e-3).
 (a numerical failure such as a negative model price), the polish is skipped and `calibrate` returns the `Inf` result,
 with or without the polish; otherwise the polish starts from those residuals, so the surface is not priced twice. Before,
 the polish priced the point itself, outside its failure guard, and the `DomainError` of the loss came out.
+
+## The polish is inferred: the ForwardDiff chunk from the model (#36)
+
+`DI.prepare_jacobian(errors, AutoForwardDiff(), x)` let ForwardDiff pick its chunk from `length(x)` at run time: the
+prepared Jacobian was a `UnionAll` over the chunk, and everything the Levenberg–Marquardt loop computes from it (`J`,
+`A`, `g`, `D`, the step, the phase of `step_accepted`) dispatched at run time, 21 reports of JET in FinancialCalibrator
+(`errors` itself and `DI.jacobian` with a concrete preparation were inferred). The number of parameters of a model is a
+constant of its type, `FinancialMonteCarlo.parameter_count` (FinancialMonteCarlo 0.9.1), so `calibrate` passes
+`polish_backend_for(polish_backend, model, x)`: `AutoForwardDiff{min(N, 12)}` when the backend has no chunk size and the
+parametrization keeps the number of variables, the backend as given otherwise (a chunk larger than the input is an
+error). `normal_equations` takes `errors::F where F`, since it only passes it on (Julia would compile it for
+`::Function`). No function barrier.
+
+Measured 2026-11-23 (i7-8550U, Julia 1.13.4; DAX, shifted lognormal mixture, `AnalyticMethod`, polish from the start
+point; JET `report_opt` on the polish; before and after in interleaved processes, two rounds, BenchmarkTools):
+
+| | JET reports (in FinancialCalibrator) | min | allocations |
+|:--|--:|--:|--:|
+| before (run-time chunk) | 123 (21) | 14.5-15.4 ms | 11600 |
+| after (`AutoForwardDiff{6}`) | 40 (0) | 14.3-15.0 ms | 10462 |
+
+Same end point and loss. The 40 reports left are in Base (`show` and string handling of the error and `@debug` paths).

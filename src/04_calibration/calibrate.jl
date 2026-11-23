@@ -74,7 +74,7 @@ function optimal_variables_and_errors(model, pricing_method, mktData::MarketData
     # the errors where the optimizer stopped, or nothing if they cannot be priced there (#38): then the polish is skipped,
     # as without it, and calibrate returns the Inf result in both cases; otherwise the polish starts from them
     e = numerical_or_nothing(errors, x)
-    x, e = polish && e !== nothing ? levenberg_marquardt_and_errors(errors, x, e; backend = polish_backend) : (x, e)
+    x, e = polish && e !== nothing ? levenberg_marquardt_and_errors(errors, x, e; backend = polish_backend_for(polish_backend, model, x)) : (x, e)
     if verbose
         println(result)
         println("loss after the polish: ", e === nothing ? Inf : sum(abs2, e) / 2)
@@ -93,7 +93,9 @@ function numerical_or_nothing(errors, x)
 end
 
 # J, JᵀJ and Jᵀe at x (e the residuals there): the products on the device of J, the p × p system on the host.
-function normal_equations(errors, prep, backend, x, e)
+# (errors only passed on: without the type parameter Julia compiles this for ::Function, and DI.jacobian dispatches at
+# run time)
+function normal_equations(errors::F, prep, backend, x, e) where {F}
     J = DI.jacobian(errors, prep, backend, x)
     return J, Array(transpose(J) * J), Array(transpose(J) * e)
 end
@@ -151,9 +153,10 @@ levenberg_marquardt(errors, x::AbstractVector{<:Real}; kwargs...) = first(levenb
 levenberg_marquardt_and_errors(errors, x::AbstractVector{<:Real}; kwargs...) = levenberg_marquardt_and_errors(errors, x, errors(x); kwargs...)
 # e: the residuals at x, already computed by the caller
 function levenberg_marquardt_and_errors(errors, x::AbstractVector{T}, e; backend::ADTypes.AbstractADType = default_backend(), iterations::Integer = 100, μ::Real = 1e-2, xtol::Real = 1e-12) where {T <: Real}
-    # The Jacobian is prepared once (not at every step), but its type is still not inferred, since the chunk depends
-    # on length(x). So the trial point is written into an array of the type of x: the variables keep their type
-    # whatever the type of the step. x and x_trial swap at each accepted step, hence the copy: the caller's array is
+    # The Jacobian is prepared once (not at every step). Its type, and the loop, are inferred when the backend fixes the
+    # chunk (calibrate passes polish_backend_for, #36); a ForwardDiff backend without a chunk size picks it from
+    # length(x) at run time. For that case the trial point is written into an array of the type of x: the variables
+    # keep their type whatever the type of the step. x and x_trial swap at each accepted step, hence the copy: the caller's array is
     # not overwritten.
     x = copy(x)
     prep = DI.prepare_jacobian(errors, backend, x)

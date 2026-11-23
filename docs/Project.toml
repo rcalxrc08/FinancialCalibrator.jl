@@ -18,7 +18,7 @@ FinancialCalibrator = {path = ".."}
 Documenter = "1"
 FinancialCalibrator = "0.2"
 FinancialFFT = "0.6.3, 0.7"
-FinancialMonteCarlo = "0.8, 0.9"
+FinancialMonteCarlo = "0.9.1"
 FinancialToolbox = "0.8"
 ForwardDiff = "0.10, 1"
 Plots = "1"

@@ -16,7 +16,8 @@ The optimizer, then the Levenberg–Marquardt polish that makes the end point st
 - Defaults are constants (`DEFAULT_OPTIMIZER`, `DEFAULT_OPTIONS`): nothing built with keywords in default arguments
   (Mooncake traces them).
 - The polish prepares its Jacobian once (`polish_backend` through DifferentiationInterface), so the solver is inferred:
-  the Enzyme rules of stage 05 need it.
+  the Enzyme rules of stage 05 need it. A ForwardDiff backend without a chunk size gets the chunk from
+  `FinancialMonteCarlo.parameter_count` (`polish_backend_for`, #36), so the loop is inferred too.
 
 ## Outputs
 
