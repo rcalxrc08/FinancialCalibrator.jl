@@ -1,7 +1,7 @@
 # Status
 
 _What is in flight. Layer 4: volatile, rewritten freely; GitHub issues are the source of truth, this file is the index
-an agent reads first._ Updated: 2026-11-22
+an agent reads first._ Updated: 2026-11-23
 
 ## Current focus
 
@@ -28,6 +28,7 @@ The status table is #41 comment 7059648077 (edited in place); open points and ne
 
 ## Technical debt and enhancements
 
+- #44 SLNM loss allocations: parametrization done; next a scalar-loop loss for `AnalyticMethod` on the host (EnzymeR 147 → 110 μs, Mooncake 481 → 120 μs measured).
 - #37 linear convergence of the polish; #32 Halley steps.
 - #33 derivative-based first stage instead of Nelder–Mead; #34 avoid the p×n matrix for one direction.
 - #25 a strike grid per maturity; #19 move `AnalyticMethod` out;
