@@ -15,7 +15,7 @@ viz(theme) = theme.text == THEMES.dark.text ? VIZ.dark : VIZ.light
 
 const DAX = let
     und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
-    method = LewisMethod(100.0, 4001)
+    method = CosMethod(512)   # the recommended setting for Heston (docs/benchmarks.jl, settings)
     model = HestonProcess(0.3, 0.2, 0.0, 1.0, -0.5, 0.04, und)
     res = calibrate(model, method, mkt)
     (und = und, mkt = mkt, method = method, model = model, res = res, calibrated = FinancialMonteCarlo.set_parameters!(model, res.OptimalParam))
@@ -225,7 +225,7 @@ function optimizer_figure(theme)
     rows = BENCH["optimizers"]
     models = unique(r["model"] for r in rows)
     optimizers = unique(r["optimizer"] for r in rows)
-    p = base_plot(theme; title = "Time to calibrate on the DAX surface, LewisMethod (median of 5 runs, polish included)", xlabel = "seconds", size = (960, 440), legend = :bottomright, yticks = (1:length(models), models), yflip = true, xgrid = true, ygrid = false, framestyle = :axes)
+    p = base_plot(theme; title = "Time to calibrate on the DAX surface, recommended method per model (median of 5 runs, polish included)", xlabel = "seconds", size = (960, 440), legend = :bottomright, yticks = (1:length(models), models), yflip = true, xgrid = true, ygrid = false, framestyle = :axes)
     w = 0.26
     xlims!(p, 0, 1.12 * maximum(r["seconds"] for r in rows))
     for (k, o) in enumerate(optimizers)
@@ -298,7 +298,22 @@ end
 function engine_table()
     rows = BENCH["engines"]
     body = join(["<tr><td><code>$(r["engine"])</code></td><td>$(@sprintf("%.2f", r["loss_ms"])) ms</td><td>$(fmt_s(r["calibration_seconds"]))</td><td>$(@sprintf("%.1f", r["rmse_bp"])) bp</td></tr>" for r in rows])
-    return HTML("<div class=\"fc-table-wrap\"><table class=\"fc-table\"><thead><tr><th>Heston, DAX, pricing engine</th><th>one loss</th><th>calibration</th><th>RMS error</th></tr></thead><tbody>$body</tbody></table></div><p class=\"fc-machine\">Same model, same optimum: the engine sets the cost. <code>CarrMadanLewisMethod(600, 16)</code> runs an FFT of 2¹⁶ points per maturity, far more than nine smiles of twelve strikes need.</p>")
+    return HTML("<div class=\"fc-table-wrap\"><table class=\"fc-table\"><thead><tr><th>Heston, DAX, pricing engine</th><th>one loss</th><th>calibration</th><th>RMS error</th></tr></thead><tbody>$body</tbody></table></div><p class=\"fc-machine\">Same model, same optimum: the engine sets the cost. <code>CarrMadanLewisMethod(400, 14)</code> runs an FFT of 2¹⁴ points per maturity, far more than nine smiles of twelve strikes need, and still stops near 3e-7 in volatility.</p>")
+end
+
+vol_error_text(x) = !isfinite(x) ? "fails" : x < 1e-12 ? "&lt; 1e-12" : @sprintf("%.0e", x)
+
+"The method settings table (#10): the largest volatility error of each setting for each model, and the cost of one loss."
+function settings_table()
+    rows = BENCH["settings"]
+    models = unique(r["model"] for r in rows)
+    methods = unique(r["method"] for r in rows)
+    row(m, method) = only(r for r in rows if r["model"] == m && r["method"] == method)
+    cell(r) = (r["recommended"] ? "<td class=\"is-pick\"><b>" : "<td>") * vol_error_text(r["max_vol_error_start"]) * " / " * vol_error_text(r["max_vol_error_optimum"]) * "<br><small>$(@sprintf("%.2f", r["loss_ms"])) ms</small>" * (r["recommended"] ? "</b></td>" : "</td>")
+    head = "<tr><th>method</th>" * join("<th>$m</th>" for m in models) * "</tr>"
+    body = join("<tr><td><code>$method</code></td>" * join(cell(row(m, method)) for m in models) * "</tr>" for method in methods)
+    picks = join(("$m: <code>$(only(r["method"] for r in rows if r["model"] == m && r["recommended"]))</code>" for m in models), ", ")
+    return HTML("<div class=\"fc-table-wrap\"><table class=\"fc-table\"><thead>$head</thead><tbody>$body</tbody></table></div><p class=\"fc-machine\">Largest implied volatility error over the 99 DAX quotes of the loss, against <code>LewisMethod(3200, 512001)</code>, at the starting point of each model / at the optimum of its calibration; under it, one loss at the starting point. In bold the recommended setting: $picks. Measured $(BENCH["measured"]) on $(BENCH["cpu"]).</p>")
 end
 
 # ---------- Draw ----------

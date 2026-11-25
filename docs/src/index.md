@@ -109,7 +109,7 @@ Main.DocumentationFigures.benchmark_cards()  # hide
 ```@raw html
 <div class="fc-figure"><div class="fc-figure-head"><h3>Optimizers</h3><p>Every optimizer ends at the same optimum: the
 Levenberg–Marquardt polish takes over from wherever it stops. <b>Insight:</b> pass <code>LBFGS()</code> or
-<code>BFGS()</code> for Heston, Merton and NIG, 2 to 2.6× faster than the default Nelder–Mead.</p></div>
+<code>BFGS()</code> for Merton, Variance Gamma, NIG and Heston, 1.6 to 1.9× faster than the default Nelder–Mead.</p></div>
 <img src="assets/figures/bench-optimizers-dark.svg" alt="Calibration time per model and optimizer"><img src="assets/figures/bench-optimizers-light.svg" alt="Calibration time per model and optimizer"></div>
 ```
 
@@ -163,7 +163,7 @@ starting point, and a pricing engine.</p></div></div>
 
 ```@example quickstart
 model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)   # σ, θ, κ: the starting point
-method = LewisMethod(100.0, 4001)
+method = LewisMethod(400.0, 8001)   # the size for NIG: Methods, backends and arrays, "Choosing the size"
 nothing # hide
 ```
 

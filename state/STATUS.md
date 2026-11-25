@@ -32,7 +32,8 @@ The status table is #41 comment 7059648077 (edited in place); open points and ne
 - #37 linear convergence of the polish; #32 Halley steps.
 - #33 derivative-based first stage instead of Nelder–Mead; #34 avoid the p×n matrix for one direction.
 - #25 a strike grid per maturity; #19 move `AnalyticMethod` out;
-  #10 cheaper default method settings; #9 maturities in parallel.
+  #9 maturities in parallel. #10 done (2026-11-25): the method sizes per model are measured at the start and at the optimum by
+  `docs/benchmarks.jl` (settings table of `docs/src/backends.md`); COS on Kou waits for FinancialFFT#101 (the range grows to L / λ₊).
 
 ## Working notes
 

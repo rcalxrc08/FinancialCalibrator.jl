@@ -12,21 +12,64 @@ median_time(f; runs = 5) = (f(); median([@elapsed(f()) for _ = 1:runs]))
 rmse_bp(res) = 1e4 * sqrt(2 * res.OptimalValue / count(!isnan, res.ModelVolatility))
 
 und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
-lewis = LewisMethod(100.0, 4001)
 
-# 1. Optimizers: the first stage of calibrate, followed by the same Levenberg–Marquardt polish
 models = ["Black–Scholes" => BlackScholesProcess(0.2, und), "Merton" => MertonProcess(0.2, 0.5, -0.1, 0.2, und), "Kou" => KouProcess(0.2, 0.5, 0.4, 10.0, 15.0, und), "Variance Gamma" => VarianceGammaProcess(0.2, -0.03, 0.16, und), "NIG" => NormalInverseGaussianProcess(0.2, -0.03, 0.16, und), "Heston" => HestonProcess(0.3, 0.2, 0.0, 1.0, -0.5, 0.04, und)]
+
+# 1. Method settings (#10): the largest implied volatility error over the quotes of the loss against a converged
+# reference, and the cost of one loss, for each model at two points: its starting point and the optimum that calibrate
+# reaches from it with the recommended method. Both matter: a calibration walks to parameters the start does not
+# show, Kou to p -> 0 and λ₊ -> 1, where the Chernoff range of COS grows to [-4, 32] (a bound of L / λ₊ that
+# ignores how rare the up jumps are) and CosMethod(512) is 43 bp off; LBFGS then needs 1000 iterations and 50000
+# evaluations (128 s) instead of 1 s. The reference is a Lewis quadrature of a range wide enough for Variance Gamma,
+# whose characteristic function decays only as a power at the short maturities (2e-8 at its optimum, against
+# CosMethod(16384) and a Lewis range of 12800). The recommended setting of each model is the cheapest one at about
+# 1e-6 or below (0.01 bp) at both points whose derivatives are those of its prices: not COS for Variance Gamma and
+# NIG, whose truncation range is held constant under differentiation (FinancialFFT.jl#64), a derivative error of 4e-5
+# for Variance Gamma with CosMethod(1024).
+reference = LewisMethod(3200.0, 512001)
+settings = [CosMethod(128), CosMethod(256), CosMethod(512), CosMethod(1024), CosMethod(2048), LewisMethod(100.0, 1001), LewisMethod(100.0, 2001), LewisMethod(100.0, 4001), LewisMethod(200.0, 4001), LewisMethod(400.0, 8001), LewisMethod(800.0, 16001), CarrMadanLewisMethod(400.0, 14), CarrMadanMethod(400.0, 14)]
+method_name(m::CosMethod) = "CosMethod($(m.N))"
+method_name(m::LewisMethod) = "LewisMethod($(round(Int, m.A)), $(m.N))"
+method_name(m::CarrMadanLewisMethod) = "CarrMadanLewisMethod(400, 14)"
+method_name(m::CarrMadanMethod) = "CarrMadanMethod(400, 14)"
+recommended = Dict("Black–Scholes" => CosMethod(256), "Merton" => CosMethod(256), "Kou" => LewisMethod(200.0, 4001), "Variance Gamma" => LewisMethod(800.0, 16001), "NIG" => LewisMethod(400.0, 8001), "Heston" => CosMethod(512))
+setting_rows = Dict{String, Any}[]
+for (name, model) in models
+    start = FinancialMonteCarlo.get_parameters(model)
+    optimum = calibrate(model, recommended[name], mkt).OptimalParam
+    exact = [FinancialCalibrator.vol_errors(p, model, reference, mkt) for p in (start, optimum)]
+    for method in settings
+        cache = FinancialCalibrator.loss_cache(model, method, mkt)
+        # Inf where the method gives a price that is not positive (COS(128) at the Kou optimum)
+        max_error(p, e) =
+            try
+                maximum(abs, FinancialCalibrator.vol_errors(p, model, method, mkt, cache) - e)
+            catch err
+                err isa DomainError || rethrow()
+                Inf
+            end
+        err_start, err_optimum = [max_error(p, e) for (p, e) in zip((start, optimum), exact)]
+        t_loss = median_time(() -> FinancialCalibrator.loss(start, model, method, mkt, cache); runs = 20)
+        push!(setting_rows, Dict("model" => name, "method" => method_name(method), "max_vol_error_start" => err_start, "max_vol_error_optimum" => err_optimum, "loss_ms" => 1e3 * t_loss, "recommended" => method == recommended[name]))
+        println(name, " ", method_name(method), ": ", round(err_start; sigdigits = 2), " / ", round(err_optimum; sigdigits = 2), ", ", round(1e3 * t_loss; digits = 2), " ms")
+    end
+end
+
+# 2. Optimizers: the first stage of calibrate, followed by the same Levenberg–Marquardt polish, with the recommended
+# method of each model
 optimizers = ["NelderMead" => NelderMead(), "LBFGS" => LBFGS(), "BFGS" => BFGS()]
 optimizer_rows = Dict{String, Any}[]
 for (name, model) in models, (opt_name, opt) in optimizers
-    res = calibrate(model, lewis, mkt, opt)
-    t = median_time(() -> calibrate(model, lewis, mkt, opt))
-    push!(optimizer_rows, Dict("model" => name, "optimizer" => opt_name, "seconds" => t, "rmse_bp" => rmse_bp(res), "parameters" => res.OptimalParam))
+    method = recommended[name]
+    res = calibrate(model, method, mkt, opt)
+    t = median_time(() -> calibrate(model, method, mkt, opt))
+    push!(optimizer_rows, Dict("model" => name, "optimizer" => opt_name, "method" => method_name(method), "seconds" => t, "rmse_bp" => rmse_bp(res), "parameters" => res.OptimalParam))
     println(name, " ", opt_name, ": ", round(t; digits = 3), " s, ", round(rmse_bp(res); digits = 2), " bp")
 end
 
-# 2. Pricing engines: Heston, the same surface, three Fourier methods
-engines = ["CosMethod(2^10)" => CosMethod(2^10), "LewisMethod(100, 4001)" => lewis, "CarrMadanLewisMethod(600, 16)" => CarrMadanLewisMethod(600.0, 16)]
+# 3. Pricing engines: Heston, the same surface, three Fourier methods, each at a size accurate to 1e-7 or below, or
+# the floor of its method (Carr–Madan: about 1e-6, see the settings)
+engines = ["CosMethod(512)" => CosMethod(512), "LewisMethod(200, 4001)" => LewisMethod(200.0, 4001), "CarrMadanLewisMethod(400, 14)" => CarrMadanLewisMethod(400.0, 14)]
 engine_rows = Dict{String, Any}[]
 heston = last(models[end])
 for (name, method) in engines
@@ -39,7 +82,7 @@ for (name, method) in engines
     println(name, ": loss ", round(1e3 * t_loss; digits = 2), " ms, calibration ", round(t; digits = 3), " s")
 end
 
-# 3. Scaling: one loss on a single smile of n strikes (Black–Scholes, CosMethod(4096)), on the host and on the device
+# 4. Scaling: one loss on a single smile of n strikes (Black–Scholes, CosMethod(4096)), on the host and on the device
 function smile_market(n, ::Type{T}) where {T}
     strikes = collect(range(T(60), T(160); length = n))
     vols = permutedims(T(0.2) .+ T(0.1) .* (strikes ./ 100 .- 1) .^ 2)
@@ -67,7 +110,7 @@ if gpu
 end
 println(scaling)
 
-benchmarks = Dict("measured" => string(today()), "cpu" => strip(Sys.cpu_info()[1].model), "threads" => Threads.nthreads(), "julia" => string(VERSION), "surface" => "DAX, 22 August 2016: 9 maturities × 12 strikes, 99 quotes in the loss", "optimizers" => optimizer_rows, "engines" => engine_rows, "scaling" => scaling)
+benchmarks = Dict("measured" => string(today()), "cpu" => strip(Sys.cpu_info()[1].model), "threads" => Threads.nthreads(), "julia" => string(VERSION), "surface" => "DAX, 22 August 2016: 9 maturities × 12 strikes, 99 quotes in the loss", "optimizers" => optimizer_rows, "settings" => setting_rows, "engines" => engine_rows, "scaling" => scaling)
 open(joinpath(@__DIR__, "src", "assets", "benchmarks.toml"), "w") do io
     TOML.print(io, benchmarks; sorted = true)
 end

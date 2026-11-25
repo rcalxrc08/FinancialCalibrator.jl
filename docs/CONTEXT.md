@@ -10,7 +10,8 @@
 
 ## Process
 
-Benchmarks are not timed at build time: `benchmarks.jl` is run by hand and writes `src/assets/benchmarks.toml`.
+Benchmarks are not timed at build time: `benchmarks.jl` is run by hand and writes `src/assets/benchmarks.toml` (method
+settings at the start and at the optimum of each model, #10; optimizers with the recommended method; engines; scaling).
 Measured numbers say on which machine they were taken. The "Which backend" tables of `backends.md` come from
 `bench/` (its own contract).
 

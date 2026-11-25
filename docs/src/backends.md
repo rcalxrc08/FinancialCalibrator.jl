@@ -12,7 +12,7 @@ does not change the others.</p>
 <div class="fc-meta"><span>FinancialFFT</span><span>closed forms</span><span>Monte Carlo</span><span>ForwardDiff · Zygote · Mooncake · Enzyme</span><span>CUDA</span></div>
 </div>
 <div class="fc-grid fc-grid-3">
-<a class="fc-card fc-card-link" href="#Pricing-methods"><span class="fc-card-k is-blue">01 · Pricing method</span><h3>How a smile is priced</h3><p>Fourier for Lévy models and Heston, a closed form where one exists, Monte Carlo for everything else.</p><p class="fc-pick"><b>Default pick</b> <code>LewisMethod</code>; <code>CosMethod</code> where its series converges (Heston, Black–Scholes).</p></a>
+<a class="fc-card fc-card-link" href="#Pricing-methods"><span class="fc-card-k is-blue">01 · Pricing method</span><h3>How a smile is priced</h3><p>Fourier for Lévy models and Heston, a closed form where one exists, Monte Carlo for everything else.</p><p class="fc-pick"><b>Default pick</b> <code>CosMethod</code> for Black–Scholes, Merton and Heston; <code>LewisMethod</code> with a wide range for Kou, Variance Gamma and NIG.</p></a>
 <a class="fc-card fc-card-link" href="#Automatic-differentiation"><span class="fc-card-k">02 · AD backend</span><h3>How derivatives are taken</h3><p>Outside the calibration any backend; inside, four keywords, each an ADTypes backend.</p><p class="fc-pick"><b>Default pick</b> ForwardDiff everywhere; a reverse backend outside with many quotes.</p></a>
 <a class="fc-card fc-card-link" href="#Arrays"><span class="fc-card-k is-amber">03 · Arrays</span><h3>Where the numbers live</h3><p><code>Float64</code> or <code>Float32</code>, on the host or on a CUDA device, derivatives included.</p><p class="fc-pick"><b>Default pick</b> the CPU for a surface of a hundred quotes; the GPU for large smiles.</p></a>
 </div>
@@ -43,15 +43,32 @@ The same Heston calibration of the DAX surface with three Fourier methods (measu
 Main.DocumentationFigures.engine_table()  # hide
 ```
 
-A new model and method pair needs only a `pricer` method for a smile. The model is any FinancialMonteCarlo process;
-the parameters the calibration moves are those of `FinancialMonteCarlo.get_parameters`, or the variables of a
-[`Parametrization`](@ref).
+### Choosing the size
 
-The derivatives of the calibration (the Levenberg–Marquardt polish and [`calibrated_parameters`](@ref)) need a method
-whose derivatives are those of its prices. FinancialFFT's methods differentiate their quadrature exactly; the
-truncation range of `CosMethod` is held constant, which matters only where its series has not converged (Variance Gamma
-and NIG at short maturities, see FinancialFFT.jl#64). A Monte Carlo method gives the pathwise derivative of its
-estimator on its fixed paths.
+A larger method costs more and stops being more accurate once its error is below the rounding of the implied
+volatilities. What it must be accurate for is the whole calibration, not only its starting point: on the DAX surface,
+at the starting point of each model of the quick start and the tests, and at the optimum its calibration reaches:
+
+```@example backends
+Main.DocumentationFigures.settings_table()  # hide
+```
+
+- **`CosMethod` for Black–Scholes, Merton and Heston**: `CosMethod(256)` is exact to the rounding for the first two, at
+  a fraction of a millisecond per loss; Heston needs `CosMethod(512)` at its optimum (a volatility of variance above 1).
+- **`LewisMethod` for Kou.** The DAX optimum of Kou has almost no up jumps (`p → 0`) and `λ₊ → 1`. The truncation
+  range of `CosMethod` comes from a Chernoff bound, `L / λ₊` for the upper tail however rare the jumps are, and grows
+  to `[-4, 32]`: `CosMethod(512)` is 43 bp off there, and its derivatives (range held constant, FinancialFFT.jl#64) are
+  not those of its prices. LBFGS then takes its 1000 iterations and 50000 evaluations of the loss, 128 s, against 1 s
+  with `CosMethod(1024)` or 1.5 s with `LewisMethod(100, 4001)`. Lewis has no truncation range to grow:
+  `LewisMethod(200, 4001)` is accurate to 1e-10 at both points.
+- **Variance Gamma and NIG need a wide Lewis range.** Their characteristic functions decay slowly at short maturities
+  (as a power of the frequency for Variance Gamma), so `LewisMethod(100, ·)` stops at 1e-4 to 1e-2 in volatility
+  whatever its number of nodes: on DAX it moved the Variance Gamma optimum by 1.5 bp of RMS error.
+  `LewisMethod(800, 16001)` (VG) and `LewisMethod(400, 8001)` (NIG), with the spacing `2A/N` of 0.1, reach 4e-6 and
+  1e-10. `CosMethod` converges for them too, but its derivatives are not those of its prices there: a derivative error
+  of 4e-5 for Variance Gamma with `CosMethod(1024)`, which the polish and [`calibrated_parameters`](@ref) would inherit.
+- **Carr–Madan stops near 1e-7 to 1e-5** whatever the size of its FFT, at several times the cost of a quadrature: use
+  it only for very large smiles, where one FFT prices all the strikes.
 
 ## Automatic differentiation
 

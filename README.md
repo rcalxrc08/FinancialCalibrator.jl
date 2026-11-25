@@ -24,7 +24,7 @@ und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInp
 model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)  # spot and dividends come from the underlying, not from the quotes
 
 # the pricing method decides how each smile is priced
-calibrate(model, LewisMethod(100.0, 4001), mkt)         # any FinancialFFT method
+calibrate(model, LewisMethod(400.0, 8001), mkt)         # any FinancialFFT method; sizes per model in the docs
 calibrate(ShiftedProcess(LogNormalMixture(...), α), AnalyticMethod(), mkt)  # closed form
 ```
 
@@ -48,7 +48,7 @@ volatilities are resampled on a moneyness grid.
 
 ```julia
 using ForwardDiff
-f(V) = calibrated_parameters(model, LewisMethod(100.0, 4001), mkt, V)   # the calibration, as a function of the quotes
+f(V) = calibrated_parameters(model, LewisMethod(400.0, 8001), mkt, V)   # the calibration, as a function of the quotes
 ForwardDiff.jacobian(f, mkt.Volatility)                                  # ∂p*/∂v; Zygote and Mooncake work too
 ```
 

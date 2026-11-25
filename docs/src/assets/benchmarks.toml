@@ -1,137 +1,702 @@
 cpu = "Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz"
-julia = "1.13.3"
-measured = "2026-11-13"
+julia = "1.13.4"
+measured = "2026-11-25"
 surface = "DAX, 22 August 2016: 9 maturities × 12 strikes, 99 quotes in the loss"
 threads = 1
 
 [[engines]]
-calibration_seconds = 0.7628854
-engine = "CosMethod(2^10)"
-loss_ms = 3.67995
-rmse_bp = 68.92108613601013
+calibration_seconds = 0.3718839
+engine = "CosMethod(512)"
+loss_ms = 1.4107
+rmse_bp = 68.92108613646411
 [[engines]]
-calibration_seconds = 1.5759277
-engine = "LewisMethod(100, 4001)"
-loss_ms = 6.64935
-rmse_bp = 68.91088947595823
+calibration_seconds = 1.2281421
+engine = "LewisMethod(200, 4001)"
+loss_ms = 4.79105
+rmse_bp = 68.9210788679479
 [[engines]]
-calibration_seconds = 51.4616075
-engine = "CarrMadanLewisMethod(600, 16)"
-loss_ms = 251.42065000000002
-rmse_bp = 68.92118450167037
+calibration_seconds = 9.6616405
+engine = "CarrMadanLewisMethod(400, 14)"
+loss_ms = 35.44595
+rmse_bp = 68.92236395871915
 
 [[optimizers]]
+method = "CosMethod(256)"
 model = "Black–Scholes"
 optimizer = "NelderMead"
-parameters = [0.2010124242424235]
-rmse_bp = 315.1968777376186
-seconds = 0.0766701
+parameters = [0.20101242424242535]
+rmse_bp = 315.19687773760296
+seconds = 0.0120171
 [[optimizers]]
+method = "CosMethod(256)"
 model = "Black–Scholes"
 optimizer = "LBFGS"
-parameters = [0.2010124242424234]
-rmse_bp = 315.1968777376197
-seconds = 0.0710892
+parameters = [0.2010124242424238]
+rmse_bp = 315.19687773761115
+seconds = 0.0050712
 [[optimizers]]
+method = "CosMethod(256)"
 model = "Black–Scholes"
 optimizer = "BFGS"
-parameters = [0.2010124242424234]
-rmse_bp = 315.1968777376197
-seconds = 0.0622324
+parameters = [0.2010124242424238]
+rmse_bp = 315.19687773761115
+seconds = 0.0047773
 [[optimizers]]
+method = "CosMethod(256)"
 model = "Merton"
 optimizer = "NelderMead"
-parameters = [0.12239572137126496, 0.7490567806865482, -0.1798076775002337, 0.12016511095222115]
-rmse_bp = 90.61785831464697
-seconds = 0.8803978
+parameters = [0.12239575245919404, 0.7490559186067183, -0.1798077934642945, 0.12016512940872054]
+rmse_bp = 90.61786118119403
+seconds = 0.110847
 [[optimizers]]
+method = "CosMethod(256)"
 model = "Merton"
 optimizer = "LBFGS"
-parameters = [0.12239572271310549, 0.749056735203064, -0.1798076831267235, 0.12016511352414731]
-rmse_bp = 90.61785831464384
-seconds = 0.3936184
+parameters = [0.1223957537579231, 0.7490558745836542, -0.17980779891002446, 0.12016513189832997]
+rmse_bp = 90.61786118118671
+seconds = 0.0705109
 [[optimizers]]
+method = "CosMethod(256)"
 model = "Merton"
 optimizer = "BFGS"
-parameters = [0.12239572273727993, 0.7490567343837271, -0.17980768322820656, 0.12016511357024177]
-rmse_bp = 90.6178583146223
-seconds = 0.4721564
+parameters = [0.12239575382469586, 0.7490558723200123, -0.17980779918997644, 0.12016513202647522]
+rmse_bp = 90.61786118116899
+seconds = 0.0695786
 [[optimizers]]
+method = "LewisMethod(200, 4001)"
 model = "Kou"
 optimizer = "NelderMead"
-parameters = [0.11748290701022426, 1.5715260334852093, 5.350102937779229e-16, 1.0000000000137086, 9.123598300768254]
-rmse_bp = 86.01558672375901
-seconds = 2.0733002
+parameters = [0.11748284512470822, 1.571529416102551, 2.574146682136777e-15, 1.0000000000659583, 9.123607070923509]
+rmse_bp = 86.01557814513266
+seconds = 1.9204247
 [[optimizers]]
+method = "LewisMethod(200, 4001)"
 model = "Kou"
 optimizer = "LBFGS"
-parameters = [0.11748290663952622, 1.5715260438890182, 9.159943899391916e-16, 1.0000000000234706, 9.123598322738662]
-rmse_bp = 86.01558672376245
-seconds = 1.7360006
+parameters = [0.11748284513588918, 1.5715294158664692, 2.0867962647713804e-15, 1.0000000000534708, 9.123607070475735]
+rmse_bp = 86.01557814512455
+seconds = 1.6694293
 [[optimizers]]
+method = "LewisMethod(200, 4001)"
 model = "Kou"
 optimizer = "BFGS"
-parameters = [0.1174829070073187, 1.571526033869095, 9.137412154457071e-16, 1.0000000000234128, 9.123598301918108]
-rmse_bp = 86.01558672376191
-seconds = 1.7373488
+parameters = [0.11748284533828546, 1.571529411671619, 6.957343806893564e-16, 1.000000000017827, 9.12360706270776]
+rmse_bp = 86.01557814513141
+seconds = 1.6431271
 [[optimizers]]
+method = "LewisMethod(800, 16001)"
 model = "Variance Gamma"
 optimizer = "NelderMead"
-parameters = [0.1619754115925594, -0.29110029787867964, 0.27941909739582005]
-rmse_bp = 93.37177762846076
-seconds = 0.3218323
+parameters = [0.16106727446605323, -0.2970769117221881, 0.26991681424025127]
+rmse_bp = 94.86048454535847
+seconds = 2.1150556
 [[optimizers]]
+method = "LewisMethod(800, 16001)"
 model = "Variance Gamma"
 optimizer = "LBFGS"
-parameters = [0.16197541206859126, -0.29110029291776574, 0.27941910682899007]
-rmse_bp = 93.3717776284481
-seconds = 0.5037804
+parameters = [0.16106727482726754, -0.2970769086899434, 0.2699168192359778]
+rmse_bp = 94.86048454535515
+seconds = 1.4784376
 [[optimizers]]
+method = "LewisMethod(800, 16001)"
 model = "Variance Gamma"
 optimizer = "BFGS"
-parameters = [0.16197541500380408, -0.29110026810976386, 0.2794191524216675]
-rmse_bp = 93.37177762846655
-seconds = 0.3811609
+parameters = [0.16106727482238828, -0.29707690873124726, 0.2699168191677013]
+rmse_bp = 94.86048454534456
+seconds = 1.215797
 [[optimizers]]
+method = "LewisMethod(400, 8001)"
 model = "NIG"
 optimizer = "NelderMead"
-parameters = [0.15967036960214767, -0.31502283136966547, 0.2667616330152099]
-rmse_bp = 86.67844138744664
-seconds = 0.7123781
+parameters = [0.1595717676997676, -0.31586993269573327, 0.26538026643668045]
+rmse_bp = 86.7908184246862
+seconds = 0.8269289
 [[optimizers]]
+method = "LewisMethod(400, 8001)"
 model = "NIG"
 optimizer = "LBFGS"
-parameters = [0.15967037266114506, -0.31502280426166873, 0.26676167860780314]
-rmse_bp = 86.67844138741229
-seconds = 0.3214499
+parameters = [0.15957176479824148, -0.31586995843793053, 0.2653802235516463]
+rmse_bp = 86.79081842468156
+seconds = 0.4687435
 [[optimizers]]
+method = "LewisMethod(400, 8001)"
 model = "NIG"
 optimizer = "BFGS"
-parameters = [0.15967037206013393, -0.31502280959324036, 0.2667616696383298]
-rmse_bp = 86.6784413874143
-seconds = 0.27199
+parameters = [0.1595717677004066, -0.3158699326882142, 0.2653802664500685]
+rmse_bp = 86.79081842471432
+seconds = 0.6666324
 [[optimizers]]
+method = "CosMethod(512)"
 model = "Heston"
 optimizer = "NelderMead"
-parameters = [1.1446363105990436, 0.2078105385861009, 0.0, 6.108317323191884, -0.6916847526639632, 0.052248770034465486]
-rmse_bp = 68.91088947595823
-seconds = 1.6650979
+parameters = [1.1427555960457523, 0.20782640362327753, 0.0, 6.1015102094505425, -0.69186127786794, 0.052243975331819036]
+rmse_bp = 68.92108613646411
+seconds = 0.3600807
 [[optimizers]]
+method = "CosMethod(512)"
 model = "Heston"
 optimizer = "LBFGS"
-parameters = [1.1446363241372903, 0.2078105385916392, 0.0, 6.108317480812524, -0.6916847533523478, 0.05224876989848836]
-rmse_bp = 68.91088947596992
-seconds = 0.7538277
+parameters = [1.1427556725208932, 0.20782640366086524, 0.0, 6.10151110277929, -0.6918612818149164, 0.05224397455881816]
+rmse_bp = 68.92108613640688
+seconds = 0.189017
 [[optimizers]]
+method = "CosMethod(512)"
 model = "Heston"
 optimizer = "BFGS"
-parameters = [1.1446363163448794, 0.20781053858844084, 0.0, 6.108317390093879, -0.6916847529562307, 0.052248769976748294]
-rmse_bp = 68.91088947596477
-seconds = 0.8870241
+parameters = [1.1427556625122104, 0.20782640365590632, 0.0, 6.101510985884259, -0.6918612812988267, 0.0522439746599626]
+rmse_bp = 68.92108613641047
+seconds = 0.2266871
 
 [scaling]
 device = "NVIDIA GeForce MX150"
-device_float32_ms = [0.8838999999999999, 0.8007500000000001, 0.94925, 1.48445, 2.0861, 3.31695, 7.1209]
-device_float64_ms = [2.18045, 3.6898500000000003, 6.3387, 5.0147, 7.0559, 10.917050000000001, 26.114600000000003]
-host_float64_ms = [0.55845, 0.9761000000000001, 2.2215999999999996, 4.74405, 9.08645, 17.785349999999998, 43.73515]
+device_float32_ms = [0.7186, 0.71205, 1.09065, 1.7812999999999999, 2.2671999999999994, 3.1966, 7.1202000000000005]
+device_float64_ms = [0.9423000000000001, 1.738, 3.7514499999999997, 6.159750000000001, 7.6953000000000005, 11.2825, 26.0945]
+host_float64_ms = [0.59385, 0.8220000000000001, 2.13795, 4.9636000000000005, 11.31015, 20.192500000000003, 48.02605]
 strikes = [12, 50, 200, 500, 1000, 2000, 5000]
+
+[[settings]]
+loss_ms = 0.17815000000000003
+max_vol_error_optimum = 9.572898029830412e-14
+max_vol_error_start = 6.111777750561487e-14
+method = "CosMethod(128)"
+model = "Black–Scholes"
+recommended = false
+[[settings]]
+loss_ms = 0.3638
+max_vol_error_optimum = 9.572898029830412e-14
+max_vol_error_start = 6.111777750561487e-14
+method = "CosMethod(256)"
+model = "Black–Scholes"
+recommended = true
+[[settings]]
+loss_ms = 0.8735999999999999
+max_vol_error_optimum = 9.572898029830412e-14
+max_vol_error_start = 6.111777750561487e-14
+method = "CosMethod(512)"
+model = "Black–Scholes"
+recommended = false
+[[settings]]
+loss_ms = 1.5019999999999998
+max_vol_error_optimum = 9.572898029830412e-14
+max_vol_error_start = 6.111777750561487e-14
+method = "CosMethod(1024)"
+model = "Black–Scholes"
+recommended = false
+[[settings]]
+loss_ms = 2.9970499999999998
+max_vol_error_optimum = 9.572898029830412e-14
+max_vol_error_start = 6.111777750561487e-14
+method = "CosMethod(2048)"
+model = "Black–Scholes"
+recommended = false
+[[settings]]
+loss_ms = 0.73385
+max_vol_error_optimum = 7.31259291251174e-5
+max_vol_error_start = 7.590476666777257e-5
+method = "LewisMethod(100, 1001)"
+model = "Black–Scholes"
+recommended = false
+[[settings]]
+loss_ms = 1.5266
+max_vol_error_optimum = 1.0980494291601417e-11
+max_vol_error_start = 1.1446593672914673e-11
+method = "LewisMethod(100, 2001)"
+model = "Black–Scholes"
+recommended = false
+[[settings]]
+loss_ms = 3.0274
+max_vol_error_optimum = 1.787459069646502e-14
+max_vol_error_start = 1.1657341758564144e-14
+method = "LewisMethod(100, 4001)"
+model = "Black–Scholes"
+recommended = false
+[[settings]]
+loss_ms = 3.4902
+max_vol_error_optimum = 1.0980494291601417e-11
+max_vol_error_start = 1.1446593672914673e-11
+method = "LewisMethod(200, 4001)"
+model = "Black–Scholes"
+recommended = false
+[[settings]]
+loss_ms = 7.24235
+max_vol_error_optimum = 1.0980494291601417e-11
+max_vol_error_start = 1.1446593672914673e-11
+method = "LewisMethod(400, 8001)"
+model = "Black–Scholes"
+recommended = false
+[[settings]]
+loss_ms = 9.87125
+max_vol_error_optimum = 1.0980494291601417e-11
+max_vol_error_start = 1.1446593672914673e-11
+method = "LewisMethod(800, 16001)"
+model = "Black–Scholes"
+recommended = false
+[[settings]]
+loss_ms = 11.04185
+max_vol_error_optimum = 3.829364851049011e-7
+max_vol_error_start = 4.1115306970151977e-7
+method = "CarrMadanLewisMethod(400, 14)"
+model = "Black–Scholes"
+recommended = false
+[[settings]]
+loss_ms = 10.4366
+max_vol_error_optimum = 6.129366889040533e-7
+max_vol_error_start = 6.503036550919994e-7
+method = "CarrMadanMethod(400, 14)"
+model = "Black–Scholes"
+recommended = false
+[[settings]]
+loss_ms = 0.236
+max_vol_error_optimum = 2.3570835949726643e-7
+max_vol_error_start = 3.237968781988343e-10
+method = "CosMethod(128)"
+model = "Merton"
+recommended = false
+[[settings]]
+loss_ms = 0.42215
+max_vol_error_optimum = 8.007761120865098e-13
+max_vol_error_start = 1.0630385460785874e-14
+method = "CosMethod(256)"
+model = "Merton"
+recommended = true
+[[settings]]
+loss_ms = 1.1948
+max_vol_error_optimum = 8.007761120865098e-13
+max_vol_error_start = 1.0630385460785874e-14
+method = "CosMethod(512)"
+model = "Merton"
+recommended = false
+[[settings]]
+loss_ms = 2.0753500000000003
+max_vol_error_optimum = 8.007761120865098e-13
+max_vol_error_start = 1.0630385460785874e-14
+method = "CosMethod(1024)"
+model = "Merton"
+recommended = false
+[[settings]]
+loss_ms = 2.93825
+max_vol_error_optimum = 8.007761120865098e-13
+max_vol_error_start = 1.0630385460785874e-14
+method = "CosMethod(2048)"
+model = "Merton"
+recommended = false
+[[settings]]
+loss_ms = 0.61585
+max_vol_error_optimum = 0.00042420269245885267
+max_vol_error_start = 1.2621735546225477e-5
+method = "LewisMethod(100, 1001)"
+model = "Merton"
+recommended = false
+[[settings]]
+loss_ms = 1.16145
+max_vol_error_optimum = 6.37647266932273e-8
+max_vol_error_start = 1.9033663534173684e-12
+method = "LewisMethod(100, 2001)"
+model = "Merton"
+recommended = false
+[[settings]]
+loss_ms = 2.2413
+max_vol_error_optimum = 6.478568029266718e-8
+max_vol_error_start = 9.880984919163893e-15
+method = "LewisMethod(100, 4001)"
+model = "Merton"
+recommended = false
+[[settings]]
+loss_ms = 2.8651
+max_vol_error_optimum = 6.249553652359907e-11
+max_vol_error_start = 1.9033663534173684e-12
+method = "LewisMethod(200, 4001)"
+model = "Merton"
+recommended = false
+[[settings]]
+loss_ms = 5.777950000000001
+max_vol_error_optimum = 6.249553652359907e-11
+max_vol_error_start = 1.9033663534173684e-12
+method = "LewisMethod(400, 8001)"
+model = "Merton"
+recommended = false
+[[settings]]
+loss_ms = 11.6781
+max_vol_error_optimum = 6.249553652359907e-11
+max_vol_error_start = 1.9033663534173684e-12
+method = "LewisMethod(800, 16001)"
+model = "Merton"
+recommended = false
+[[settings]]
+loss_ms = 14.2912
+max_vol_error_optimum = 1.0012901595413126e-5
+max_vol_error_start = 1.1899929980296875e-7
+method = "CarrMadanLewisMethod(400, 14)"
+model = "Merton"
+recommended = false
+[[settings]]
+loss_ms = 14.897300000000001
+max_vol_error_optimum = 8.179712433553643e-6
+max_vol_error_start = 1.3117036384846514e-7
+method = "CarrMadanMethod(400, 14)"
+model = "Merton"
+recommended = false
+[[settings]]
+loss_ms = 0.26180000000000003
+max_vol_error_optimum = +inf
+max_vol_error_start = 5.276735604020644e-9
+method = "CosMethod(128)"
+model = "Kou"
+recommended = false
+[[settings]]
+loss_ms = 0.43925
+max_vol_error_optimum = +inf
+max_vol_error_start = 6.708522626297508e-14
+method = "CosMethod(256)"
+model = "Kou"
+recommended = false
+[[settings]]
+loss_ms = 0.89715
+max_vol_error_optimum = 0.004286096028095376
+max_vol_error_start = 6.708522626297508e-14
+method = "CosMethod(512)"
+model = "Kou"
+recommended = false
+[[settings]]
+loss_ms = 1.8991
+max_vol_error_optimum = 5.714451485061556e-6
+max_vol_error_start = 6.708522626297508e-14
+method = "CosMethod(1024)"
+model = "Kou"
+recommended = false
+[[settings]]
+loss_ms = 4.10535
+max_vol_error_optimum = 3.2342462041867748e-12
+max_vol_error_start = 6.708522626297508e-14
+method = "CosMethod(2048)"
+model = "Kou"
+recommended = false
+[[settings]]
+loss_ms = 0.71655
+max_vol_error_optimum = 0.0002745439086532797
+max_vol_error_start = 2.920038437911887e-5
+method = "LewisMethod(100, 1001)"
+model = "Kou"
+recommended = false
+[[settings]]
+loss_ms = 1.3888
+max_vol_error_optimum = 5.489242006495587e-7
+max_vol_error_start = 4.3507419889010635e-12
+method = "LewisMethod(100, 2001)"
+model = "Kou"
+recommended = false
+[[settings]]
+loss_ms = 2.6950999999999996
+max_vol_error_optimum = 5.538662588289167e-7
+max_vol_error_start = 8.607003998406526e-14
+method = "LewisMethod(100, 4001)"
+model = "Kou"
+recommended = false
+[[settings]]
+loss_ms = 3.2664500000000003
+max_vol_error_optimum = 4.0946274149078477e-11
+max_vol_error_start = 4.3507419889010635e-12
+method = "LewisMethod(200, 4001)"
+model = "Kou"
+recommended = true
+[[settings]]
+loss_ms = 6.209
+max_vol_error_optimum = 4.0946274149078477e-11
+max_vol_error_start = 4.3507419889010635e-12
+method = "LewisMethod(400, 8001)"
+model = "Kou"
+recommended = false
+[[settings]]
+loss_ms = 12.1111
+max_vol_error_optimum = 4.0946274149078477e-11
+max_vol_error_start = 4.3507419889010635e-12
+method = "LewisMethod(800, 16001)"
+model = "Kou"
+recommended = false
+[[settings]]
+loss_ms = 16.0748
+max_vol_error_optimum = 1.8281627457872318e-5
+max_vol_error_start = 1.4160102401739039e-7
+method = "CarrMadanLewisMethod(400, 14)"
+model = "Kou"
+recommended = false
+[[settings]]
+loss_ms = 17.6584
+max_vol_error_optimum = +inf
+max_vol_error_start = 2.297426376085543e-7
+method = "CarrMadanMethod(400, 14)"
+model = "Kou"
+recommended = false
+[[settings]]
+loss_ms = 0.28335
+max_vol_error_optimum = +inf
+max_vol_error_start = 0.00025602603649965694
+method = "CosMethod(128)"
+model = "Variance Gamma"
+recommended = false
+[[settings]]
+loss_ms = 0.47064999999999996
+max_vol_error_optimum = 0.002300368813317827
+max_vol_error_start = 2.7704023412955525e-5
+method = "CosMethod(256)"
+model = "Variance Gamma"
+recommended = false
+[[settings]]
+loss_ms = 0.8542000000000001
+max_vol_error_optimum = 7.287204070036135e-5
+max_vol_error_start = 3.0555504541285305e-6
+method = "CosMethod(512)"
+model = "Variance Gamma"
+recommended = false
+[[settings]]
+loss_ms = 1.5938
+max_vol_error_optimum = 1.55778348560065e-5
+max_vol_error_start = 2.6548316686691997e-7
+method = "CosMethod(1024)"
+model = "Variance Gamma"
+recommended = false
+[[settings]]
+loss_ms = 3.0652500000000003
+max_vol_error_optimum = 1.9994477638840547e-6
+max_vol_error_start = 3.500813111623202e-9
+method = "CosMethod(2048)"
+model = "Variance Gamma"
+recommended = false
+[[settings]]
+loss_ms = 0.71845
+max_vol_error_optimum = 0.007381799746879969
+max_vol_error_start = 0.00016460490997052823
+method = "LewisMethod(100, 1001)"
+model = "Variance Gamma"
+recommended = false
+[[settings]]
+loss_ms = 1.6624999999999999
+max_vol_error_optimum = 0.007244207822788257
+max_vol_error_start = 0.00016671199141182758
+method = "LewisMethod(100, 2001)"
+model = "Variance Gamma"
+recommended = false
+[[settings]]
+loss_ms = 2.6911
+max_vol_error_optimum = 0.007235659265223737
+max_vol_error_start = 0.00016683968085687284
+method = "LewisMethod(100, 4001)"
+model = "Variance Gamma"
+recommended = false
+[[settings]]
+loss_ms = 2.6829
+max_vol_error_optimum = 0.0005540198172519495
+max_vol_error_start = 1.947024571127831e-5
+method = "LewisMethod(200, 4001)"
+model = "Variance Gamma"
+recommended = false
+[[settings]]
+loss_ms = 5.428999999999999
+max_vol_error_optimum = 8.158708737623921e-5
+max_vol_error_start = 2.090802264737013e-6
+method = "LewisMethod(400, 8001)"
+model = "Variance Gamma"
+recommended = false
+[[settings]]
+loss_ms = 11.608500000000001
+max_vol_error_optimum = 3.6505853157065005e-6
+max_vol_error_start = 1.6587796280997935e-7
+method = "LewisMethod(800, 16001)"
+model = "Variance Gamma"
+recommended = true
+[[settings]]
+loss_ms = 19.02025
+max_vol_error_optimum = 9.61786671297149e-5
+max_vol_error_start = 1.4239673606114556e-5
+method = "CarrMadanLewisMethod(400, 14)"
+model = "Variance Gamma"
+recommended = false
+[[settings]]
+loss_ms = 18.101499999999998
+max_vol_error_optimum = 9.078433718295864e-5
+max_vol_error_start = 1.355087917639941e-5
+method = "CarrMadanMethod(400, 14)"
+model = "Variance Gamma"
+recommended = false
+[[settings]]
+loss_ms = 0.24830000000000002
+max_vol_error_optimum = +inf
+max_vol_error_start = 4.017549892099126e-5
+method = "CosMethod(128)"
+model = "NIG"
+recommended = false
+[[settings]]
+loss_ms = 0.40705
+max_vol_error_optimum = 0.0006775791262570996
+max_vol_error_start = 3.226406763978673e-8
+method = "CosMethod(256)"
+model = "NIG"
+recommended = false
+[[settings]]
+loss_ms = 0.71935
+max_vol_error_optimum = 1.3817320940467948e-6
+max_vol_error_start = 6.461498003318411e-14
+method = "CosMethod(512)"
+model = "NIG"
+recommended = false
+[[settings]]
+loss_ms = 1.3368
+max_vol_error_optimum = 2.3999968679078165e-12
+max_vol_error_start = 2.0622392682412283e-14
+method = "CosMethod(1024)"
+model = "NIG"
+recommended = false
+[[settings]]
+loss_ms = 3.87355
+max_vol_error_optimum = 2.0031198921799387e-13
+max_vol_error_start = 2.0622392682412283e-14
+method = "CosMethod(2048)"
+model = "NIG"
+recommended = false
+[[settings]]
+loss_ms = 0.6040000000000001
+max_vol_error_optimum = 0.000770366854969784
+max_vol_error_start = 1.8308427790658666e-5
+method = "LewisMethod(100, 1001)"
+model = "NIG"
+recommended = false
+[[settings]]
+loss_ms = 1.5082
+max_vol_error_optimum = 0.000657495434717964
+max_vol_error_start = 3.352726095529057e-6
+method = "LewisMethod(100, 2001)"
+model = "NIG"
+recommended = false
+[[settings]]
+loss_ms = 2.11275
+max_vol_error_optimum = 0.000657275637398369
+max_vol_error_start = 3.367594201719726e-6
+method = "LewisMethod(100, 4001)"
+model = "NIG"
+recommended = false
+[[settings]]
+loss_ms = 2.1694
+max_vol_error_optimum = 1.0704979778175527e-6
+max_vol_error_start = 2.2069060467977408e-10
+method = "LewisMethod(200, 4001)"
+model = "NIG"
+recommended = false
+[[settings]]
+loss_ms = 5.5055
+max_vol_error_optimum = 5.4636295487853204e-11
+max_vol_error_start = 2.7478019859472624e-12
+method = "LewisMethod(400, 8001)"
+model = "NIG"
+recommended = true
+[[settings]]
+loss_ms = 12.90935
+max_vol_error_optimum = 5.4636295487853204e-11
+max_vol_error_start = 2.7478019859472624e-12
+method = "LewisMethod(800, 16001)"
+model = "NIG"
+recommended = false
+[[settings]]
+loss_ms = 13.87775
+max_vol_error_optimum = 4.268554970654481e-6
+max_vol_error_start = 7.292881377685134e-7
+method = "CarrMadanLewisMethod(400, 14)"
+model = "NIG"
+recommended = false
+[[settings]]
+loss_ms = 13.95625
+max_vol_error_optimum = 3.5480289206357707e-6
+max_vol_error_start = 8.220335984965299e-7
+method = "CarrMadanMethod(400, 14)"
+model = "NIG"
+recommended = false
+[[settings]]
+loss_ms = 0.49155
+max_vol_error_optimum = 0.001884896306524747
+max_vol_error_start = 1.0479081356817854e-6
+method = "CosMethod(128)"
+model = "Heston"
+recommended = false
+[[settings]]
+loss_ms = 0.8354499999999999
+max_vol_error_optimum = 8.311923295478696e-7
+max_vol_error_start = 2.7872149033214555e-12
+method = "CosMethod(256)"
+model = "Heston"
+recommended = false
+[[settings]]
+loss_ms = 1.5006
+max_vol_error_optimum = 7.54712958794812e-12
+max_vol_error_start = 1.1832201884942606e-13
+method = "CosMethod(512)"
+model = "Heston"
+recommended = true
+[[settings]]
+loss_ms = 3.7978500000000004
+max_vol_error_optimum = 3.8383185518853224e-13
+max_vol_error_start = 1.1832201884942606e-13
+method = "CosMethod(1024)"
+model = "Heston"
+recommended = false
+[[settings]]
+loss_ms = 5.6498
+max_vol_error_optimum = 3.8383185518853224e-13
+max_vol_error_start = 1.1832201884942606e-13
+method = "CosMethod(2048)"
+model = "Heston"
+recommended = false
+[[settings]]
+loss_ms = 1.1784000000000001
+max_vol_error_optimum = 0.0002800527790794427
+max_vol_error_start = 0.00013280821106612106
+method = "LewisMethod(100, 1001)"
+model = "Heston"
+recommended = false
+[[settings]]
+loss_ms = 3.26815
+max_vol_error_optimum = 4.938023728057184e-5
+max_vol_error_start = 1.007833100585831e-7
+method = "LewisMethod(100, 2001)"
+model = "Heston"
+recommended = false
+[[settings]]
+loss_ms = 4.698
+max_vol_error_optimum = 4.9102597840799955e-5
+max_vol_error_start = 1.010649885446746e-7
+method = "LewisMethod(100, 4001)"
+model = "Heston"
+recommended = false
+[[settings]]
+loss_ms = 4.671450000000001
+max_vol_error_optimum = 2.291301715029448e-8
+max_vol_error_start = 1.9921758687146962e-11
+method = "LewisMethod(200, 4001)"
+model = "Heston"
+recommended = false
+[[settings]]
+loss_ms = 10.57305
+max_vol_error_optimum = 3.444958207587945e-11
+max_vol_error_start = 1.9921758687146962e-11
+method = "LewisMethod(400, 8001)"
+model = "Heston"
+recommended = false
+[[settings]]
+loss_ms = 21.825499999999998
+max_vol_error_optimum = 3.444958207587945e-11
+max_vol_error_start = 1.9921758687146962e-11
+method = "LewisMethod(800, 16001)"
+model = "Heston"
+recommended = false
+[[settings]]
+loss_ms = 36.07275
+max_vol_error_optimum = 4.729590750846002e-6
+max_vol_error_start = 9.812750167981221e-7
+method = "CarrMadanLewisMethod(400, 14)"
+model = "Heston"
+recommended = false
+[[settings]]
+loss_ms = 34.2396
+max_vol_error_optimum = 3.86549590086771e-6
+max_vol_error_start = 6.945086452048166e-7
+method = "CarrMadanMethod(400, 14)"
+model = "Heston"
+recommended = false
