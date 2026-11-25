@@ -24,7 +24,7 @@ parameters and of `vols` (a keyword, so the quotes can be dual numbers while `Ma
 on invalid parameters and a `DomainError` on a non-positive price. `loss` is half its sum of squares (smooth also at an
 exact fit, unlike the old sum of per-maturity norms) and is `Inf` where the parameters cannot be priced
 (`numerical_failure`: a `DomainError`, which is also what every FinancialMonteCarlo ≥ 0.8 constructor throws on invalid parameters, possible with `Parametrization()`; FinancialMonteCarlo#71, #31: an `AssertionError` or a `DimensionMismatch` is a bug and propagates);
-any other exception propagates (#3, #24; the polish rejects the same exceptions and rethrows the rest). The loop over the maturities, `maturity_errors`, sits behind
+any other exception propagates (#3, #24; the polish rejects the same exceptions and rethrows the rest), and so does a numerical failure where the plain values of the parameters can be priced (`priceable`: a failure of the derivatives only, #42; one more evaluation of the errors, on the failure path only). The loop over the maturities, `maturity_errors`, sits behind
 `FinancialMonteCarlo.set_parameters!`, which is not inferred; `loss` converts to `promote_type(eltype(params), T)` and is
 `@inferred` in the tests, as the closed-form `pricer` (which writes into an array of the price type computed by `analytic_price_type`, `analytic_prices`; the kernel of a mixture has its arity as a type parameter, known from the tuples of the model).
 

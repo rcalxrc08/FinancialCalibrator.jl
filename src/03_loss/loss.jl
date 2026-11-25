@@ -101,25 +101,52 @@ loss(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, met
 
 # the type of the result as a parameter, so that the loss and the Inf of a failure have the same type. No return type
 # assertion: vol_errors is inferred (Float64 and dual numbers, host and device), so the conversion is too.
+# A numerical failure is Inf only where the values of the parameters cannot be priced either: a failure of the
+# derivatives alone propagates (#42), an Inf there would be a zero gradient at a point that can be priced, where an
+# optimizer stops believing it is stationary. The check runs after the try, not in the catch: the catch would keep the
+# arguments live into it, and Enzyme then asks for runtime activity on the parameters (measured on Heston/Cos Float32,
+# both modes). It costs one more evaluation of the errors, on the failure path only; the exception is thrown again
+# without its original backtrace.
 function loss(::Type{R}, params, model, method, mktData, cache) where {R}
-    try
+    failure = try
         return loss_value(R, params, model, method, mktData, cache)
     catch e
-        return failed_loss(R, params, e)
+        numerical_failure(e) || rethrow()
+        e
     end
+    priceable(params, model, method, mktData, cache) && throw(failure)
+    # enable with JULIA_DEBUG=FinancialCalibrator to see why
+    @debug "loss: parameters that cannot be priced, Inf" params exception = failure
+    return R(Inf)
 end
 
 # The loss without the try, which is what the reverse rules differentiate.
 loss_value(::Type{R}, params, model, method, mktData, cache) where {R} = R(sum(abs2, vol_errors(params, model, method, mktData, cache)) / 2)
 
-# The loss where the parameters cannot be priced: Inf, or the exception again if it is not a numerical failure (called
-# inside a catch, so rethrow() keeps its backtrace).
-function failed_loss(::Type{R}, params, e) where {R}
+# The same decision for the reverse rules, which run their own try (not differentiated, so in the catch, where rethrow()
+# keeps the backtrace).
+function failed_loss(::Type{R}, e, params, model, method, mktData, cache) where {R}
     numerical_failure(e) || rethrow()
-    # enable with JULIA_DEBUG=FinancialCalibrator to see why
+    priceable(params, model, method, mktData, cache) && rethrow()
     @debug "loss: parameters that cannot be priced, Inf" params exception = e
     return R(Inf)
 end
+
+# Whether the values of the parameters, without their derivatives, can be priced. Inactive for Enzyme (its extension):
+# a Bool, nothing to differentiate.
+function priceable(params, model, method, mktData, cache)
+    try
+        vol_errors(primal_value.(params), model, method, mktData, cache)
+        return true
+    catch e
+        numerical_failure(e) || rethrow()
+        return false
+    end
+end
+
+# The value of a number without its derivatives (#42): a method per dual number type in the extensions (ForwardDiff); a
+# float is its own value, and so are the arguments of Enzyme and of the reverse rules, whose derivatives live apart.
+primal_value(x) = x
 
 # Zygote cannot differentiate a catch (pop_exception, #40), so its rule runs the try itself, around the forward pass of
 # the loss without it; where that throws a numerical failure the loss is Inf with a zero gradient, as ForwardDiff and
@@ -128,7 +155,7 @@ function ChainRulesCore.rrule(config::ChainRulesCore.RuleConfig{>:ChainRulesCore
     value, value_pullback = try
         ChainRulesCore.rrule_via_ad(config, loss_value, R, params, model, method, mktData, cache)
     catch e
-        failed_loss(R, params, e), nothing
+        failed_loss(R, e, params, model, method, mktData, cache), nothing
     end
     no_tangents = ntuple(_ -> ChainRulesCore.NoTangent(), 4)
     function loss_pullback(Δ)

@@ -44,7 +44,14 @@ _Read before touching anything on the differentiated path._ (Layer 3 reference: 
   `RuleConfig` (`rrule_via_ad`) for Zygote, and a Mooncake `rrule!!` in the extension (`@from_rrule` passes no config)
   around `build_rrule(loss_value, ...)`, which Mooncake caches per signature. The zero gradient is `zero(params)`: a
   `ZeroTangent` reaches DifferentiationInterface as `nothing`. Tested as `autodiff` of `calibrate` with `LBFGS()` on
-  DAX in `test/models_methods.jl`. Zygote on `vol_errors` needed `analytic_prices` without `.=` into `similar`: one allocating broadcast through the
+  DAX in `test/models_methods.jl`. A numerical failure is `Inf` only where the plain values cannot be priced either
+  (`priceable`, #42): a failure of the derivatives alone propagates instead of passing as a zero gradient. `loss` runs
+  that check after its `try`, not in the `catch`: arguments live into the `catch` made Enzyme ask for runtime activity
+  (Heston/Cos Float32, both modes); `priceable` is `EnzymeRules.inactive`, and the dual numbers lose their partials
+  through `primal_value` (a method per dual type, the ForwardDiff extension). It cannot catch Enzyme's Float32 Heston
+  failure (#41 group 7): there the primal itself is wrong inside the differentiated code, `sqrt`/`inv` of a `ComplexF32`
+  return garbage values (EnzymeAD/Enzyme.jl#4108, comment 7167307470), the prices are `NaN` and `check_prices` throws on
+  values, so `Inf` and a zero gradient remain until #4108 is fixed. Zygote on `vol_errors` needed `analytic_prices` without `.=` into `similar`: one allocating broadcast through the
   isbits callable `PriceAs{PT}`, a closure over `PT` is not isbits and a GPU broadcast refuses it. On the device Zygote (0.7.18) differentiates the
   fields of a broadcast callable by rebuilding it with dual numbers: only fields typed by a bare, unbounded type parameter
   can hold them (`LognormalMixtureKernel` has one per field, its tuples included, and an outer constructor sets `N`), and

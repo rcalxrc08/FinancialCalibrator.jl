@@ -25,6 +25,12 @@ progress("Packages loaded")
 # Prices of the call smile of `model` re-parametrized with `p`, through the `pricer` interface.
 # a method without a pricer: the loss must not hide the MethodError
 struct NoPricer <: FinancialMonteCarlo.AbstractMethod end
+# a method whose derivatives fail where its values do not: the closed form, and a DomainError on dual numbers. The loss
+# must not turn that into Inf and a zero gradient (#42).
+struct DerivativeFails <: FinancialMonteCarlo.AbstractMethod end
+failing_derivative(::ForwardDiff.Dual, _) = throw(DomainError(NaN, "a derivative that fails"))
+failing_derivative(::Real, prices) = prices
+FinancialMonteCarlo.pricer(model::BlackScholesProcess, r::FinancialMonteCarlo.AbstractZeroRateCurve, ::DerivativeFails, smile::FinancialMonteCarlo.EuropeanOptionSmile) = failing_derivative(model.σ, pricer(model, r, AnalyticMethod(), smile))
 
 function smile_prices(model, method, p, K, r, T)
     smile = FinancialMonteCarlo.EuropeanOptionSmile(T, K, fill!(similar(K, Bool), true))
@@ -245,6 +251,12 @@ progress("Running the core testset")
             # parameters the model rejects (a DomainError of its constructor) too; any other exception propagates (#3)
             @test FC.loss([-0.2], model, method, mkt) == Inf
             @test_throws MethodError FC.loss([0.2], model, NoPricer(), mkt)
+            # where only the derivatives fail, the values are priced: the exception propagates instead of a zero
+            # gradient (#42); where the values cannot be priced, still Inf and a zero gradient
+            @test FC.loss([0.2], model, DerivativeFails(), mkt) == FC.loss([0.2], model, AnalyticMethod(), mkt)
+            @test_throws DomainError ForwardDiff.gradient(x -> FC.loss(x, model, DerivativeFails(), mkt), [0.2])
+            @test ForwardDiff.gradient(x -> FC.loss(x, model, DerivativeFails(), mkt), [-0.2]) == [0.0]
+            @test FC.primal_value(ForwardDiff.Dual(ForwardDiff.Dual(0.2, 1.0), 1.0)) === 0.2
             # Zygote differentiates the volatility errors and the loss (its try through a rule, #40) of a closed form: the prices
             # are one allocating broadcast, not a write into an array (#39)
             slnm = ShiftedProcess(LogNormalMixture((0.1, 0.2, 0.35), (0.3, 0.4), und), -0.1)

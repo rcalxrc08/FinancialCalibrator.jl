@@ -21,7 +21,7 @@ Startup: read `state/STATUS.md`, then route the task through `CONTEXT.md`. Runti
 for this project (`kaimon.toml` pins the Julia); each contract's Verify table lists the checks to run after a change.
 
 Map: `src/FinancialCalibrator.jl` includes the stages in order, `01_market_data` → `02_pricing` → `03_loss` →
-`04_calibration` → `05_sensitivities`; `ext/` holds the extensions (CUDA, Enzyme, Mooncake); `test/` the suite;
+`04_calibration` → `05_sensitivities`; `ext/` holds the extensions (CUDA, Enzyme, ForwardDiff, Mooncake); `test/` the suite;
 `docs/` the Documenter site; `data/json/` the sample market data (DAX 22 Aug 2016); `etc/` the logo and its script; `bench/` the AD benchmark, run by hand.
 
 Rules for every change (details in `references/conventions.md` and `references/autodiff.md`):

@@ -7,7 +7,7 @@
 # derivative, as in the ChainRules rule.
 module FinancialCalibratorEnzymeExt
 
-using FinancialCalibrator: calibrated_variables, implicit_calibration
+using FinancialCalibrator: calibrated_variables, implicit_calibration, priceable
 using EnzymeCore: Active, Annotation, BatchDuplicated, Const, Duplicated
 using EnzymeCore.EnzymeRules: EnzymeRules, FwdConfig, RevConfig, AugmentedReturn, needs_primal, needs_shadow
 
@@ -43,5 +43,8 @@ function EnzymeRules.reverse(config::RevConfig, ::Const{typeof(calibrated_variab
     # no derivative for the setup; an active number (min_vega) needs a zero
     return (nothing, map(a -> a isa Active ? zero(a.val) : nothing, setup)...)
 end
+
+# the check of loss that the values of the parameters can be priced (#42): a Bool, run as is
+EnzymeRules.inactive(::typeof(priceable), args...) = true
 
 end # module

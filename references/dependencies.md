@@ -14,7 +14,7 @@ backend keyword defaults to it (`DI.check_available`, not `Base.get_extension`: 
 cannot differentiate through the keyword defaults). `ext/FinancialCalibratorMooncakeExt.jl` (triggered by Mooncake) gives Mooncake a
 rule for `implicit_variables` and one for `loss` (its `try`, #40): ImplicitDifferentiation's ChainRules rrule needs a `RuleConfig`, which Mooncake's
 `@from_rrule` does not pass, so the extension calls it with a config without modes (the backends are always explicit in
-`calibrated_parameters`, the config is never used) and moves the cotangent of the quotes itself. The setup of the implicit function is `implicit_calibration`, marked
+`calibrated_parameters`, the config is never used) and moves the cotangent of the quotes itself. `ext/FinancialCalibratorForwardDiffExt.jl` (triggered by ForwardDiff) only gives `primal_value` of a dual number, the value the loss prices again to tell a failure of the derivatives from parameters that cannot be priced (#42; to be replaced by FinancialToolbox's once rcalxrc08/FinancialToolbox.jl#81 makes it public). The setup of the implicit function is `implicit_calibration`, marked
 `@zero_derivative` there: otherwise Mooncake traces it and fails on the device-to-host copies of the cache on the GPU.
 AD support (CPU and GPU timings, failures) is the table in `docs/src/backends.md`: ForwardDiff, Zygote, Mooncake work
 (Mooncake also on the GPU); Mooncake as inner `x` fails on the GPU (dual numbers broadcast over a CuArray); Enzyme

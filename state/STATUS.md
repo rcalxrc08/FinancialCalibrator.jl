@@ -1,7 +1,7 @@
 # Status
 
 _What is in flight. Layer 4: volatile, rewritten freely; GitHub issues are the source of truth, this file is the index
-an agent reads first._ Updated: 2026-11-23
+an agent reads first._ Updated: 2026-11-25
 
 ## Current focus
 
@@ -16,14 +16,14 @@ The status table is #41 comment 7059648077 (edited in place); open points and ne
 | Mooncake Jacobian on the device | `master` | #41 group 3d | upstream: chalk-lab/Mooncake.jl#1485 (no `CuArray` method in its output check, fix verified); recheck on each Mooncake release |
 | Enzyme on the device (forward and reverse) | `master` | #41 group 5 | same assertion and warnings as Enzyme#4094 in both modes: comment there with the reverse case |
 | Enzyme `parmsRemoved` | `master` | #41 group 2 | toy reproducer for Enzyme |
-| Groups 6 and 7 | `master` | #41, #42 | 7 waits for Enzyme#4108; 6: recheck once #4108 is fixed, meanwhile reduce it (batched reverse over a `ComplexF32` Cos sum) |
+| Groups 6 and 7 | `master` | #41 | 7 waits for Enzyme#4108 (primal wrong too, comment 7167307470); 6: recheck once #4108 is fixed, meanwhile reduce it (batched reverse over a `ComplexF32` Cos sum) |
 | Docs and Mooncake as inner `x` timing | `master` | #41 group 8 | re-time the Heston Enzyme `calibrate` cells (still ✗ in `docs/src/backends.md`), add a test, full bench rerun |
 
 ## Known issues
 
 | Issue | Symptom | Workaround |
 |:--|:--|:--|
-| #42 | the `try` of `loss` turns a failing derivative into a zero gradient | compare with ForwardDiff when a backend gives a zero gradient |
+| #41 group 7 | Enzyme in Float32 on Heston/Fourier: wrong primal inside the differentiated loss (EnzymeAD/Enzyme.jl#4108), `Inf` and a zero gradient | ForwardDiff, or Float64 |
 | #27 | shifted lognormal mixture on DAX converges to a degenerate corner (α ≈ −234) | — (optimum is degenerate, cond ≈ 5e9) |
 
 ## Technical debt and enhancements

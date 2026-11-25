@@ -52,7 +52,7 @@ function Mooncake.rrule!!(::CoDual{typeof(FinancialCalibrator.loss)}, R::CoDual,
         loss_pullback(dy) = (NoRData(), Base.tail(value_pullback(dy))...)
         return value, loss_pullback
     catch e
-        value = FinancialCalibrator.failed_loss(primal(R), primal(first(args)), e)
+        value = FinancialCalibrator.failed_loss(primal(R), e, map(primal, args)...)
         failure_pullback(_) = (NoRData(), NoRData(), map(a -> zero_rdata(primal(a)), args)...)
         return zero_fcodual(value), failure_pullback
     end

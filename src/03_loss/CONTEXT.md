@@ -6,7 +6,7 @@ The volatility errors of the quotes that enter the loss, for the parameters of a
 
 | Load | Why |
 |:--|:--|
-| `loss.jl` | `loss_cache`, `vol_errors`, `maturity_errors`, `loss`, `numerical_failure` |
+| `loss.jl` | `loss_cache`, `vol_errors`, `maturity_errors`, `loss`, `numerical_failure`, `priceable` |
 | `parametrization.jl` | `Parametrization`, `default_parametrization` per model |
 | `backends.jl` | `default_backend()`: ForwardDiff when loaded, FiniteDiff otherwise |
 | `ext/FinancialCalibratorMooncakeExt.jl` | the Mooncake rule of `loss`, when changing `loss` or `loss_value` |
@@ -21,7 +21,8 @@ The volatility errors of the quotes that enter the loss, for the parameters of a
   parameters; `loss` returns `Inf` only for a `DomainError`, every other exception propagates.
 - The `try` of `loss` stays out of what Zygote and Mooncake differentiate: `loss_value` is the loss without it, and the
   rules of `loss` (the `rrule` in `loss.jl`, the Mooncake one in `ext/`) run the `try` around its reverse pass (#40).
-  Change the three together.
+  Change the three together. A numerical failure is `Inf` only if `priceable` (the plain values) fails too (#42); in
+  `loss` that check stays after the `try`, never in the `catch` (Enzyme runtime activity).
 - One check of the prices per call (one GPU sync), `@inbounds` after the size check on the host.
 
 ## Outputs
