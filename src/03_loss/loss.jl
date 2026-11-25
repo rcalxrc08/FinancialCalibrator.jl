@@ -7,10 +7,10 @@
 # quoted volatility, is below `min_vega * S0` are left out: their prices are so small that the error of a numerical
 # method is a large error in volatility, and it moves erratically with the parameters (on the DAX surface one such quote,
 # priced 1e-10, keeps the loss from being smooth at the 1e-6 level).
-function loss_cache(model::FinancialMonteCarlo.BaseProcess, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData; min_vega::Real = 1e-3)
-    S0 = model.underlying.S0
+function loss_cache(model::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCarlo.AbstractUnderlying, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData; min_vega::Real = 1e-3)
+    S0 = und.S0
     maturities, rates, strikes = mktData.TimeToMaturity, mktData.ZeroRates, mktData.Strikes
-    dividends = [implied_dividend(model.underlying, t) for t in maturities]
+    dividends = [implied_dividend(und, t) for t in maturities]
     # the indices of the quotes kept, on the host; the strikes and the call flags live where the strikes live
     quoted = [findall(Array(blsvega.(S0, strikes, rates[i], maturities[i], @view(mktData.Volatility[i, :]), dividends[i]) .>= min_vega * S0)) for i in eachindex(maturities)]
     quoted_strikes = [strikes[q] for q in quoted]
@@ -26,25 +26,31 @@ function loss_cache(model::FinancialMonteCarlo.BaseProcess, method::FinancialMon
     repeated(values) = reduce(vcat, [zero(quoted_strikes[i]) .+ values[i] for i in active])
     positions = reduce(vcat, [vec(LinearIndices(mktData.Volatility)[i, quoted[i]]) for i in active])
     flat = (strikes = reduce(vcat, quoted_strikes[active]), rates = repeated(rates), maturities = repeated(maturities), dividends = repeated(dividends), is_call = reduce(vcat, is_call[active]), positions = positions)
-    return (quoted = quoted, strikes = quoted_strikes, smiles = smiles, is_call = is_call, zero_rates = [ZeroRate(r) for r in rates], dividends = dividends, method = calibration_method(method, strikes), active = active, flat = flat)
+    # the underlying of each maturity with its flat-equivalent dividend, as the rate: the pricers integrate a number, not
+    # the dividend curve, at every evaluation (FinancialMonteCarlo#72)
+    underlyings = [FinancialMonteCarlo.Underlying(S0, d) for d in dividends]
+    return (S0 = S0, underlyings = underlyings, quoted = quoted, strikes = quoted_strikes, smiles = smiles, is_call = is_call, zero_rates = [ZeroRate(r) for r in rates], dividends = dividends, method = calibration_method(method, strikes), active = active, flat = flat)
 end
 
 """
-    vol_errors(params, model, method, mktData, cache = loss_cache(model, method, mktData); vols = mktData.Volatility)
+    vol_errors(params, model, und, method, mktData, cache = loss_cache(model, und, method, mktData); vols = mktData.Volatility)
+    vol_errors(params, model, method, mktData, cache; vols = mktData.Volatility)
 
-Model implied volatilities minus the quoted ones, for the parameters `params` of `model`: one entry per quote that enters
+Model implied volatilities minus the quoted ones, for the parameters `params` of `model` on the underlying `und` (spot
+and dividends; with a cache, those it was built with): one entry per quote that enters
 the loss (see `loss_cache`: out of the money options, vega at least `min_vega * S0`), maturity by maturity. Generic in the
 number type of `params` and of `vols`, so that it can be differentiated with respect to both. Throws on invalid
 parameters, and a `DomainError` on a price that is not positive.
 """
-function vol_errors(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData, cache = loss_cache(model, method, mktData); vols::AbstractMatrix{<:Real} = mktData.Volatility)
+vol_errors(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCarlo.AbstractUnderlying, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData, cache = loss_cache(model, und, method, mktData); vols::AbstractMatrix{<:Real} = mktData.Volatility) = vol_errors(params, model, method, mktData, cache; vols = vols)
+function vol_errors(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData, cache; vols::AbstractMatrix{<:Real} = mktData.Volatility)
     # set_parameters! returns a new model, it does not mutate `model` (inferred since FinancialMonteCarlo 0.7; the loop
     # over the maturities stays a function of its own, a barrier should a model's type not be inferred).
     new_model = FinancialMonteCarlo.set_parameters!(model, params)
     # the positions of the quotes in the cache index the surface of mktData: checked here on the sizes, on the host, so that
     # maturity_errors reads them without a bounds check, which on the GPU is a reduction read back to the host (a sync)
     check_surface_size(vols, mktData)
-    return maturity_errors(new_model, model.underlying.S0, cache, vols)
+    return maturity_errors(new_model, cache.S0, cache, vols)
 end
 
 # The comprehension over the maturities is inferred with dual numbers (tested with `@inferred`): the pricer of a maturity
@@ -61,7 +67,7 @@ function maturity_errors(new_model, S0, cache, vols)
 end
 
 # The model prices of the quotes of maturity i that enter the loss.
-model_prices(new_model, cache, i::Integer) = vec(pricer(new_model, cache.zero_rates[i], cache.method, cache.smiles[i]))
+model_prices(new_model, cache, i::Integer) = vec(pricer(new_model, cache.underlyings[i], cache.zero_rates[i], cache.method, cache.smiles[i]))
 
 # The checks on the differentiated path are validations (their branches are not traced, #39): named functions marked
 # @non_differentiable and called directly, not ChainRulesCore.@ignore_derivatives blocks, whose closures Zygote traces
@@ -86,7 +92,8 @@ function model_volatilities(new_model, S0, mktData::MarketData, cache, i::Intege
 end
 
 """
-    loss(params, model, method, mktData, cache = loss_cache(model, method, mktData))
+    loss(params, model, und, method, mktData, cache = loss_cache(model, und, method, mktData))
+    loss(params, model, method, mktData, cache)
 
 Half the sum of the squared volatility errors of [`vol_errors`](@ref): smooth in the parameters, also where a maturity
 is fitted exactly. `Inf` where the parameters cannot be priced (see `numerical_failure`), which an Optim optimizer ranks
@@ -97,7 +104,8 @@ Every backend differentiates it, with a zero gradient where it is `Inf`: Forward
 FinancialMonteCarlo#79), Zygote through a ChainRules `rrule` and Mooncake through a rule of its extension, both of which
 run the `try` themselves around the reverse pass of the loss without it (#40: neither differentiates a `catch`).
 """
-loss(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}, cache = loss_cache(model, method, mktData)) where {T} = loss(promote_type(eltype(params), T), params, model, method, mktData, cache)
+loss(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCarlo.AbstractUnderlying, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData, cache = loss_cache(model, und, method, mktData)) = loss(params, model, method, mktData, cache)
+loss(params::AbstractVector{<:Real}, model::FinancialMonteCarlo.BaseProcess, method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}, cache) where {T} = loss(promote_type(eltype(params), T), params, model, method, mktData, cache)
 
 # the type of the result as a parameter, so that the loss and the Inf of a failure have the same type. No return type
 # assertion: vol_errors is inferred (Float64 and dual numbers, host and device), so the conversion is too.

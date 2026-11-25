@@ -21,14 +21,14 @@ See `data/json/` for the sample market data.
 ```julia
 using FinancialCalibrator, FinancialMonteCarlo, FinancialFFT
 und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
-model = NormalInverseGaussianProcess(0.2, -0.03, 0.16, und)  # spot and dividends come from the underlying, not from the quotes
+model = NormalInverseGaussianProcess(0.2, -0.03, 0.16)  # spot and dividends come from the underlying, not from the quotes
 
 # the pricing method decides how each smile is priced
-calibrate(model, LewisMethod(400.0, 8001), mkt)         # any FinancialFFT method; sizes per model in the docs
-calibrate(ShiftedProcess(LogNormalMixture(...), α), AnalyticMethod(), mkt)  # closed form
+calibrate(model, und, LewisMethod(400.0, 8001), mkt)         # any FinancialFFT method; sizes per model in the docs
+calibrate(ShiftedProcess(LogNormalMixture(...), α), und, AnalyticMethod(), mkt)  # closed form
 ```
 
-Spot and dividends are those of the model's `Underlying`. `calibrate(model, method, mkt, opt_method, opt_options;
+Spot and dividends are those of the `Underlying` passed next to the model (FinancialMonteCarlo 0.10). `calibrate(model, und, method, mkt, opt_method, opt_options;
 parametrization, autodiff, polish, polish_backend, min_vega, verbose)` accepts any Optim optimizer and `Optim.Options`,
 and polishes the result with Levenberg–Marquardt. The loss is half the sum of the squared implied volatility errors of
 the out of the money quotes whose vega is at least `min_vega * S0`.
@@ -48,7 +48,7 @@ volatilities are resampled on a moneyness grid.
 
 ```julia
 using ForwardDiff
-f(V) = calibrated_parameters(model, LewisMethod(400.0, 8001), mkt, V)   # the calibration, as a function of the quotes
+f(V) = calibrated_parameters(model, und, LewisMethod(400.0, 8001), mkt, V)   # the calibration, as a function of the quotes
 ForwardDiff.jacobian(f, mkt.Volatility)                                  # ∂p*/∂v; Zygote and Mooncake work too
 ```
 
@@ -62,7 +62,7 @@ FinancialFFT method and `AnalyticMethod` (the execution mode of the method is mo
 
 ```julia
 using CUDA, Adapt
-calibrate(model, CosMethod(1024), adapt(CuArray, mkt))
+calibrate(model, und, CosMethod(1024), adapt(CuArray, mkt))
 ```
 
 The execution mode is part of the method (FinancialMonteCarlo 0.6): `CosMethod(1024; mode = FinancialMonteCarlo.CudaMode())`

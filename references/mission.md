@@ -14,7 +14,7 @@ come from automatic differentiation (implicit function theorem) instead of bumpi
 - Any pricing method of FinancialMonteCarlo's `pricer(model, zero_rate, method, payoff)` interface calibrates with the
   same call: FinancialFFT's Fourier methods, FinancialMonteCarlo's Monte Carlo, VibratoMonteCarlo, the closed forms of
   `AnalyticMethod`.
-- `calibrated_parameters(model, method, mkt, vols)` is differentiable with respect to `vols` with ForwardDiff, Zygote,
+- `calibrated_parameters(model, und, method, mkt, vols)` is differentiable with respect to `vols` with ForwardDiff, Zygote,
   Mooncake and Enzyme, on the host and on the GPU (status per combination: `docs/src/backends.md`, #41).
 - Generic number types: Float32 works, on the host and on the device.
 - Market data from files (`data/json/`) and from the CBOE.
@@ -22,7 +22,7 @@ come from automatic differentiation (implicit function theorem) instead of bumpi
 ## Constraints
 
 - No package that differentiates is a hard dependency (`dependencies.md`, D-002 in `decisions.md`).
-- Spot and dividends belong to the model's `Underlying` (D-001).
+- Spot and dividends belong to the `Underlying` passed next to the model (D-001, D-007).
 - No branches on the differentiated path (D-003).
 - Julia ≥ 1.10 (`Project.toml`); CI on Julia 1.
 

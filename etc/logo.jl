@@ -35,10 +35,10 @@ end
 # Implied volatilities of Heston, from out of the money options priced by FinancialFFT.
 function heston_vols(T, log_strikes; ρ = -0.6)
     S0 = 100.0
-    model = HestonProcess(0.8, 0.22, 0.0, 1.5, ρ, 0.04, Underlying(S0, 0.0))
+    model = HestonProcess(0.8, 0.22, 0.0, 1.5, ρ, 0.04)
     strikes = S0 .* exp.(log_strikes)
     calls = collect(strikes .>= S0)
-    prices = pricer(model, ZeroRate(0.0), CosMethod(2^10), EuropeanOptionSmile(T, strikes, calls))
+    prices = pricer(model, Underlying(S0, 0.0), ZeroRate(0.0), CosMethod(2^10), EuropeanOptionSmile(T, strikes, calls))
     return blsimpv.(S0, strikes, 0.0, T, prices, 0.0, calls)
 end
 

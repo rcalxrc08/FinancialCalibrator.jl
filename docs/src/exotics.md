@@ -42,10 +42,10 @@ underlying = Underlying(S0, d)
 maturities = [0.25, 0.5, 1.0, 2.0]
 strikes = collect(70.0:5.0:130.0)
 method = CosMethod(2^9)
-heston_market = HestonProcess(0.5, 0.2, 0.0, 1.5, -0.7, 0.04, underlying)
+heston_market = HestonProcess(0.5, 0.2, 0.0, 1.5, -0.7, 0.04)
 function quoted_vols(T, row)
     calls = strikes .>= S0 * exp((r - d) * T)
-    prices = pricer(heston_market, zero_rate, method, FinancialMonteCarlo.EuropeanOptionSmile(T, strikes, calls))
+    prices = pricer(heston_market, underlying, zero_rate, method, FinancialMonteCarlo.EuropeanOptionSmile(T, strikes, calls))
     prices = prices .* (1 .+ 0.01 .* sin.((row - 1) * length(strikes) .+ (1:length(strikes))))
     return blsimpv.(S0, strikes, r, T, prices, d, calls)
 end
@@ -53,8 +53,8 @@ vols = reduce(vcat, [permutedims(quoted_vols(T, i)) for (i, T) in enumerate(matu
 mkt = MarketData(maturities, [Date(2026) + Day(round(Int, 365 * T)) for T in maturities], fill(r, length(maturities)), strikes, vols)
 variables = Parametrization(x -> [exp(x[1]), exp(x[2]), zero(x[1]), exp(x[3]), tanh(x[4]), exp(x[5])],
                             p -> [log(p[1]), log(p[2]), log(p[4]), atanh(p[5]), log(p[6])])
-start = HestonProcess(0.3, 0.25, 0.0, 1.0, -0.3, 0.06, underlying)
-calibrated(w) = calibrated_parameters(start, method, mkt, w; parametrization = variables, min_vega = 0)
+start = HestonProcess(0.3, 0.25, 0.0, 1.0, -0.3, 0.06)
+calibrated(w) = calibrated_parameters(start, underlying, method, mkt, w; parametrization = variables, min_vega = 0)
 nothing # hide
 ```
 
@@ -76,7 +76,7 @@ maturity that no quote has (strike 110, eighteen months):
 ```@example exotics
 position = AmericanOption(1.0, 95.0, false) - 0.5 * AsianFixedStrikeOption(1.0, 100.0) + 2 * EuropeanOption(1.5, 110.0)
 mc = MonteCarloConfiguration(20_000, 50)
-price(p) = pricer(FinancialMonteCarlo.set_parameters!(start, p), zero_rate, mc, position)
+price(p) = pricer(FinancialMonteCarlo.set_parameters!(start, p), underlying, zero_rate, mc, position)
 value(w) = price(calibrated(w))
 value(vols)
 ```

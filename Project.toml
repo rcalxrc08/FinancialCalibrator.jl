@@ -1,6 +1,6 @@
 name = "FinancialCalibrator"
 uuid = "60ce4190-d1b0-11e9-1cf6-9f8fd6ff6838"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Nicola Scaramuzzino <nicola.scaramuzzino@yandex.com>"]
 
 [deps]
@@ -42,8 +42,8 @@ DifferentiationInterface = "0.6.1, 0.7"
 Downloads = "1"
 Enzyme = "0.13.220"
 EnzymeCore = "0.8"
-FinancialFFT = "0.6.3, 0.7"
-FinancialMonteCarlo = "0.9.1"
+FinancialFFT = "0.8"
+FinancialMonteCarlo = "0.10"
 FinancialToolbox = "0.8.0"
 ForwardDiff = "0.10, 1"
 ImplicitDifferentiation = "0.9"

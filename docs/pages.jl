@@ -10,8 +10,8 @@ sci(x) = (e = floor(Int, log10(abs(x))); @sprintf("%.1f×10<sup>%d</sup>", x / 1
 # ---------- Calibration ----------
 
 "The fit of the Heston calibration of calibration.md, and how stationary its end point is."
-function calibration_tiles(res, vols, start, method, mkt, variables)
-    cache = FinancialCalibrator.loss_cache(start, method, mkt; min_vega = 0)
+function calibration_tiles(res, vols, start, und, method, mkt, variables)
+    cache = FinancialCalibrator.loss_cache(start, und, method, mkt; min_vega = 0)
     x = variables.from_params(res.OptimalParam)
     g = ForwardDiff.gradient(y -> FinancialCalibrator.loss(variables.to_params(y), start, method, mkt, cache), x)
     e = filter(!isnan, res.ModelVolatility .- vols)

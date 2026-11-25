@@ -11,7 +11,8 @@ the details stay in the reference each entry points to.
 - **Why:** one source of truth for the forward; a pricing method of FinancialMonteCarlo's interface already reads them
   from the model.
 - **Consequences:** `adapter` returns `(underlying, mkt)`; rule in `CLAUDE.md`.
-- **Status:** active
+- **Status:** superseded in part by D-007 (the underlying is an argument next to the model; `MarketData` still holds no
+  spot nor dividends)
 
 ## D-002 (date not recorded; ChainRulesCore made hard in #39) No package that differentiates is a hard dependency
 
@@ -60,4 +61,16 @@ the details stay in the reference each entry points to.
   2.8-2.9 μs against 3.2-3.4 μs for `Bool *`, nested branches as fast as nested `ifelse` (`autodiff.md`); `ifelse` on a
   scalar flag stays ~4x `Bool *`. Mooncake and Enzyme never cared.
 - **Consequences:** the test extras require Zygote 0.7.19; rule in `CLAUDE.md`; `autodiff.md`.
+- **Status:** active
+
+## D-007 (2026-11-25; FinancialMonteCarlo#72, 0.3.0) The underlying is an argument next to the model
+
+- **Decision:** with FinancialMonteCarlo 0.10 the models hold only their parameters. `calibrate(model, und, method,
+  mkt)`, `calibrated_parameters(model, und, method, mkt, vols)`, `loss_cache(model, und, method, mkt)`, and the public
+  `vol_errors`/`loss` take the `Underlying` after the model; with a cache, the internal 5-argument forms read the spot
+  and one `Underlying(S0, d_i)` per maturity (flat-equivalent dividend) from the cache.
+- **Why:** one `set_parameters!` per evaluation and scalar dividends per maturity: the pricers integrate a number instead
+  of the dividend curve at every loss and gradient (FinancialMonteCarlo#72, #44); the AD rules of the internal loss keep
+  their arity.
+- **Consequences:** breaking (0.3.0); `adapter` still returns `(underlying, mkt)`, now passed as is.
 - **Status:** active

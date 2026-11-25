@@ -35,11 +35,11 @@ function build(::Type{T}, und) where {T}
         MarketData(T.(mkt_dax.TimeToMaturity), mkt_dax.MaturityDates, T.(mkt_dax.ZeroRates), T.(mkt_dax.Strikes), T.(mkt_dax.Volatility))
     end
     method, truth, model = if scen == "slnm"
-        AnalyticMethod(), ShiftedProcess(LogNormalMixture(T.((0.15, 0.3)), T.((0.6,)), und), T(0.1)), ShiftedProcess(LogNormalMixture(T.((0.2, 0.35)), T.((0.5,)), und), T(0.05))
+        AnalyticMethod(), ShiftedProcess(LogNormalMixture(T.((0.15, 0.3)), T.((0.6,))), T(0.1)), ShiftedProcess(LogNormalMixture(T.((0.2, 0.35)), T.((0.5,))), T(0.05))
     elseif scen == "vg"
-        LewisMethod(T(100), 4001), VarianceGammaProcess(T(0.2), T(-0.1), T(0.2), und), VarianceGammaProcess(T(0.25), T(-0.05), T(0.3), und)
+        LewisMethod(T(100), 4001), VarianceGammaProcess(T(0.2), T(-0.1), T(0.2)), VarianceGammaProcess(T(0.25), T(-0.05), T(0.3))
     else
-        CosMethod(1024), HestonProcess(T(0.3), T(0.2), T(0), T(1.5), T(-0.6), T(0.04), und), HestonProcess(T(0.25), T(0.25), T(0), T(1.0), T(-0.5), T(0.05), und)
+        CosMethod(1024), HestonProcess(T(0.3), T(0.2), T(0), T(1.5), T(-0.6), T(0.04)), HestonProcess(T(0.25), T(0.25), T(0), T(1.0), T(-0.5), T(0.05))
     end
     # the synthetic surface, built on the host
     mkt = let c = FC.loss_cache(truth, method, grid), v = copy(grid.Volatility)

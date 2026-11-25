@@ -14,7 +14,7 @@ end
 AnalyticMethod(; mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.SerialMode()) = AnalyticMethod(mode)
 
 # A model with a closed form defines two methods:
-#   analytic_price_type(model): the number type of its prices before the market data enters (inferred: it is used to
+#   analytic_price_type(model): the number type of its prices from its parameters, before the market data enters (inferred: it is used to
 #       allocate the prices, so that `pricer` is inferred even when the kernel is not);
 #   analytic_kernel(model, S0, r, d, T): a callable (K, isCall) -> price, an isbits struct so that it is captured by a
 #       GPU broadcast, with r and d the flat rates equivalent to the curves over the maturity T.
@@ -24,18 +24,18 @@ AnalyticMethod(; mode::FinancialMonteCarlo.AbstractMode = FinancialMonteCarlo.Se
     pricer(model, zero_rate, method::AnalyticMethod, opt)
 
 Closed-form price of a `EuropeanOption` or of a `EuropeanOptionSmile`. The spot, the dividend curve and the rate curve
-are those of the `model` and of `zero_rate`, as for the numerical methods; the rate and the dividend are flat-equivalent
+are those of the underlying `und` and of `zero_rate`, as for the numerical methods; the rate and the dividend are flat-equivalent
 over the maturity of `opt`. The strikes of a smile go to the device of the mode of `method`: in `CudaMode` the prices are
 computed on the GPU, one thread per strike.
 """
-function pricer(model::FinancialMonteCarlo.BaseProcess, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::AnalyticMethod, opt_::Union{FinancialMonteCarlo.EuropeanOption, FinancialMonteCarlo.EuropeanOptionSmile})
+function pricer(model::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCarlo.AbstractUnderlying, zero_rate::FinancialMonteCarlo.AbstractZeroRateCurve, method::AnalyticMethod, opt_::Union{FinancialMonteCarlo.EuropeanOption, FinancialMonteCarlo.EuropeanOptionSmile})
     opt = FinancialMonteCarlo.to_mode(opt_, FinancialMonteCarlo.execution_mode(method))
     T = opt.T
-    S0 = model.underlying.S0
+    S0 = und.S0
     # the curves may integrate in a wider type than the model (e.g. Float64 for a Float32 model)
     FT = float(promote_type(typeof(S0), typeof(T)))
     r = FT(FinancialMonteCarlo.integral(zero_rate.r, T) / T)
-    d = FT(FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(model), T) / T)
+    d = FT(FinancialMonteCarlo.integral(FinancialMonteCarlo.dividend(und), T) / T)
     PT = float(promote_type(analytic_price_type(model), FT, eltype(opt.K)))
     return analytic_prices(PT, analytic_kernel(model, S0, r, d, T), opt)
 end

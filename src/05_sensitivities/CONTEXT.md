@@ -19,7 +19,7 @@ The calibrated parameters as a differentiable function of the quoted volatilitie
 
 ## Outputs
 
-`calibrated_parameters(model, method, mkt, vols; conditions_backend, implicit_backends, ...)`. Checked by
+`calibrated_parameters(model, und, method, mkt, vols; conditions_backend, implicit_backends, ...)`. Checked by
 `test/runtests.jl` (BS against 1/n, recalibration) and `test/models_methods.jl` (−H⁻¹∂ᵥ∇L, Zygote, Mooncake, Enzyme).
 
 ## Verify (Kaimon)

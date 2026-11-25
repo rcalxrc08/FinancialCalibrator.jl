@@ -10,7 +10,7 @@ const DEFAULT_OPTIONS = Optim.Options(g_tol = 1e-6)
 const FULL_OPTIONS = Optim.Options()
 
 """
-    calibrate(model, pricing_method, mktData::MarketData, opt_method = NelderMead(), opt_options = Optim.Options(g_tol = 1e-6); parametrization = default_parametrization(model), autodiff, polish = true, polish_backend, min_vega = 1e-3, verbose = false)
+    calibrate(model, und, pricing_method, mktData::MarketData, opt_method = NelderMead(), opt_options = Optim.Options(g_tol = 1e-6); parametrization = default_parametrization(model), autodiff, polish = true, polish_backend, min_vega = 1e-3, verbose = false)
 
 Calibrate the parameters of `model` to the implied volatility surface in `mktData`. Each smile is priced with
 `pricing_method`, any `FinancialMonteCarlo.AbstractMethod`: a FinancialFFT method such as `CarrMadanMethod`,
@@ -33,9 +33,9 @@ the gradient of the loss vanishes, not where the tolerances of `opt_method` stop
 a smooth function of the quotes, which the implicit function theorem can differentiate. Nothing is printed unless
 `verbose = true`.
 """
-function calibrate(model::FinancialMonteCarlo.BaseProcess, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData, opt_method::Optim.AbstractOptimizer = DEFAULT_OPTIMIZER, opt_options::Optim.Options = DEFAULT_OPTIONS; min_vega::Real = 1e-3, kwargs...)
+function calibrate(model::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCarlo.AbstractUnderlying, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData, opt_method::Optim.AbstractOptimizer = DEFAULT_OPTIMIZER, opt_options::Optim.Options = DEFAULT_OPTIONS; min_vega::Real = 1e-3, kwargs...)
     # what does not depend on the parameters is built once, not at every evaluation of the loss
-    return calibrate_cached(model, pricing_method, mktData, loss_cache(model, pricing_method, mktData; min_vega = min_vega), opt_method, opt_options; kwargs...)
+    return calibrate_cached(model, pricing_method, mktData, loss_cache(model, und, pricing_method, mktData; min_vega = min_vega), opt_method, opt_options; kwargs...)
 end
 
 function calibrate_cached(model::FinancialMonteCarlo.BaseProcess, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}, cache, opt_method::Optim.AbstractOptimizer, opt_options::Optim.Options; parametrization::Parametrization = default_parametrization(model), kwargs...) where {T}

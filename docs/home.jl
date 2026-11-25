@@ -16,8 +16,8 @@ viz(theme) = theme.text == THEMES.dark.text ? VIZ.dark : VIZ.light
 const DAX = let
     und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
     method = CosMethod(512)   # the recommended setting for Heston (docs/benchmarks.jl, settings)
-    model = HestonProcess(0.3, 0.2, 0.0, 1.0, -0.5, 0.04, und)
-    res = calibrate(model, method, mkt)
+    model = HestonProcess(0.3, 0.2, 0.0, 1.0, -0.5, 0.04)
+    res = calibrate(model, und, method, mkt)
     (und = und, mkt = mkt, method = method, model = model, res = res, calibrated = FinancialMonteCarlo.set_parameters!(model, res.OptimalParam))
 end
 
@@ -28,10 +28,10 @@ function model_surface(d, strikes, maturities)
     S0 = d.und.S0
     rates = [FinancialCalibrator.interpolate_linear(d.mkt.TimeToMaturity, d.mkt.ZeroRates, t) for t in maturities]
     grid = MarketData(maturities, [Date(2016, 8, 22) + Day(round(Int, 365 * t)) for t in maturities], rates, strikes, fill(0.25, length(maturities), length(strikes)))
-    cache = FinancialCalibrator.loss_cache(d.calibrated, d.method, grid; min_vega = 0)
+    cache = FinancialCalibrator.loss_cache(d.calibrated, d.und, d.method, grid; min_vega = 0)
     vols = fill(NaN, length(maturities), length(strikes))
     for i in eachindex(maturities)
-        prices = vec(pricer(d.calibrated, cache.zero_rates[i], cache.method, cache.smiles[i]))
+        prices = vec(pricer(d.calibrated, cache.underlyings[i], cache.zero_rates[i], cache.method, cache.smiles[i]))
         for (n, j) in enumerate(cache.quoted[i])
             prices[n] > 3e-5 * S0 || continue                  # below the accuracy of the quadrature
             vols[i, j] = try
@@ -330,10 +330,10 @@ let d = DAX, S0 = DAX.und.S0
     smiles = model_surface(d, smile_strikes, d.mkt.TimeToMaturity)
     save_themes(theme -> smiles_figure(theme, d, smile_strikes, smiles), "home-smiles")
     save_themes(theme -> error_figure(theme, d), "home-errors")
-    J = ForwardDiff.jacobian(w -> calibrated_parameters(d.model, d.method, d.mkt, w), d.mkt.Volatility)
+    J = ForwardDiff.jacobian(w -> calibrated_parameters(d.model, d.und, d.method, d.mkt, w), d.mkt.Volatility)
     save_themes(theme -> sensitivity_figure(theme, d, J), "home-sensitivities")
     p = d.res.OptimalParam
-    cache = FinancialCalibrator.loss_cache(d.model, d.method, d.mkt)
+    cache = FinancialCalibrator.loss_cache(d.model, d.und, d.method, d.mkt)
     κs = exp.(range(log(p[4] / 6), log(p[4] * 4); length = 44))
     σs = exp.(range(log(p[1] / 3), log(p[1] * 2.5); length = 44))
     L = [FinancialCalibrator.loss([σ, p[2], p[3], κ, p[5], p[6]], d.model, d.method, d.mkt, cache) for κ in κs, σ in σs]

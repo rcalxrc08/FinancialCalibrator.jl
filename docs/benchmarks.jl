@@ -13,7 +13,7 @@ rmse_bp(res) = 1e4 * sqrt(2 * res.OptimalValue / count(!isnan, res.ModelVolatili
 
 und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
 
-models = ["Black–Scholes" => BlackScholesProcess(0.2, und), "Merton" => MertonProcess(0.2, 0.5, -0.1, 0.2, und), "Kou" => KouProcess(0.2, 0.5, 0.4, 10.0, 15.0, und), "Variance Gamma" => VarianceGammaProcess(0.2, -0.03, 0.16, und), "NIG" => NormalInverseGaussianProcess(0.2, -0.03, 0.16, und), "Heston" => HestonProcess(0.3, 0.2, 0.0, 1.0, -0.5, 0.04, und)]
+models = ["Black–Scholes" => BlackScholesProcess(0.2), "Merton" => MertonProcess(0.2, 0.5, -0.1, 0.2), "Kou" => KouProcess(0.2, 0.5, 0.4, 10.0, 15.0), "Variance Gamma" => VarianceGammaProcess(0.2, -0.03, 0.16), "NIG" => NormalInverseGaussianProcess(0.2, -0.03, 0.16), "Heston" => HestonProcess(0.3, 0.2, 0.0, 1.0, -0.5, 0.04)]
 
 # 1. Method settings (#10): the largest implied volatility error over the quotes of the loss against a converged
 # reference, and the cost of one loss, for each model at two points: its starting point and the optimum that calibrate
@@ -36,10 +36,10 @@ recommended = Dict("Black–Scholes" => CosMethod(256), "Merton" => CosMethod(25
 setting_rows = Dict{String, Any}[]
 for (name, model) in models
     start = FinancialMonteCarlo.get_parameters(model)
-    optimum = calibrate(model, recommended[name], mkt).OptimalParam
-    exact = [FinancialCalibrator.vol_errors(p, model, reference, mkt) for p in (start, optimum)]
+    optimum = calibrate(model, und, recommended[name], mkt).OptimalParam
+    exact = [FinancialCalibrator.vol_errors(p, model, und, reference, mkt) for p in (start, optimum)]
     for method in settings
-        cache = FinancialCalibrator.loss_cache(model, method, mkt)
+        cache = FinancialCalibrator.loss_cache(model, und, method, mkt)
         # Inf where the method gives a price that is not positive (COS(128) at the Kou optimum)
         max_error(p, e) =
             try
@@ -61,8 +61,8 @@ optimizers = ["NelderMead" => NelderMead(), "LBFGS" => LBFGS(), "BFGS" => BFGS()
 optimizer_rows = Dict{String, Any}[]
 for (name, model) in models, (opt_name, opt) in optimizers
     method = recommended[name]
-    res = calibrate(model, method, mkt, opt)
-    t = median_time(() -> calibrate(model, method, mkt, opt))
+    res = calibrate(model, und, method, mkt, opt)
+    t = median_time(() -> calibrate(model, und, method, mkt, opt))
     push!(optimizer_rows, Dict("model" => name, "optimizer" => opt_name, "method" => method_name(method), "seconds" => t, "rmse_bp" => rmse_bp(res), "parameters" => res.OptimalParam))
     println(name, " ", opt_name, ": ", round(t; digits = 3), " s, ", round(rmse_bp(res); digits = 2), " bp")
 end
@@ -73,11 +73,11 @@ engines = ["CosMethod(512)" => CosMethod(512), "LewisMethod(200, 4001)" => Lewis
 engine_rows = Dict{String, Any}[]
 heston = last(models[end])
 for (name, method) in engines
-    cache = FinancialCalibrator.loss_cache(heston, method, mkt)
+    cache = FinancialCalibrator.loss_cache(heston, und, method, mkt)
     p = FinancialMonteCarlo.get_parameters(heston)
     t_loss = median_time(() -> FinancialCalibrator.loss(p, heston, method, mkt, cache); runs = 50)
-    res = calibrate(heston, method, mkt)
-    t = median_time(() -> calibrate(heston, method, mkt))
+    res = calibrate(heston, und, method, mkt)
+    t = median_time(() -> calibrate(heston, und, method, mkt))
     push!(engine_rows, Dict("engine" => name, "loss_ms" => 1e3 * t_loss, "calibration_seconds" => t, "rmse_bp" => rmse_bp(res)))
     println(name, ": loss ", round(1e3 * t_loss; digits = 2), " ms, calibration ", round(t; digits = 3), " s")
 end
@@ -89,8 +89,9 @@ function smile_market(n, ::Type{T}) where {T}
     return MarketData(T[1], [Date(2027)], T[0.01], strikes, vols)
 end
 sizes = [12, 50, 200, 500, 1000, 2000, 5000]
-bs(T) = BlackScholesProcess(T(0.2), Underlying(T(100), T(0)))
-host_ms(n, T) = (m = smile_market(n, T); c = FinancialCalibrator.loss_cache(bs(T), CosMethod(4096), m; min_vega = 0); 1e3 * median_time(() -> FinancialCalibrator.loss(T[0.21], bs(T), CosMethod(4096), m, c); runs = 20))
+bs(T) = BlackScholesProcess(T(0.2))
+bs_und(T) = Underlying(T(100), T(0))
+host_ms(n, T) = (m = smile_market(n, T); c = FinancialCalibrator.loss_cache(bs(T), bs_und(T), CosMethod(4096), m; min_vega = 0); 1e3 * median_time(() -> FinancialCalibrator.loss(T[0.21], bs(T), CosMethod(4096), m, c); runs = 20))
 scaling = Dict{String, Any}("strikes" => sizes, "host_float64_ms" => [host_ms(n, Float64) for n in sizes])
 gpu = try
     @eval using CUDA, Adapt
@@ -101,7 +102,7 @@ end
 if gpu
     device_ms(n, T) = Base.invokelatest() do
         m = Adapt.adapt(CUDA.CuArray, smile_market(n, T))
-        c = FinancialCalibrator.loss_cache(bs(T), CosMethod(4096), m; min_vega = 0)
+        c = FinancialCalibrator.loss_cache(bs(T), bs_und(T), CosMethod(4096), m; min_vega = 0)
         1e3 * median_time(() -> (FinancialCalibrator.loss(T[0.21], bs(T), CosMethod(4096), m, c); CUDA.synchronize()); runs = 20)
     end
     scaling["device_float64_ms"] = [device_ms(n, Float64) for n in sizes]

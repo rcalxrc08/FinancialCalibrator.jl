@@ -5,6 +5,10 @@ an agent reads first._ Updated: 2026-11-25
 
 ## Current focus
 
+0.3.0 on branch `issue-fmc72-underlying` (local, not pushed nor registered): FinancialMonteCarlo 0.10 and FinancialFFT 0.8,
+the `Underlying` is an argument next to the model in `calibrate`, `calibrated_parameters`, `implicit_calibration`, `loss`,
+`vol_errors` and the analytic pricer (FinancialMonteCarlo#72, D-007). Waits for the author's go to push, merge and register.
+
 AD backend combinations that fail in the benchmark (#41). Fixed: groups 1, 3a, 3b, 4 (FinancialFFT 0.6.3, c1e256c); 3c on branch `issue-41-3c`.
 The status table is #41 comment 7059648077 (edited in place); open points and next steps are comment 7061673022.
 

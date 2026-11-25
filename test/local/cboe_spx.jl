@@ -24,18 +24,18 @@ const SPX_DIR = joinpath(@__DIR__, "..", "..", "data", "json", "cboe", "2026-11-
     # NIG, NormalInverseGaussianProcess(σ, θ, κ), with σ and κ positive; Lewis, whose derivatives are those of its
     # prices (not Cos for NIG, FinancialFFT#64)
     variables = Parametrization(x -> [exp(x[1]), x[2], exp(x[3])], p -> [log(p[1]), p[2], log(p[3])])
-    start = NormalInverseGaussianProcess(0.15, -0.1, 0.5, und)
+    start = NormalInverseGaussianProcess(0.15, -0.1, 0.5)
     method = LewisMethod(400.0, 40001)
-    res = calibrate(start, method, mkt; parametrization = variables)
+    res = calibrate(start, und, method, mkt; parametrization = variables)
     rms = sqrt(2 * res.OptimalValue / count(!isnan, res.ModelVolatility))
     @info "NIG on the SPX surface" parameters = res.OptimalParam rms
     @test rms < 0.02
     # the calibration ends where the gradient of the loss vanishes
-    cache = FinancialCalibrator.loss_cache(start, method, mkt)
+    cache = FinancialCalibrator.loss_cache(start, und, method, mkt)
     @test norm(ForwardDiff.gradient(x -> FinancialCalibrator.loss(variables.to_params(x), start, method, mkt, cache), variables.from_params(res.OptimalParam))) < 1e-8
 
     # the sensitivity of the calibrated parameters to one quote, by the implicit function theorem, against recalibrating
-    calibrated(V) = calibrated_parameters(start, method, mkt, V; parametrization = variables)
+    calibrated(V) = calibrated_parameters(start, und, method, mkt, V; parametrization = variables)
     i = CartesianIndex(3, 5)
     bump(h) = (V = mkt.Volatility .+ zero(h); V[i] += h; V)
     ∂p = ForwardDiff.derivative(h -> calibrated(bump(h)), 0.0)

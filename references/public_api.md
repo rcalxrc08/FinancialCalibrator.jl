@@ -8,8 +8,8 @@ The public API:
 
 ```julia
 und, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()), Float64)  # last argument: float type
-calibrate(model, pricing_method, mkt, opt_method = NelderMead(), opt_options = Optim.Options(); parametrization = Parametrization(), autodiff = AutoForwardDiff(), polish = true, polish_backend = AutoForwardDiff(), min_vega = 1e-3, verbose = false)
-calibrated_parameters(model, pricing_method, mkt, vols = mkt.Volatility, opt_method, opt_options; parametrization, autodiff, polish_backend, conditions_backend, implicit_backends = (x = ..., y = ...), min_vega)  # differentiable in vols
+calibrate(model, und, pricing_method, mkt, opt_method = NelderMead(), opt_options = Optim.Options(); parametrization = Parametrization(), autodiff = AutoForwardDiff(), polish = true, polish_backend = AutoForwardDiff(), min_vega = 1e-3, verbose = false)
+calibrated_parameters(model, und, pricing_method, mkt, vols = mkt.Volatility, opt_method, opt_options; parametrization, autodiff, polish_backend, conditions_backend, implicit_backends = (x = ..., y = ...), min_vega)  # differentiable in vols
 Parametrization(to_params, from_params)   # the variables of the search: x -> model parameters, and its inverse
 vol_errors(params, model, pricing_method, mkt, cache = loss_cache(...); vols = mkt.Volatility)                       # residuals of the loss
 ```

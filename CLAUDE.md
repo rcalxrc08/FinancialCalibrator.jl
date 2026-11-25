@@ -26,7 +26,7 @@ Map: `src/FinancialCalibrator.jl` includes the stages in order, `01_market_data`
 
 Rules for every change (details in `references/conventions.md` and `references/autodiff.md`):
 
-- Spot and dividends live in the model's `Underlying`, never in `MarketData` nor as arguments.
+- Spot and dividends live in the `Underlying` passed next to the model (FinancialMonteCarlo 0.10, #72), never in `MarketData`.
 - Generic floating point type: no `::Float64` nor Float64 literals on the pricing path; `Float32` must work.
 - Branches on the differentiated path are allowed (Zygote ≥ 0.7.19, D-006); as a select, `Bool *` or weights rather than
   `ifelse` on a scalar flag; validations are named functions marked `ChainRulesCore.@non_differentiable`, called

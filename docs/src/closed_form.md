@@ -31,9 +31,9 @@ S_t = \alpha\, S_0\, e^{(r - d) t} + A_t, \qquad A_0 = (1 - \alpha) S_0,
 
 with ``Z`` standard normal, volatilities ``\eta_1, \dots, \eta_n > 0`` and weights ``w_j = \lambda_j`` for
 ``j < n``, ``w_n = 1 - \sum_{j<n} \lambda_j``. In FinancialMonteCarlo it is
-`ShiftedProcess(LogNormalMixture(η, λ, underlying), α)`: the ``n`` volatilities and the ``n - 1`` free weights as
+`ShiftedProcess(LogNormalMixture(η, λ), α)`: the ``n`` volatilities and the ``n - 1`` free weights as
 tuples, and the shift ``\alpha < 1`` (`LogNormalMixture` alone is the mixture with no shift, and
-`ShiftedProcess(BlackScholesProcess(σ, underlying), α)` the displaced diffusion, a mixture of one component: both have
+`ShiftedProcess(BlackScholesProcess(σ), α)` the displaced diffusion, a mixture of one component: both have
 the same closed form). Brigo and Mercurio show that a local volatility ``\sigma(t, A_t)`` exists for which ``A`` has
 exactly these marginals: the model is a diffusion, and not only a family of densities. FinancialMonteCarlo (≥ 0.8)
 simulates that diffusion, so its Monte Carlo prices of European options converge to the closed form (the tests check it
@@ -80,8 +80,8 @@ using FinancialCalibrator, FinancialMonteCarlo
 underlying, mkt = adapter(retriever(CalibrationID("Dax", "22Aug2016", "EUR"), IOFileInputStrategy()))
 rms(res) = sqrt(2 * res.OptimalValue / count(!isnan, res.ModelVolatility))
 
-bs = calibrate(BlackScholesProcess(0.2, underlying), AnalyticMethod(), mkt)
-slnm = calibrate(ShiftedProcess(LogNormalMixture((0.1, 0.2, 0.35), (0.3, 0.4), underlying), -0.1), AnalyticMethod(), mkt)
+bs = calibrate(BlackScholesProcess(0.2), underlying, AnalyticMethod(), mkt)
+slnm = calibrate(ShiftedProcess(LogNormalMixture((0.1, 0.2, 0.35), (0.3, 0.4)), -0.1), underlying, AnalyticMethod(), mkt)
 (black_scholes = rms(bs), shifted_lognormal_mixture = rms(slnm))
 ```
 
@@ -103,7 +103,7 @@ slnm.OptimalParam
 
 A model gets a closed form by two methods, `FinancialCalibrator.analytic_price_type(model)` (the number type of its
 prices) and `FinancialCalibrator.analytic_kernel(model, S0, r, d, T)` (a callable `(K, isCall) -> price`, an isbits
-struct so that a GPU broadcast captures it); `pricer(model, zero_rate, AnalyticMethod(), smile)` does the rest, on the
+struct so that a GPU broadcast captures it); `pricer(model, und, zero_rate, AnalyticMethod(), smile)` does the rest, on the
 host or on the device.
 
 The kernel is the code that every backend differentiates, one strike at a time, so it is written for all of them:

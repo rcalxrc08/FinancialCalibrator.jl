@@ -21,7 +21,7 @@ The optimizer, then the Levenberg–Marquardt polish that makes the end point st
 
 ## Outputs
 
-`calibrate(model, method, mkt, opt_method, opt_options; parametrization, autodiff, polish, polish_backend, min_vega)`
+`calibrate(model, und, method, mkt, opt_method, opt_options; parametrization, autodiff, polish, polish_backend, min_vega)`
 returns `CalibratedData` (`OptimalParam`, `OptimalValue`, `ModelVolatility`, `NaN` at the quotes left out). Checked by
 `test/runtests.jl` (stationarity on DAX) and `test/models_methods.jl` (synthetic surfaces recovered).
 
@@ -32,4 +32,4 @@ Run in a session of this project after a change here (`ex(q = false, ...)`; setu
 | Check | Expect |
 |:--|:--|
 | `calibrate(bs, AnalyticMethod(), MarketData([0.5, 1.0, 2.0], Date(2020) .+ Day.([182, 365, 730]), fill(0.01, 3), 70.0:10.0:130.0, fill(0.25, 3, 7)))` | `OptimalParam ≈ [0.25]` (rel. 1e-15), `OptimalValue` ~1e-31 |
-| `calibrate(BlackScholesProcess(0.2, und), AnalyticMethod(), mkt)` on DAX | `OptimalParam ≈ [0.2010]`, `OptimalValue ≈ 0.0492`, 9 `NaN` in `ModelVolatility` (the quotes left out) |
+| `calibrate(BlackScholesProcess(0.2), und, AnalyticMethod(), mkt)` on DAX | `OptimalParam ≈ [0.2010]`, `OptimalValue ≈ 0.0492`, 9 `NaN` in `ModelVolatility` (the quotes left out) |

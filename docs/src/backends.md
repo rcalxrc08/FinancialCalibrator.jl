@@ -31,10 +31,10 @@ kind of calibration is the choice of that argument:
 | `Vibrato`, `VibratoSaltando`, `PureLRM` | [VibratoMonteCarlo.jl](https://github.com/rcalxrc08/VibratoMonteCarlo.jl) | Monte Carlo with smooth estimators of the derivatives |
 
 ```julia
-calibrate(model, CosMethod(2^10), mkt)                                   # Fourier
-calibrate(model, LewisMethod(400.0, 40001), mkt)                         # Fourier, another quadrature
-calibrate(slnm, AnalyticMethod(), mkt)                                   # closed form
-calibrate(model, MonteCarloConfiguration(10^5, 1), mkt)                  # simulation
+calibrate(model, und, CosMethod(2^10), mkt)                                   # Fourier
+calibrate(model, und, LewisMethod(400.0, 40001), mkt)                         # Fourier, another quadrature
+calibrate(slnm, und, AnalyticMethod(), mkt)                                 # closed form
+calibrate(model, und, MonteCarloConfiguration(10^5, 1), mkt)                  # simulation
 ```
 
 The same Heston calibration of the DAX surface with three Fourier methods (measured by `docs/benchmarks.jl`):
@@ -79,7 +79,7 @@ its rules come from the implicit function theorem and not from tracing the optim
 
 ```julia
 using ForwardDiff, Zygote
-f(v) = calibrated_parameters(model, method, mkt, v)
+f(v) = calibrated_parameters(model, und, method, mkt, v)
 ForwardDiff.jacobian(f, mkt.Volatility)                    # ∂p*/∂v, forward mode
 Zygote.gradient(v -> w' * f(v), mkt.Volatility)            # wᵀ ∂p*/∂v, reverse mode (ChainRules)
 ```
@@ -162,7 +162,7 @@ many quotes: the reverse rule needs ``(\partial_v g)^\top w``, which forward mod
 
 ```julia
 using ADTypes, Mooncake
-calibrated_parameters(model, method, mkt, v; implicit_backends = (x = AutoMooncake(; config = nothing), y = AutoForwardDiff()))
+calibrated_parameters(model, und, method, mkt, v; implicit_backends = (x = AutoMooncake(; config = nothing), y = AutoForwardDiff()))
 ```
 
 The table above times these combinations. Zygote for `x` does not work: it cannot differentiate the inner ForwardDiff
@@ -304,9 +304,9 @@ The small linear systems (the Levenberg–Marquardt step, the implicit function 
 ```julia
 using CUDA, Adapt
 gmkt = adapt(CuArray, mkt)                                            # strikes and volatilities on the device
-calibrate(model, CosMethod(1024), gmkt)
-calibrated_parameters(model, CosMethod(1024), gmkt)
-Zygote.gradient(V -> sum(calibrated_parameters(model, CosMethod(1024), gmkt, V)), gmkt.Volatility)[1]   # a CuMatrix
+calibrate(model, und, CosMethod(1024), gmkt)
+calibrated_parameters(model, und, CosMethod(1024), gmkt)
+Zygote.gradient(V -> sum(calibrated_parameters(model, und, CosMethod(1024), gmkt, V)), gmkt.Volatility)[1]   # a CuMatrix
 ```
 
 Measured on a laptop GPU (NVIDIA MX150) with the DAX surface of 108 quotes, once compiled:
