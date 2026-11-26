@@ -31,7 +31,11 @@ Run the formatter before committing. `FinancialFFT` lives in the public LocalReg
 
 ## Releases
 
-FinancialCalibrator is not registered: it is used from its repository (`Pkg.add(url = …)` or `Pkg.develop`). When its
-dependencies release, widen their compat here and in `docs/` and `bench/`, and let CI resolve the new versions.
+FinancialCalibrator is registered on the private registry `localregistry` (`rcalxrc08/LocalRegistry`, since 0.3.0). To
+release: bump `version` (and its own compat in `docs/` and `bench/` on a breaking release), push to `master`, wait for
+CI, register the commit with `LocalRegistry.register` from Julia 1.12 (`julia +1.12`, where LocalRegistry.jl is
+installed) and push the registry; then tag `vX.Y.Z` on the registered commit and create the GitHub release by hand (no
+TagBot). When its dependencies release, widen their compat here and in `docs/` and `bench/`, and let CI resolve the new
+versions.
 FinancialFFT and VibratoMonteCarlo come from the private registry `localregistry` (`rcalxrc08/LocalRegistry`), which CI
 adds with the `localregistry` input of `julia-buildpkg`; FinancialMonteCarlo and FinancialToolbox from General.
