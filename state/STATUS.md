@@ -7,7 +7,8 @@ an agent reads first._ Updated: 2026-11-26
 
 0.3.0 released 2026-11-25 (LocalRegistry): FinancialMonteCarlo 0.10 and FinancialFFT 0.8, the `Underlying` is an
 argument next to the model (FinancialMonteCarlo#72, D-007). #42 closed. `test/financialfft_example.jl` follows the
-FinancialFFT calibration page again at `rtol = 1e-8` (FinancialFFT#102, 2026-11-26). 0.4.0 (2026-11-26, LocalRegistry): #46,
+FinancialFFT calibration page again at `rtol = 1e-8` (FinancialFFT#102, 2026-11-26). 0.4.1 (2026-11-26): compat FinancialFFT 0.8, 0.9
+(`LewisMethod(ε)`, FinancialFFT#48). 0.4.0 (2026-11-26, LocalRegistry): #46,
 `calibrate` warns when Optim stops at its iteration or time limit, `CalibratedData` keeps `Converged`,
 `Iterations`, `LossCalls`.
 

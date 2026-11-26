@@ -18,5 +18,5 @@ FinancialCalibrator = {path = ".."}
 
 [compat]
 FinancialCalibrator = "0.4"
-FinancialFFT = "0.8"
+FinancialFFT = "0.8, 0.9"
 FinancialMonteCarlo = "0.10"
