@@ -187,6 +187,23 @@ progress("Running the core testset")
             @test res.OptimalValue <= loss0
         end
 
+        # calibrate says when the optimizer stops at its iteration or time limit (#46), and the result keeps its status
+        @testset "Optimizer at its limit" begin
+            progress("Optimizer at its limit")
+            bs = BlackScholesProcess(0.2)
+            res = @test_logs calibrate(bs, und, AnalyticMethod(), mkt)
+            @test res.Converged && res.Iterations > 0 && res.LossCalls >= res.Iterations
+            short = @test_logs (:warn, r"iteration limit") calibrate(bs, und, AnalyticMethod(), mkt, FC.Optim.NelderMead(), FC.Optim.Options(iterations = 2))
+            @test !short.Converged && short.Iterations == 2
+            @test short.OptimalParam ≈ res.OptimalParam rtol = 1e-8   # the polish still reaches the optimum
+            # a line search that needs many losses per iteration gets the hint about the pricing method
+            rosenbrock(x) = (1 - x[1])^2 + 100 * (x[2] - x[1]^2)^2
+            wrong = FC.Optim.optimize(rosenbrock, x -> [1.0, 1.0], [-1.2, 1.0], FC.Optim.LBFGS(), FC.Optim.Options(iterations = 3); inplace = false)
+            @test_logs (:warn, r"iteration limit.*inaccurate pricing method") FC.warn_if_stopped_by_limit(wrong)
+            slow = FC.Optim.optimize(x -> (sleep(0.02); rosenbrock(x)), [-1.2, 1.0], FC.Optim.NelderMead(), FC.Optim.Options(time_limit = 0.2))
+            @test_logs (:warn, r"time limit") FC.warn_if_stopped_by_limit(slow)
+        end
+
         # The loss and the closed-form pricer are inferred: set_parameters! is not, hence the function barrier in loss.
         @testset "Inferred" begin
             progress("Inferred")

@@ -39,10 +39,12 @@ function calibrate(model::FinancialMonteCarlo.BaseProcess, und::FinancialMonteCa
 end
 
 function calibrate_cached(model::FinancialMonteCarlo.BaseProcess, pricing_method::FinancialMonteCarlo.AbstractMethod, mktData::MarketData{T}, cache, opt_method::Optim.AbstractOptimizer, opt_options::Optim.Options; parametrization::Parametrization = default_parametrization(model), kwargs...) where {T}
-    x, e = optimal_variables_and_errors(model, pricing_method, mktData, cache, opt_method, opt_options, parametrization; kwargs...)
+    x, e, result = optimal_variables_and_errors(model, pricing_method, mktData, cache, opt_method, opt_options, parametrization; kwargs...)
+    warn_if_stopped_by_limit(result)
+    converged, iterations, loss_calls = Optim.converged(result), Optim.iterations(result), Optim.f_calls(result)
     OptimalParameters = parametrization.to_params(x)
     ModelVolatility = fill(T(NaN), length(mktData.TimeToMaturity), length(mktData.Strikes))
-    e === nothing && return CalibratedData(OptimalParameters, T(Inf), ModelVolatility)
+    e === nothing && return CalibratedData(OptimalParameters, T(Inf), ModelVolatility, converged, iterations, loss_calls)
     # the value and the model volatilities from the errors at the optimum, which the polish has already computed: the
     # surface is not priced again (#22). The errors are maturity by maturity, in the order of the quotes of the cache.
     e = Array(e)
@@ -53,7 +55,20 @@ function calibrate_cached(model::FinancialMonteCarlo.BaseProcess, pricing_method
         ModelVolatility[i, q] = Array(mktData.Volatility[i, q]) .+ e[(offset+1):(offset+length(q))]
         offset += length(q)
     end
-    return CalibratedData(OptimalParameters, T(sum(abs2, e) / 2), ModelVolatility)
+    return CalibratedData(OptimalParameters, T(sum(abs2, e) / 2), ModelVolatility, converged, iterations, loss_calls)
+end
+
+# A warning when the optimizer stopped at its iteration or time limit (#46): calibrate returned an ordinary result after
+# LBFGS spent its 1000 iterations and 49486 losses (73 s) on Kou with CosMethod(256) on DAX, whose accuracy was lost
+# along the path (#10, FinancialFFT#101). Many losses per iteration are a line search that gets wrong derivatives.
+function warn_if_stopped_by_limit(result)
+    code = Optim.termination_code(result)
+    code == Optim.TerminationCode.Iterations || code == Optim.TerminationCode.Time || return nothing
+    iterations, loss_calls = Optim.iterations(result), Optim.f_calls(result)
+    limit = code == Optim.TerminationCode.Iterations ? "iteration limit" : "time limit"
+    hint = loss_calls > 20 * max(iterations, 1) ? " Many evaluations per iteration point to a line search with wrong derivatives: an inaccurate pricing method (see the method sizes in the docs)." : ""
+    @warn "calibrate: the optimizer stopped at its $limit ($iterations iterations, $loss_calls evaluations of the loss) without converging.$hint"
+    return nothing
 end
 
 # The minimizer, in the variables of the parametrization: the optimizer, then the Levenberg–Marquardt polish.
@@ -61,8 +76,8 @@ end
 # calibrated_parameters inferred, they check the type of the shadow against the type of the result.
 optimal_variables(args...; kwargs...) = first(optimal_variables_and_errors(args...; kwargs...))
 
-# The minimizer and the volatility errors there (`nothing` if they cannot be priced), so that calibrate needs no other
-# pricing of the surface. With the default options and no polish, Optim runs with its own tolerances (FULL_OPTIONS).
+# The minimizer, the volatility errors there (`nothing` if they cannot be priced), so that calibrate needs no other
+# pricing of the surface, and the result of the optimizer. With the default options and no polish, Optim runs with its own tolerances (FULL_OPTIONS).
 function optimal_variables_and_errors(model, pricing_method, mktData::MarketData, cache, opt_method::Optim.AbstractOptimizer, opt_options::Optim.Options, parametrization::Parametrization; autodiff::ADTypes.AbstractADType = default_backend(), polish::Bool = true, polish_backend::ADTypes.AbstractADType = default_backend(), verbose::Bool = false)
     to_params = parametrization.to_params
     loss_function(x::AbstractVector{<:Real}) = loss(to_params(x), model, pricing_method, mktData, cache)
@@ -79,7 +94,7 @@ function optimal_variables_and_errors(model, pricing_method, mktData::MarketData
         println(result)
         println("loss after the polish: ", e === nothing ? Inf : sum(abs2, e) / 2)
     end
-    return x, e
+    return x, e, result
 end
 
 # errors(x), or nothing where the parameters cannot be priced

@@ -7,8 +7,9 @@ an agent reads first._ Updated: 2026-11-26
 
 0.3.0 released 2026-11-25 (LocalRegistry): FinancialMonteCarlo 0.10 and FinancialFFT 0.8, the `Underlying` is an
 argument next to the model (FinancialMonteCarlo#72, D-007). #42 closed. `test/financialfft_example.jl` follows the
-FinancialFFT calibration page again at `rtol = 1e-8` (FinancialFFT#102, 2026-11-26). Next: #46 (warn when Optim stops
-at its iteration limit).
+FinancialFFT calibration page again at `rtol = 1e-8` (FinancialFFT#102, 2026-11-26). #46 on `master` (2026-11-26, not
+released): `calibrate` warns when Optim stops at its iteration or time limit, `CalibratedData` keeps `Converged`,
+`Iterations`, `LossCalls`.
 
 AD backend combinations that fail in the benchmark (#41). Fixed: groups 1, 3a, 3b, 4 (FinancialFFT 0.6.3, c1e256c); 3c on branch `issue-41-3c`.
 The status table is #41 comment 7059648077 (edited in place); open points and next steps are comment 7061673022.

@@ -6,7 +6,7 @@ The optimizer, then the Levenberg–Marquardt polish that makes the end point st
 
 | Load | Why |
 |:--|:--|
-| `calibrate.jl` | `calibrate`, `calibrate_cached`, `optimal_variables_and_errors`, `levenberg_marquardt`, `step_accepted` |
+| `calibrate.jl` | `calibrate`, `calibrate_cached`, `warn_if_stopped_by_limit`, `optimal_variables_and_errors`, `levenberg_marquardt`, `step_accepted` |
 | `calibrated_data.jl` | `CalibratedData` |
 | `references/optimization.md` | the defaults, the acceptance rules of the polish, the time split |
 | `references/loss.md` | what the polish minimizes |
@@ -22,7 +22,9 @@ The optimizer, then the Levenberg–Marquardt polish that makes the end point st
 ## Outputs
 
 `calibrate(model, und, method, mkt, opt_method, opt_options; parametrization, autodiff, polish, polish_backend, min_vega)`
-returns `CalibratedData` (`OptimalParam`, `OptimalValue`, `ModelVolatility`, `NaN` at the quotes left out). Checked by
+returns `CalibratedData` (`OptimalParam`, `OptimalValue`, `ModelVolatility`, `NaN` at the quotes left out; `Converged`,
+`Iterations`, `LossCalls` of the optimizer) and warns when the optimizer stopped at its iteration or time limit
+(`warn_if_stopped_by_limit`, #46; tested in `test/runtests.jl`, "Optimizer at its limit"). Checked by
 `test/runtests.jl` (stationarity on DAX) and `test/models_methods.jl` (synthetic surfaces recovered).
 
 ## Verify (Kaimon)

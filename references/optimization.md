@@ -26,6 +26,16 @@ end point stationary (|∇L| ~ 1e-8 on DAX instead of NelderMead's ~1e-3).
   `NelderMead()`: a default argument is evaluated in the method Mooncake traces, and `NelderMead()` builds `Dict(kwargs)`,
   whose constructor has a try/catch on Julia 1.10 (Mooncake fails). Do not construct anything with keywords there.
 
+## When the optimizer stops at its limit (#46)
+
+`optimal_variables_and_errors` also returns the Optim result. `calibrate_cached` keeps `Optim.converged`,
+`Optim.iterations` and `Optim.f_calls` in `CalibratedData` (`Converged`, `Iterations`, `LossCalls`) and warns when
+`Optim.termination_code` is `Iterations` or `Time`, with a hint about an inaccurate pricing method when the optimizer
+took more than 20 losses per iteration (a line search with wrong derivatives: LBFGS on Kou with `CosMethod(256)` on DAX
+spent 1000 iterations and 49486 losses, 73 s, FinancialFFT#101). The warning is in `calibrate` only, not in the solver of
+`calibrated_parameters`, which stays inferred (checked 2026-11-26: `optimal_variables_and_errors` inferred with the
+result type).
+
 ## Where the optimizer stops at an unpriceable point (#38)
 
 `optimal_variables_and_errors` prices the optimizer's end point once (`numerical_or_nothing`): if it cannot be priced
