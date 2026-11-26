@@ -36,16 +36,18 @@ using Dates
     to_p(x) = [exp(x[1]), exp(x[2]), exp(x[3]), tanh(x[4]), exp(x[5])]
     to_x(p) = [log(p[1]), log(p[2]), log(p[3]), atanh(p[4]), log(p[5])]
     vol_errors_page(x, v) = implied_vols(model_prices(to_p(x))) .- v
+    jacobian_page(x, v) = ForwardDiff.jacobian(t -> vol_errors_page(t, v), x)
     function calibrate_page(v; x = to_x([0.3, 0.25, 1.0, -0.3, 0.06]), μ = 1e-2, iterations = 100)
-        e = vol_errors_page(x, v)
+        e, J = vol_errors_page(x, v), jacobian_page(x, v)
         for _ = 1:iterations
-            J = ForwardDiff.jacobian(t -> vol_errors_page(t, v), x)
+            g = Array(transpose(J) * e)
+            norm(g) < 1e-12 && break
             A = Array(transpose(J) * J)
-            δ = -(A + μ * Diagonal(diag(A))) \ Array(transpose(J) * e)
-            e_new = vol_errors_page(x + δ, v)
-            if sum(abs2, e_new) < sum(abs2, e)
-                x, e, μ = x + δ, e_new, μ / 3
-                norm(δ) < 1e-12 && break
+            δ = -(A + μ * Diagonal(diag(A))) \ g
+            e_new, J_new = vol_errors_page(x + δ, v), jacobian_page(x + δ, v)
+            S, S_new = sum(abs2, e), sum(abs2, e_new)
+            if S_new < S || (S_new < (1 + sqrt(eps(S))) * S && norm(transpose(J_new) * e_new) < norm(g) / 2)
+                x, e, J, μ = x + δ, e_new, J_new, μ / 3
             else
                 μ *= 4
                 μ > 1e12 && break
@@ -73,11 +75,9 @@ using Dates
     model_params(q::AbstractVector) = q[[1, 2, 4, 5, 6]]
     model_params(q::AbstractMatrix) = q[[1, 2, 4, 5, 6], :]
     @test res.OptimalParam[3] == 0
-    # The page's loop stops on a step below 1e-12 with a large damping (μ ≈ 3e5 after 25 iterations), 2e-8 from the optimum
-    # (|Jᵀe| = 1e-10 there, 5e-14 at FinancialCalibrator's point, which FinancialCalibrator 0.2 found to 1e-12): with
-    # FinancialMonteCarlo 0.10 the rounding of its accepted steps changed, and the point where it stops with it
-    # (FinancialFFT#102: back to 1e-8 once the page stops on the gradient).
-    @test model_params(res.OptimalParam) ≈ p rtol = 1e-7
+    # the page stops on the gradient (|Jᵀe| < 1e-12) and accepts a step within the rounding of the loss that halves the
+    # gradient, as the polish does: both reach the stationary point (FinancialFFT#102)
+    @test model_params(res.OptimalParam) ≈ p rtol = 1e-8
     # the root mean square error of the page, about 6 basis points of volatility
     @test sqrt(2 * res.OptimalValue / length(v)) ≈ sqrt(sum(abs2, vol_errors_page(x, v)) / length(v)) rtol = 1e-6
     @test res.ModelVolatility ≈ as_surface(implied_vols(model_prices(p))) rtol = 1e-8
