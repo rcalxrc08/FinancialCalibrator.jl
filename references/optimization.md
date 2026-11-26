@@ -13,7 +13,10 @@ cancellation) or, within sqrt(eps) of it, halves the gradient Jᵀe; near the op
 (~1e-14, ±1e-15 on the sum) hides the decrease a step promises (6e-18 on DAX/BS), and the GPU polish stopped 9e-10
 short of σ* = mean of the quotes; a step accepted on the gradient starts a phase in which every step must halve the
 last gradient and stay within sqrt(eps) of the sum where it began (with a FiniteDiff Jacobian the two criteria
-alternated for all 100 iterations); a rejected step below `xtol` or a non-finite Jacobian (Kou on DAX) ends the polish;
+alternated for all 100 iterations); a rejected step below `xtol`, a non-finite Jacobian (Kou on DAX), or (#37) three rejections in a row once the
+decrease the linear model promises, `-(gᵀδ + δᵀAδ/2)`, is below `sqrt(eps)` times the loss, ends the polish (at the floor
+the steps are ~1e-9, above `xtol`, and μ needed ~30 rejections to pass 1e12; measured 2026-11-26 on DAX: Heston
+`LewisMethod(100, 4001)` 37 -> 23 calls of the errors, 0.43 -> 0.27 s, NIG 33 -> 27, BS 9 -> 9, end points bit-identical);
 the Jacobian is recomputed only after an accepted step; with J on the GPU, JᵀJ and Jᵀe are formed there and the p × p solve is on the host, timings in the
 comment above the function). The polish is what makes the
 end point stationary (|∇L| ~ 1e-8 on DAX instead of NelderMead's ~1e-3).

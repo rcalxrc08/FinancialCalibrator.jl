@@ -179,6 +179,7 @@ function levenberg_marquardt_and_errors(errors, x::AbstractVector{T}, e; backend
     # the Jacobian and the normal equations at x, recomputed only when a step is accepted: a rejected step leaves x
     J, A, g = normal_equations(errors, prep, backend, x, e)
     phase = nothing   # the gradient phase, see step_accepted
+    rejections = 0    # in a row
     for _ = 1:iterations
         # a Jacobian that is not finite (an overflow in the derivatives of the pricer) gives no direction: stop here
         all(isfinite, A) && all(isfinite, g) || break
@@ -194,6 +195,7 @@ function levenberg_marquardt_and_errors(errors, x::AbstractVector{T}, e; backend
         end
         accepted, phase = e_new === nothing || !all(isfinite, e_new) ? (false, phase) : step_accepted(e, e_new, J, g, phase)
         if accepted
+            rejections = 0
             x, x_trial, e, μ = x_trial, x, e_new, μ / 3
             norm(δ) <= xtol * (1 + norm(x)) && break
             J, A, g = normal_equations(errors, prep, backend, x, e)
@@ -201,6 +203,11 @@ function levenberg_marquardt_and_errors(errors, x::AbstractVector{T}, e; backend
             # no step decreases the loss: the rounding floor of the volatilities. A larger μ only shortens the step, so
             # a rejected step already below the tolerance ends the polish (it took 25 more rejections to reach μ > 1e12)
             norm(δ) <= xtol * (1 + norm(x)) && break
+            # at the rounding floor the steps are still ~1e-9, far above xtol, and μ, divided by 3 at every accepted
+            # step, took ~30 rejections to pass 1e12 (#37): stop after three rejections in a row once the decrease that
+            # the linear model promises, -(gᵀδ + δᵀAδ / 2), is below the resolution sqrt(eps) of the loss
+            rejections += 1
+            rejections >= 3 && -(dot(g, δ) + dot(δ, A * δ) / 2) <= sqrt(eps(T)) * sum(abs2, e) / 2 && break
             μ *= 4
             μ > 1e12 && break
         end
