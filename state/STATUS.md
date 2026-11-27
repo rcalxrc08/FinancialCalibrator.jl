@@ -20,7 +20,7 @@ The status table is #41 comment 7059648077 (edited in place); open points and ne
 
 | Item | Branch | Issue | Next step |
 |:--|:--|:--|:--|
-| Default first stage: `LBFGS()` when the backend is not finite differences (measured in the #33 comment; the polish fix for a Jacobian outside the domain is on `master`, 53d126c) | — | #33 | decide (changes the defaults); the mixture (#27) needs an `f_calls_limit` or Nelder–Mead |
+| Default first stage: `LBFGS()` when the backend is not finite differences (measured in the #33 comment; the polish fix for a Jacobian outside the domain is on `master`, 523e95b) | — | #33 | decide (changes the defaults); the mixture (#27) needs an `f_calls_limit` or Nelder–Mead |
 | Mooncake on the device, closed form: rule through `stateless_prices` (CUDA+Mooncake extension) | `issue-41-3c` | #41 group 3c | review; full suite, then merge; update the #41 comments |
 | Mooncake Jacobian on the device | `master` | #41 group 3d | upstream: chalk-lab/Mooncake.jl#1485 (no `CuArray` method in its output check, fix verified); recheck on each Mooncake release |
 | Enzyme on the device (forward and reverse) | `master` | #41 group 5 | same assertion and warnings as Enzyme#4094 in both modes: comment there with the reverse case |
