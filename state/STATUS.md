@@ -1,7 +1,7 @@
 # Status
 
 _What is in flight. Layer 4: volatile, rewritten freely; GitHub issues are the source of truth, this file is the index
-an agent reads first._ Updated: 2026-11-26
+an agent reads first._ Updated: 2026-11-27
 
 ## Current focus
 
@@ -40,8 +40,9 @@ The status table is #41 comment 7059648077 (edited in place); open points and ne
 - #37 linear convergence of the polish; #32 Halley steps.
 - #33 derivative-based first stage instead of Nelder–Mead; #34 avoid the p×n matrix for one direction.
 - #25 a strike grid per maturity; #19 move `AnalyticMethod` out;
-  #9 maturities in parallel. #10 done (2026-11-25): the method sizes per model are measured at the start and at the optimum by
-  `docs/benchmarks.jl` (settings table of `docs/src/backends.md`); COS on Kou waits for FinancialFFT#101 (the range grows to L / λ₊).
+  #9 maturities in parallel. #10 closed (2026-11-27): the settings table of `docs/src/backends.md` has the tolerance forms too; ε = 1e-6 meets
+  4e-8 in volatility for every model, at 2-7 ms per loss spent choosing the sizes (#47 would choose them once); Variance
+  Gamma is best with `CosMethod(1e-4)`.
 
 ## Working notes
 

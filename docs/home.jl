@@ -309,7 +309,7 @@ function settings_table()
     models = unique(r["model"] for r in rows)
     methods = unique(r["method"] for r in rows)
     row(m, method) = only(r for r in rows if r["model"] == m && r["method"] == method)
-    cell(r) = (r["recommended"] ? "<td class=\"is-pick\"><b>" : "<td>") * vol_error_text(r["max_vol_error_start"]) * " / " * vol_error_text(r["max_vol_error_optimum"]) * "<br><small>$(@sprintf("%.2f", r["loss_ms"])) ms</small>" * (r["recommended"] ? "</b></td>" : "</td>")
+    cell(r) = !isfinite(r["loss_ms"]) ? "<td>—<br><small>N &gt; N_max</small></td>" : (r["recommended"] ? "<td class=\"is-pick\"><b>" : "<td>") * vol_error_text(r["max_vol_error_start"]) * " / " * vol_error_text(r["max_vol_error_optimum"]) * "<br><small>$(@sprintf("%.2f", r["loss_ms"])) ms</small>" * (r["recommended"] ? "</b></td>" : "</td>")
     head = "<tr><th>method</th>" * join("<th>$m</th>" for m in models) * "</tr>"
     body = join("<tr><td><code>$method</code></td>" * join(cell(row(m, method)) for m in models) * "</tr>" for method in methods)
     picks = join(("$m: <code>$(only(r["method"] for r in rows if r["model"] == m && r["recommended"]))</code>" for m in models), ", ")

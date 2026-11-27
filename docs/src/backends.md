@@ -67,6 +67,15 @@ Main.DocumentationFigures.settings_table()  # hide
   `LewisMethod(800, 16001)` (VG) and `LewisMethod(400, 8001)` (NIG), with the spacing `2A/N` of 0.1, reach 4e-6 and
   1e-10. `CosMethod` converges for them too, but its derivatives are not those of its prices there: a derivative error
   of 4e-5 for Variance Gamma with `CosMethod(1024)`, which the polish and [`calibrated_parameters`](@ref) would inherit.
+- **From a tolerance, no tuning.** `CosMethod(ε)` and `LewisMethod(ε)` (FinancialFFT 0.9, 0.10) choose the size of
+  each maturity from a tolerance `ε` on the prices, in their units: on DAX (spot 10514) `ε = 1e-6` gives at most 4e-8 in
+  volatility at both points for every model, `ε = 1e-4` at most 4e-6 (the volatility error is about `ε` / vega). The
+  sizes are chosen again at every loss, which costs 2 to 7 ms on this surface, more than the whole loss of a fixed
+  `CosMethod(256)`: the fixed settings above stay the fast choice where they are known (FinancialCalibrator#47 would
+  choose the sizes once per calibration). The exception is Variance Gamma, whose characteristic function decays as a
+  power: at its optimum `CosMethod(1e-4)` errs by 9e-8, 40 times less than `LewisMethod(800, 16001)`, at about the same
+  cost (15 ms per loss there, 4 ms at the start), with derivatives within 6e-7 of those of the reference;
+  `CosMethod(1e-6)` takes 90 ms there and `LewisMethod(1e-6)` more than its `N_max` nodes.
 - **Carr–Madan stops near 1e-7 to 1e-5** whatever the size of its FFT, at several times the cost of a quadrature: use
   it only for very large smiles, where one FFT prices all the strikes.
 

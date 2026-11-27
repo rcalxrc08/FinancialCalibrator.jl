@@ -27,9 +27,14 @@ models = ["Black–Scholes" => BlackScholesProcess(0.2), "Merton" => MertonProce
 # NIG, whose truncation range is held constant under differentiation (FinancialFFT.jl#64), a derivative error of 4e-5
 # for Variance Gamma with CosMethod(1024).
 reference = LewisMethod(3200.0, 512001)
-settings = [CosMethod(128), CosMethod(256), CosMethod(512), CosMethod(1024), CosMethod(2048), LewisMethod(100.0, 1001), LewisMethod(100.0, 2001), LewisMethod(100.0, 4001), LewisMethod(200.0, 4001), LewisMethod(400.0, 8001), LewisMethod(800.0, 16001), CarrMadanLewisMethod(400.0, 14), CarrMadanMethod(400.0, 14)]
-method_name(m::CosMethod) = "CosMethod($(m.N))"
-method_name(m::LewisMethod) = "LewisMethod($(round(Int, m.A)), $(m.N))"
+# The tolerance forms (FinancialFFT 0.9, 0.10) choose the size per maturity at every loss from a price tolerance ε, in the
+# units of the prices (DAX: S0 ≈ 10514, so ε = 1e-4 is 1e-8 of the spot; the volatility error is about ε / vega): no
+# tuning, at the cost of choosing the size at every loss (#47 would do it once per calibration). Where ε needs more than
+# N_max nodes (Lewis on Variance Gamma, whose characteristic function decays as a power), the cell says so.
+settings = [CosMethod(128), CosMethod(256), CosMethod(512), CosMethod(1024), CosMethod(2048), LewisMethod(100.0, 1001), LewisMethod(100.0, 2001), LewisMethod(100.0, 4001), LewisMethod(200.0, 4001), LewisMethod(400.0, 8001), LewisMethod(800.0, 16001), CosMethod(1e-4), CosMethod(1e-6), LewisMethod(1e-4), LewisMethod(1e-6), CarrMadanLewisMethod(400.0, 14), CarrMadanMethod(400.0, 14)]
+method_name(m::CosMethod{<:FinancialFFT.CosTerms}) = "CosMethod($(m.grid.N))"
+method_name(m::LewisMethod{<:FinancialFFT.QuadratureGrid}) = "LewisMethod($(round(Int, m.grid.A)), $(m.grid.N))"
+method_name(m::Union{CosMethod{<:FinancialFFT.CosTolerance}, LewisMethod{<:FinancialFFT.QuadratureTolerance}}) = "$(nameof(typeof(m)))($(m.grid.ε))"
 method_name(m::CarrMadanLewisMethod) = "CarrMadanLewisMethod(400, 14)"
 method_name(m::CarrMadanMethod) = "CarrMadanMethod(400, 14)"
 recommended = Dict("Black–Scholes" => CosMethod(256), "Merton" => CosMethod(256), "Kou" => LewisMethod(200.0, 4001), "Variance Gamma" => LewisMethod(800.0, 16001), "NIG" => LewisMethod(400.0, 8001), "Heston" => CosMethod(512))
@@ -40,6 +45,20 @@ for (name, model) in models
     exact = [FinancialCalibrator.vol_errors(p, model, und, reference, mkt) for p in (start, optimum)]
     for method in settings
         cache = FinancialCalibrator.loss_cache(model, und, method, mkt)
+        # a tolerance that needs more than N_max nodes throws an ArgumentError: no error, no time
+        feasible = try
+            FinancialCalibrator.loss(optimum, model, method, mkt, cache)
+            FinancialCalibrator.loss(start, model, method, mkt, cache)
+            true
+        catch err
+            err isa ArgumentError || rethrow()
+            false
+        end
+        if !feasible
+            push!(setting_rows, Dict("model" => name, "method" => method_name(method), "max_vol_error_start" => Inf, "max_vol_error_optimum" => Inf, "loss_ms" => Inf, "recommended" => false))
+            println(name, " ", method_name(method), ": more than N_max nodes")
+            continue
+        end
         # Inf where the method gives a price that is not positive (COS(128) at the Kou optimum)
         max_error(p, e) =
             try
