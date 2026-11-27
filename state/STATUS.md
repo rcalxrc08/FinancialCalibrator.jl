@@ -7,7 +7,8 @@ an agent reads first._ Updated: 2026-11-27
 
 0.3.0 released 2026-11-25 (LocalRegistry): FinancialMonteCarlo 0.10 and FinancialFFT 0.8, the `Underlying` is an
 argument next to the model (FinancialMonteCarlo#72, D-007). #42 closed. `test/financialfft_example.jl` follows the
-FinancialFFT calibration page again at `rtol = 1e-8` (FinancialFFT#102, 2026-11-26). 0.4.2 (2026-11-26): #37 point 1, the polish stops at the rounding floor
+FinancialFFT calibration page again at `rtol = 1e-8` (FinancialFFT#102, 2026-11-26). 0.4.3 (2026-11-27): #33, the polish stops where its Jacobian leaves the domain
+(`normal_equations_or_nothing`, 523e95b). 0.4.2 (2026-11-26): #37 point 1, the polish stops at the rounding floor
 (three rejections with a predicted decrease below sqrt(eps) of the loss); compat FinancialFFT 0.10 (`CosMethod(ε)`). 0.4.1 (2026-11-26): compat FinancialFFT 0.8, 0.9
 (`LewisMethod(ε)`, FinancialFFT#48). 0.4.0 (2026-11-26, LocalRegistry): #46,
 `calibrate` warns when Optim stops at its iteration or time limit, `CalibratedData` keeps `Converged`,
@@ -20,7 +21,7 @@ The status table is #41 comment 7059648077 (edited in place); open points and ne
 
 | Item | Branch | Issue | Next step |
 |:--|:--|:--|:--|
-| Default first stage: `LBFGS()` when the backend is not finite differences (measured in the #33 comment; the polish fix for a Jacobian outside the domain is on `master`, 523e95b) | — | #33 | decide (changes the defaults); the mixture (#27) needs an `f_calls_limit` or Nelder–Mead |
+| Default first stage: `LBFGS()` when the backend is not finite differences (measured in the #33 comment; the polish fix for a Jacobian outside the domain is released in 0.4.3) | — | #33 | decide (changes the defaults); the mixture (#27) needs an `f_calls_limit` or Nelder–Mead |
 | Mooncake on the device, closed form: rule through `stateless_prices` (CUDA+Mooncake extension) | `issue-41-3c` | #41 group 3c | review; full suite, then merge; update the #41 comments |
 | Mooncake Jacobian on the device | `master` | #41 group 3d | upstream: chalk-lab/Mooncake.jl#1485 (no `CuArray` method in its output check, fix verified); recheck on each Mooncake release |
 | Enzyme on the device (forward and reverse) | `master` | #41 group 5 | same assertion and warnings as Enzyme#4094 in both modes: comment there with the reverse case |
