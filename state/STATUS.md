@@ -20,6 +20,7 @@ The status table is #41 comment 7059648077 (edited in place); open points and ne
 
 | Item | Branch | Issue | Next step |
 |:--|:--|:--|:--|
+| Default first stage: `LBFGS()` when the backend is not finite differences (measured in the #33 comment; the polish fix for a Jacobian outside the domain is on `master`, 53d126c) | — | #33 | decide (changes the defaults); the mixture (#27) needs an `f_calls_limit` or Nelder–Mead |
 | Mooncake on the device, closed form: rule through `stateless_prices` (CUDA+Mooncake extension) | `issue-41-3c` | #41 group 3c | review; full suite, then merge; update the #41 comments |
 | Mooncake Jacobian on the device | `master` | #41 group 3d | upstream: chalk-lab/Mooncake.jl#1485 (no `CuArray` method in its output check, fix verified); recheck on each Mooncake release |
 | Enzyme on the device (forward and reverse) | `master` | #41 group 5 | same assertion and warnings as Enzyme#4094 in both modes: comment there with the reverse case |
@@ -37,7 +38,7 @@ The status table is #41 comment 7059648077 (edited in place); open points and ne
 ## Technical debt and enhancements
 
 - #44 SLNM loss allocations: parametrization done; next a scalar-loop loss for `AnalyticMethod` on the host (EnzymeR 147 → 110 μs, Mooncake 481 → 120 μs measured).
-- #37 linear convergence of the polish; #32 Halley steps.
+- #37 linear convergence of the polish; #32 Halley steps: measured, not worth it (Newton/Halley 1.9–3.6× slower), proposed won't-fix.
 - #33 derivative-based first stage instead of Nelder–Mead; #34 avoid the p×n matrix for one direction.
 - #25 a strike grid per maturity; #19 move `AnalyticMethod` out;
   #9 maturities in parallel. #10 closed (2026-11-27): the settings table of `docs/src/backends.md` has the tolerance forms too; ε = 1e-6 meets

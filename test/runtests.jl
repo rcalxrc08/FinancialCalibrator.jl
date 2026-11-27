@@ -204,6 +204,18 @@ progress("Running the core testset")
             @test_logs (:warn, r"time limit") FC.warn_if_stopped_by_limit(slow)
         end
 
+        # A Jacobian that leaves the domain where the residuals do not stops the polish instead of throwing (#33): ForwardDiff
+        # 1 fails `sum(λ) <= 1` for mixture weights that sum to 1 in value with a positive partial, where Nelder–Mead takes
+        # this mixture on DAX.
+        @testset "Jacobian outside the domain" begin
+            progress("Jacobian outside the domain")
+            no_jacobian(x) = eltype(x) <: AbstractFloat ? x .- 1 : throw(DomainError(x, "outside the domain"))
+            x, e = FC.levenberg_marquardt_and_errors(no_jacobian, [3.0, 2.0])
+            @test x == [3.0, 2.0] && e == [2.0, 1.0]
+            res = calibrate(ShiftedProcess(LogNormalMixture((0.2, 0.25, 0.3), (0.2, 0.3)), -0.1), und, AnalyticMethod(), mkt)
+            @test isfinite(res.OptimalValue)
+        end
+
         # The loss and the closed-form pricer are inferred: set_parameters! is not, hence the function barrier in loss.
         @testset "Inferred" begin
             progress("Inferred")

@@ -29,6 +29,25 @@ end point stationary (|∇L| ~ 1e-8 on DAX instead of NelderMead's ~1e-3).
   `NelderMead()`: a default argument is evaluated in the method Mooncake traces, and `NelderMead()` builds `Dict(kwargs)`,
   whose constructor has a try/catch on Julia 1.10 (Mooncake fails). Do not construct anything with keywords there.
 
+## A Jacobian outside the domain (#33)
+
+The polish computes its Jacobian through `normal_equations_or_nothing`: where the residuals can be priced but their dual
+numbers leave the domain of the model, it returns `nothing` and the polish stops (at the start or after an accepted
+step), as for a non-finite Jacobian. ForwardDiff 1 compares duals with their partials at a boundary
+(`Dual(1.0, 1e-17) <= 1` and `0 <= Dual(0.0, NaN)` are false), so mixture weights that sum to 1 in value fail the check
+of `LogNormalMixture` (a mixture of three lognormals on DAX after Nelder–Mead) and a saturated `p = 1/(1 + e^{-x})` fails
+the one of `KouProcess`; `calibrate` threw a `DomainError` there.
+
+## Measured: first stage (#33) and order of the polish (#32), 2026-11-27
+
+DAX, recommended method per model (#10), ForwardDiff, 5 starts (default and parameters scaled by U(0.5, 1.5)):
+`LBFGS()` + polish reaches the best optimum from all 30 starts of the six smooth models, 1.6–2.4 times faster than
+Nelder–Mead (Kou: the same, and Nelder–Mead missed one start); LM from the start is fastest but ends elsewhere for 4 of
+5 Kou starts; `NewtonTrustRegion` is robust but slower than LBFGS (3.3 times on Kou); the mixture (#27) ends in a
+different point with every stage, and LBFGS once took 47975 losses. A Newton (exact Hessian) or Halley polish halves the
+steps of Gauss–Newton but is 1.9–3.6 times slower (a Hessian per step), and on Kou stops at a worse point. Numbers in
+the #32 and #33 comments; scripts were in the session scratchpad.
+
 ## When the optimizer stops at its limit (#46)
 
 `optimal_variables_and_errors` also returns the Optim result. `calibrate_cached` keeps `Optim.converged`,

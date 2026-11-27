@@ -114,6 +114,21 @@ function normal_equations(errors::F, prep, backend, x, e) where {F}
     J = DI.jacobian(errors, prep, backend, x)
     return J, Array(transpose(J) * J), Array(transpose(J) * e)
 end
+# The same, or nothing where the Jacobian cannot be computed although the residuals can: at a point where the
+# parametrization saturates the dual numbers leave the domain of the model. ForwardDiff 1 compares duals with their
+# partials at a boundary, so a probability 1/(1 + e^{-x}) that underflows to 0 with NaN partials fails `0 <= p` (Kou), and
+# mixture weights summing to 1 in value with a positive partial fail `sum <= 1` (#33: Kou from its start without a
+# first stage, a mixture of three lognormals on DAX after Nelder–Mead). Then there is no direction: the polish stops,
+# as for a Jacobian that is not finite.
+function normal_equations_or_nothing(errors::F, prep, backend, x, e) where {F}
+    try
+        return normal_equations(errors, prep, backend, x, e)
+    catch err
+        numerical_failure(err) || rethrow()
+        @debug "levenberg_marquardt: no Jacobian at x, the polish stops" x exception = err
+        return nothing
+    end
+end
 
 # Whether a step from the residuals e to e_new is accepted, with J the Jacobian and g = Jᵀe at the current point, and
 # the gradient phase: `nothing` until a step is accepted on the gradient, then the sum of squares where the phase began
@@ -157,7 +172,8 @@ end
 # Copying J wins only on small surfaces, by less than 0.3 ms per step; a step also prices the surface once (the trial
 # point) and differentiates it, which takes from tens to hundreds of milliseconds, so the choice is the one that does not
 # degrade with the number of quotes.
-# Exceptions at `x` itself, where the optimizer stopped, propagate: they are not a matter of the step.
+# Exceptions of the residuals at `x` itself, where the optimizer stopped, propagate: they are not a matter of the step (a
+# Jacobian that cannot be computed there, or after an accepted step, stops the polish: normal_equations_or_nothing).
 # Type stability: the result has the type of `x` (Enzyme's rules for calibrated_parameters need the solver inferred).
 # It used to be `Any`: `DI.jacobian(errors, backend, x)` unprepared lets ForwardDiff choose its chunk from `length(x)`,
 # a run-time value, so the chunk, the dual numbers and the Jacobian are not inferred; the step δ = -(A + μD) \ g
@@ -177,7 +193,9 @@ function levenberg_marquardt_and_errors(errors, x::AbstractVector{T}, e; backend
     prep = DI.prepare_jacobian(errors, backend, x)
     x_trial = similar(x)
     # the Jacobian and the normal equations at x, recomputed only when a step is accepted: a rejected step leaves x
-    J, A, g = normal_equations(errors, prep, backend, x, e)
+    equations = normal_equations_or_nothing(errors, prep, backend, x, e)
+    equations === nothing && return x, e
+    J, A, g = equations
     phase = nothing   # the gradient phase, see step_accepted
     rejections = 0    # in a row
     for _ = 1:iterations
@@ -198,7 +216,9 @@ function levenberg_marquardt_and_errors(errors, x::AbstractVector{T}, e; backend
             rejections = 0
             x, x_trial, e, μ = x_trial, x, e_new, μ / 3
             norm(δ) <= xtol * (1 + norm(x)) && break
-            J, A, g = normal_equations(errors, prep, backend, x, e)
+            equations = normal_equations_or_nothing(errors, prep, backend, x, e)
+            equations === nothing && break
+            J, A, g = equations
         else
             # no step decreases the loss: the rounding floor of the volatilities. A larger μ only shortens the step, so
             # a rejected step already below the tolerance ends the polish (it took 25 more rejections to reach μ > 1e12)

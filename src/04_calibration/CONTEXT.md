@@ -6,7 +6,7 @@ The optimizer, then the Levenberg–Marquardt polish that makes the end point st
 
 | Load | Why |
 |:--|:--|
-| `calibrate.jl` | `calibrate`, `calibrate_cached`, `warn_if_stopped_by_limit`, `optimal_variables_and_errors`, `levenberg_marquardt`, `step_accepted` |
+| `calibrate.jl` | `calibrate`, `calibrate_cached`, `warn_if_stopped_by_limit`, `optimal_variables_and_errors`, `levenberg_marquardt`, `step_accepted`, `normal_equations_or_nothing` (#33) |
 | `calibrated_data.jl` | `CalibratedData` |
 | `references/optimization.md` | the defaults, the acceptance rules of the polish, the time split |
 | `references/loss.md` | what the polish minimizes |
